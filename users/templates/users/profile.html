@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Mi Perfil | Intranet SFA{% endblock %}
+{% block content %}
+<div style="max-width:600px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">👤 Mi Perfil</h2>
+    <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+
+        <!-- Info no editable -->
+        <div
+            style="display:flex;align-items:center;gap:20px;margin-bottom:28px;padding-bottom:24px;border-bottom:1px solid #f0f0f0;">
+            <div
+                style="width:70px;height:70px;border-radius:50%;background:#1e73be;color:white;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;flex-shrink:0;">
+                {{ user.username|first|upper }}
+            </div>
+            <div>
+                <p style="font-size:18px;font-weight:700;margin:0;">{{ user.get_full_name|default:user.username }}</p>
+                <p style="font-size:13px;color:#575760;margin:3px 0 0;">{{ user.get_role_display|default:"Sin rol" }} ·
+                    {{ user.get_establishment_display }}</p>
+                <p style="font-size:12px;color:#b2b2be;margin:2px 0 0;">{{ user.email }}</p>
+            </div>
+        </div>
+
+        <!-- Formulario editable -->
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in form %}
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-size:13px; font-weight:700; color:var(--contrast-2); margin-bottom:8px;">
+                    {{ field.label }}{% if field.field.required %}<span style="color:#dc3545; margin-left:4px;">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                <p style="font-size:11px; color:var(--contrast-3); margin-top:4px;">{{ field.help_text|safe }}</p>
+                {% endif %}
+                {% if field.errors %}
+                <p style="color:#dc3545; font-size:12px; margin-top:4px; font-weight:600;">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div style="display:flex;gap:12px;margin-top:8px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Guardar
+                    Cambios</button>
+                <a href="{% url 'portal:index' %}"
+                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

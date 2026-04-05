@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="upload-container"
+    style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+    <h1 style="text-align: center; margin-bottom: 30px;">Subir Nuevo Documento</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Título del Documento</label>
+            {{ form.title }}
+        </div>
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Archivo (PDF, Word, etc.)</label>
+            {{ form.file }}
+        </div>
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Categoría</label>
+            {{ form.category }}
+        </div>
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Reseña / Descripción</label>
+            {{ form.description }}
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button type="submit" class="button"
+                style="flex: 1; background: var(--accent); color: white; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer;">PUBLICAR
+                DOCUMENTO</button>
+            <a href="{% url 'library:document_list' %}" class="button"
+                style="flex: 1; text-align: center; background: var(--base); color: var(--contrast); padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold;">CANCELAR</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-control,
+    .form-select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--base);
+        border-radius: 10px;
+        box-sizing: border-box;
+    }
+</style>
+{% endblock %}

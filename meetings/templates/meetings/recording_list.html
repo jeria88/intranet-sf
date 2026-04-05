@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Repositorio de Reuniones | Intranet SFA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .repo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .repo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    .recording-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s;
+    }
+
+    .recording-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .recording-thumb {
+        height: 160px;
+        background: #1a1a2e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 40px;
+        position: relative;
+    }
+
+    .recording-thumb::after {
+        content: "▶";
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        backdrop-filter: blur(4px);
+    }
+
+    .recording-body {
+        padding: 20px;
+    }
+
+    .recording-room {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--accent);
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .recording-title {
+        font-size: 16px;
+        color: var(--contrast);
+        margin: 0 0 12px 0;
+        line-height: 1.4;
+    }
+
+    .recording-meta {
+        font-size: 13px;
+        color: var(--contrast-2);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .recording-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-watch {
+        display: block;
+        text-align: center;
+        background: var(--base);
+        color: var(--contrast);
+        text-decoration: none;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        margin-top: 16px;
+        transition: background 0.2s;
+    }
+
+    .btn-watch:hover {
+        background: #e2e8f0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="repo-header">
+    <div>
+        <h1 style="margin: 0 0 8px 0;">📹 Repositorio de Reuniones</h1>
+        <p style="margin: 0; color: var(--contrast-2);">Historial de videollamadas grabadas según tu perfil</p>
+    </div>
+    <a href="{% url 'meetings:meeting_list' %}"
+        style="text-decoration: none; color: var(--contrast-2); font-weight: 600;">← Volver a Salas</a>
+</div>
+
+<!-- Filtros del Repositorio -->
+<div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <form method="get" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: var(--contrast-3); text-transform: uppercase; margin-bottom: 6px;">Establecimiento</label>
+            <select name="establishment" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base); font-size: 14px; background: var(--base-2);">
+                <option value="">Todos los establecimientos</option>
+                {% for code, name in establishments %}
+                <option value="{{ code }}" {% if request.GET.establishment == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: var(--contrast-3); text-transform: uppercase; margin-bottom: 6px;">Rol</label>
+            <select name="role" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base); font-size: 14px; background: var(--base-2);">
+                <option value="">Todos los roles</option>
+                {% for code, name in roles %}
+                <option value="{{ code }}" {% if request.GET.role == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: var(--contrast-3); text-transform: uppercase; margin-bottom: 6px;">Mes</label>
+            <select name="month" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base); font-size: 14px; background: var(--base-2);">
+                <option value="">Cualquier mes</option>
+                <option value="01" {% if request.GET.month == '01' %}selected{% endif %}>Enero</option>
+                <option value="02" {% if request.GET.month == '02' %}selected{% endif %}>Febrero</option>
+                <option value="03" {% if request.GET.month == '03' %}selected{% endif %}>Marzo</option>
+                <option value="04" {% if request.GET.month == '04' %}selected{% endif %}>Abril</option>
+                <option value="05" {% if request.GET.month == '05' %}selected{% endif %}>Mayo</option>
+                <option value="06" {% if request.GET.month == '06' %}selected{% endif %}>Junio</option>
+                <option value="07" {% if request.GET.month == '07' %}selected{% endif %}>Julio</option>
+                <option value="08" {% if request.GET.month == '08' %}selected{% endif %}>Agosto</option>
+                <option value="09" {% if request.GET.month == '09' %}selected{% endif %}>Septiembre</option>
+                <option value="10" {% if request.GET.month == '10' %}selected{% endif %}>Octubre</option>
+                <option value="11" {% if request.GET.month == '11' %}selected{% endif %}>Noviembre</option>
+                <option value="12" {% if request.GET.month == '12' %}selected{% endif %}>Diciembre</option>
+            </select>
+        </div>
+        <button type="submit" style="background: var(--accent); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Filtrar</button>
+        <a href="{% url 'meetings:recording_list' %}" style="text-decoration: none; color: var(--contrast-2); font-size: 13px; margin-bottom: 10px;">Limpiar</a>
+    </form>
+</div>
+
+{% if bookings %}
+<div class="repo-grid">
+    {% for booking in bookings %}
+    <div class="recording-card">
+        <div class="recording-thumb">🎥</div>
+        <div class="recording-body">
+            <span class="recording-room">{{ booking.room.name }}</span>
+            <h3 class="recording-title">Reunión del {{ booking.scheduled_at|date:"d \d\e F, Y" }}</h3>
+
+            <div class="recording-meta">
+                <span>👤 Agendada por: {{ booking.booked_by.get_full_name|default:booking.booked_by.username }}</span>
+                <span>⏰ Hora: {{ booking.scheduled_at|date:"H:i" }} hrs</span>
+            </div>
+
+            <a href="{{ booking.recording_url }}" target="_blank" class="btn-watch">Ver Grabación ↗</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div
+    style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+    <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+    <h3 style="margin: 0 0 10px 0; color: var(--contrast);">Sin grabaciones disponibles</h3>
+    <p style="color: var(--contrast-2); margin: 0;">Aún no hay reuniones grabadas en las salas a las que tienes acceso.
+    </p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,337 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Intranet SFA{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/main.min.css' %}">
+    <style>
+        :root {
+            --contrast: #222222;
+            --contrast-2: #575760;
+            --contrast-3: #b2b2be;
+            --base: #f0f0f0;
+            --base-2: #f7f8f9;
+            --base-3: #ffffff;
+            --accent: #1e73be;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--base-2);
+            color: var(--contrast);
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            display: flex;
+            flex-direction: column;
+        }
+
+        .site-header {
+            background-color: var(--base-3);
+            padding: 20px 0;
+            border-bottom: 1px solid var(--base);
+            flex-shrink: 0;
+        }
+
+        .inside-header {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+        }
+
+        .site-logo img {
+            width: 60px;
+            height: auto;
+            margin-right: 20px;
+        }
+
+        .main-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .site-description {
+            font-size: 14px;
+            color: var(--contrast-2);
+            margin: 5px 0 0 0;
+        }
+
+        .main-navigation {
+            background-color: var(--base-3);
+            border-bottom: 1px solid var(--base);
+            flex-shrink: 0;
+        }
+
+        .inside-navigation {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .main-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+
+        .main-nav li a {
+            display: block;
+            padding: 15px 20px;
+            text-decoration: none;
+            color: var(--contrast);
+            font-weight: 500;
+        }
+
+        .main-nav li a:hover {
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            flex: 1;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Dropdown nav */
+        .main-nav ul li.has-dropdown {
+            position: relative;
+        }
+
+        .main-nav ul li.has-dropdown .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            min-width: 220px;
+            z-index: 1000;
+            padding: 8px 0;
+        }
+
+        .main-nav ul li.has-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-menu li a {
+            display: block;
+            padding: 9px 18px;
+            font-size: 14px;
+            color: var(--contrast-2) !important;
+            text-decoration: none;
+        }
+
+        .dropdown-menu li a:hover {
+            color: var(--accent) !important;
+            background: var(--base-2);
+        }
+
+        .dropdown-menu li.has-submenu {
+            position: relative;
+        }
+
+        .dropdown-menu li.has-submenu .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            min-width: 210px;
+            z-index: 1001;
+            padding: 8px 0;
+        }
+
+        .dropdown-menu li.has-submenu:hover .sub-dropdown {
+            display: block;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--base);
+            margin: 6px 0;
+        }
+
+        /* Utility */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body style="padding-top: 40px;">
+    <!-- Enhanced ANCI Compliance Seal -->
+    <div id="anci-seal" onclick="openAnciModal()" style="position:fixed; top:20px; right:20px; z-index:9999; cursor:pointer; filter:drop-shadow(0 6px 15px rgba(0,0,0,0.25)); transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); perspective: 1000px;">
+        <div style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:white; padding:10px; border-radius:12px; min-width:90px; height:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid #eab308; position:relative; overflow:hidden; box-shadow: inset 0 0 15px rgba(234, 179, 8, 0.2);">
+            <div style="position:absolute; top:0; left:-150%; width:100%; height:100%; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transform:skewX(-25deg); animation:anci-shine 4s infinite;"></div>
+            <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308" stroke-width="1"><path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/></svg>
+                <span style="font-size:10px; font-weight:900; letter-spacing:1px; color:#eab308;">ANCI</span>
+            </div>
+            <div style="text-align:center; line-height:1.1;">
+                <div style="font-size:8px; opacity:0.8; text-transform:uppercase; letter-spacing:0.5px;">Cumplimiento</div>
+                <div style="font-size:12px; font-weight:800; color:white; margin:2px 0;">LEY 21.663</div>
+                <div style="display:inline-block; background:#eab308; color:#0f172a; font-size:9px; font-weight:900; padding:2px 6px; border-radius:4px; margin-top:4px; text-transform:uppercase;">Ver Info</div>
+            </div>
+            <div style="position:absolute; bottom:-5px; left:-5px; width:20px; height:20px; background:#eab308; transform:rotate(45deg); opacity:0.3;"></div>
+        </div>
+        <div id="anci-tooltip" style="position:absolute; top:110%; right:0; background:rgba(15, 23, 42, 0.95); backdrop-filter:blur(8px); color:white; padding:15px; border-radius:12px; width:220px; margin-top:12px; box-shadow:0 15px 35px rgba(0,0,0,0.3); border:1px solid rgba(234, 179, 8, 0.3); opacity:0; pointer-events:none; transition:all 0.3s ease; transform:translateY(-10px); font-size:12px; line-height:1.4;">
+            <p style="margin:0; font-weight:800; color:#eab308; margin-bottom:4px;">🛡️ Ciberseguridad Activa</p>
+            Haz clic para ver detalles del cumplimiento normativo.
+        </div>
+    </div>
+
+    <!-- ANCI Info Modal -->
+    <div id="anci-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:10000; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:white; max-width:650px; width:100%; border-radius:24px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); position:relative; animation: anci-modal-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:white; padding:30px; position:relative;">
+                <button onclick="closeAnciModal()" style="position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; color:white; font-size:24px; cursor:pointer; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;">×</button>
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:10px;">
+                    <div style="background:#eab308; color:#0f172a; padding:8px 15px; border-radius:8px; font-weight:900; font-size:14px;">LEY N° 21.663</div>
+                    <span style="opacity:0.8; font-size:14px; font-weight:600;">Marco de Ciberseguridad Chile</span>
+                </div>
+                <h2 style="margin:0; font-size:28px;">Garantía Institucional de Seguridad</h2>
+            </div>
+            
+            <div style="padding:40px; color:#334155; font-size:15px; line-height:1.6; max-height:70vh; overflow-y:auto;">
+                <div style="display:grid; grid-template-columns: 1fr; gap:30px;">
+                    
+                    <section>
+                        <h3 style="color:#1e3a8a; border-left:4px solid #eab308; padding-left:12px; margin:0 0 12px 0;">🏫 ¿Qué implica para nuestro Colegio?</h3>
+                        <p>La adopción de esta ley nos obliga a implementar protocolos estrictos de protección de datos, incluyendo cifrado AES-256 en comunicaciones, copias de seguridad redundantes y una gestión proactiva de riesgos para proteger la información de nuestros alumnos y docentes.</p>
+                    </section>
+
+                    <section>
+                        <h3 style="color:#1e3a8a; border-left:4px solid #eab308; padding-left:12px; margin:0 0 12px 0;">🌟 Beneficios de la Certificación</h3>
+                        <ul style="padding-left:20px;">
+                            <li><b>Confianza Total:</b> Garantizamos a los apoderados que la información sensible de sus hijos está segura.</li>
+                            <li><b>Continuidad Operativa:</b> Protegemos la plataforma contra ataques que podrían interrumpir las clases o procesos administrativos.</li>
+                            <li><b>Estatus de Excelencia:</b> Posicionamos al colegio en el más alto estándar tecnológico nacional.</li>
+                        </ul>
+                    </section>
+
+                    <div style="background:#fefce8; padding:20px; border-radius:15px; border:1px solid #fef08a;">
+                        <h3 style="color:#854d0e; margin:0 0 10px 0;">🛡️ ¿De qué nos protegemos al cumplir?</h3>
+                        <p style="margin:0;">El cumplimiento riguroso nos exime de sanciones gravísimas contempladas en la Ley, las cuales pueden alcanzar hasta las <b>40.000 UTM</b> en casos de negligencia. Además, evitamos la responsabilidad civil y el daño irreparable a la reputación institucional derivado de filtraciones de datos.</p>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div style="background:#f8fafc; padding:20px 40px; text-align:center; border-top:1px solid #e2e8f0; font-weight:700; color:#64748b; font-size:12px; text-transform:uppercase; letter-spacing:1px;">
+                Certificación Activa • Intranet SFA 2026
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openAnciModal() { document.getElementById('anci-modal').style.display = 'flex'; }
+        function closeAnciModal() { document.getElementById('anci-modal').style.display = 'none'; }
+        window.onclick = function(event) { 
+            let modal = document.getElementById('anci-modal');
+            if (event.target == modal) { modal.style.display = "none"; }
+        }
+    </script>
+
+    <style>
+        @keyframes anci-shine { 0% { left: -150%; } 20% { left: 150%; } 100% { left: 150%; } }
+        @keyframes anci-modal-in { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        #anci-seal:hover { transform: translateY(-5px) scale(1.02); }
+        #anci-seal:hover #anci-tooltip { opacity: 1; transform: translateY(0); }
+    </style>
+
+    <header class="site-header">
+        <div class="inside-header">
+            <div class="site-logo">
+                <a href="/"><img src="{% static 'img/logo.png' %}" alt="Logo SFA"></a>
+            </div>
+            <div class="site-branding">
+                <p class="main-title">Intranet Establecimientos Educacionales</p>
+                <p class="site-description">Congregación Hermanas Terceras Franciscanas Misioneras de la Inmaculada
+                    Concepción de Angol</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="main-navigation">
+        <div class="inside-navigation">
+            <div class="main-nav">
+                <ul>
+                    <li><a href="{% url 'portal:index' %}">Portal Principal</a></li>
+                    <li><a href="{% url 'ai_modules:ai_list' %}">Asistentes IA</a></li>
+                    <li><a href="{% url 'meetings:meeting_list' %}">Salas de Reunión</a></li>
+                    <li><a href="{% url 'library:document_list' %}">Biblioteca Digital</a></li>
+
+                    <!-- Evidencia Red Dropdown -->
+                    <li class="has-dropdown">
+                        <a href="{% url 'evidencia:formularios' %}"
+                            style="display:flex;align-items:center;gap:4px;">Evidencia Red <span
+                                style="font-size:10px;">&#9660;</span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'evidencia:formularios' %}">Formularios de Evaluación</a></li>
+                            <li class="dropdown-divider"></li>
+                            <li class="has-submenu">
+                                <a href="{% url 'evidencia:reuniones' %}"
+                                    style="display:flex;justify-content:space-between;">Reuniones
+                                    <span>&#9658;</span></a>
+                                <ul class="sub-dropdown">
+                                    <li><a href="{% url 'evidencia:reunion_presencial' %}">Primera Reunión
+                                            Presencial</a></li>
+                                    <li><a href="{% url 'evidencia:reunion_virtual' %}">Primera Reunión Virtual</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+
+                    {% if user.is_authenticated %}
+                    <li style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+                        <a href="{% url 'users:profile' %}" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                            {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--base);">
+                            {% else %}
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">{{ user.username|first|upper }}</div>
+                            {% endif %}
+                            <span style="font-size: 14px; color: var(--contrast-2);">
+                                {{ user.get_full_name|default:user.username }} ({{ user.establishment }})
+                            </span>
+                        </a>
+                        <a href="{% url 'users:logout' %}" style="color: #dc3545; font-size: 14px; text-decoration: none; font-weight: 600;">Cerrar Sesión</a>
+                    </li>
+                    {% else %}
+                    <li style="margin-left: auto;"><a href="{% url 'users:login' %}"
+                            style="color: var(--accent);">Iniciar Sesión</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer style="text-align: center; padding: 20px 0; color: var(--contrast-3); flex-shrink: 0;">
+        <p>&copy; 2026 Intranet SFA - Beta</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

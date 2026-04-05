@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .ai-list-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .ai-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 30px;
+        margin: 0 auto;
+    }
+
+    .assistant-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        transition: transform 0.25s, box-shadow 0.25s;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .assistant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    .assistant-card img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+    }
+
+    .card-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        gap: 10px;
+    }
+
+    .card-body h3 {
+        font-size: 14px;
+        margin: 0;
+        color: var(--contrast);
+        line-height: 1.3;
+    }
+
+    .card-role {
+        font-size: 12px;
+        color: var(--contrast-3);
+    }
+
+    .btn-detail {
+        display: block;
+        background: var(--accent);
+        color: white;
+        padding: 11px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        text-align: center;
+        margin-top: auto;
+        transition: opacity 0.2s;
+    }
+
+    .btn-detail:hover {
+        opacity: 0.85;
+        color: white;
+    }
+
+    .badge-recommended {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #28a745;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 2;
+    }
+
+    @media (max-width: 900px) {
+        .ai-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ai-list-header">
+    <h1>Asistentes IA Especializados</h1>
+    <p>Selecciona tu perfil para ver el instructivo y acceder al asistente correspondiente.</p>
+</div>
+
+<div class="ai-grid">
+    {% for assistant in assistants %}
+    {% if assistant.is_recommended %}
+    <div class="assistant-card" style="position: relative; border: 2px solid #28a745;">
+        <div class="badge-recommended">★ RECOMENDADO</div>
+        <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
+        <div class="card-body">
+            <h3>{{ assistant.name }}</h3>
+            <p class="card-role">Para: {{ assistant.profile_role|default:"Todos los perfiles" }}</p>
+            <a href="{% url 'ai_modules:ai_detail' assistant.slug %}" class="btn-detail" style="background: #28a745;">
+                Ver Instructivo →
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="assistant-card" style="position: relative;">
+        <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
+        <div class="card-body">
+            <h3>{{ assistant.name }}</h3>
+            <p class="card-role">Para: {{ assistant.profile_role|default:"Todos los perfiles" }}</p>
+            <a href="{% url 'ai_modules:ai_detail' assistant.slug %}" class="btn-detail">
+                Ver Instructivo →
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

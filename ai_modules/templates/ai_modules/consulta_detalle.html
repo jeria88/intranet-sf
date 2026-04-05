@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{{ query.assistant.name }} | Consulta{% endblock %}
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <a href="{% url 'ai_modules:mis_consultas' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr; Mis
+        Consultas</a>
+    <div
+        style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+            <h2 style="margin:0;">{{ query.assistant.name }}</h2>
+            <span style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:8px;
+                {% if query.status == 'respondida' %}background:#d1e7dd;color:#0f5132;
+                {% elif query.status == 'vencida' %}background:#f8d7da;color:#842029;
+                {% elif query.status == 'en_proceso' %}background:#cff4fc;color:#0c5460;
+                {% else %}background:#fff3cd;color:#856404;{% endif %}">
+                {{ query.get_status_display }}
+            </span>
+        </div>
+        <p style="font-size:12px;color:#b2b2be;margin-bottom:20px;">Enviada: {{ query.submitted_at|date:"d/m/Y H:i" }} ·
+            Plazo: {{ query.deadline|date:"d/m/Y H:i" }}</p>
+        <div style="background:#f7f8f9;border-radius:10px;padding:18px;margin-bottom:20px;">
+            <p
+                style="font-size:12px;font-weight:700;color:#575760;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;">
+                Tu consulta</p>
+            <p style="font-size:15px;color:#222;margin:0;line-height:1.6;">{{ query.question }}</p>
+        </div>
+        {% if query.answer %}
+        <div style="background:#f0f9f4;border-radius:10px;padding:18px;border-left:4px solid #28a745;">
+            <p
+                style="font-size:12px;font-weight:700;color:#0f5132;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;">
+                ✅ Respuesta — {{ query.answered_at|date:"d/m/Y H:i" }}</p>
+            <p style="font-size:15px;color:#222;margin:0;line-height:1.7;white-space:pre-wrap;">{{ query.answer }}</p>
+            {% if query.answered_by %}
+            <p style="font-size:12px;color:#b2b2be;margin-top:12px;">Respondida por {{
+                query.answered_by.get_full_name|default:query.answered_by.username }}</p>
+            {% endif %}
+        </div>
+        {% elif query.status == 'vencida' %}
+        <div style="background:#fdf0f0;border-radius:10px;padding:18px;border-left:4px solid #dc3545;">
+            <p style="color:#842029;font-size:15px;margin:0;">⏰ Esta consulta venció su plazo de 24 horas sin ser
+                respondida. Puede solicitar una nueva consulta.</p>
+        </div>
+        {% else %}
+        <div style="background:#f7f8f9;border-radius:10px;padding:18px;text-align:center;color:#b2b2be;">
+            <p style="font-size:15px;margin:0;">⏳ Tu consulta está siendo procesada. Recibirás una notificación cuando
+                esté lista.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

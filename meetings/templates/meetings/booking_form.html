@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Reservar Sala | {{ room.name }}{% endblock %}
+{% block content %}
+<div style="max-width:540px; margin:0 auto;">
+    <a href="{% url 'meetings:meeting_list' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr; Ver
+        todas las salas</a>
+    <div
+        style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <h2 style="margin:0 0 6px;">Reservar: {{ room.name }}</h2>
+        <p style="font-size:13px;color:#575760;margin-bottom:24px;">
+            📸 Jitsi: <code>{{ room.slug }}</code> ·
+            {% if room.is_unlimited %}Sin límite de reuniones{% else %}Cupo: 4 reuniones/mes{% endif %}
+        </p>
+        {% if error %}
+        <div
+            style="background:#fdf0f0;border-left:4px solid #dc3545;border-radius:8px;padding:14px;margin-bottom:20px;font-size:14px;color:#842029;">
+            ⚠️ {{ error }}
+        </div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Fecha y
+                    hora de la reunión *</label>
+                <input type="datetime-local" name="scheduled_at" required
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Agenda
+                    (opcional)</label>
+                <textarea name="agenda" rows="5" placeholder="Puntos a tratar en la reunión..."
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Confirmar
+                    Reserva</button>
+                <a href="{% url 'meetings:meeting_list' %}"
+                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

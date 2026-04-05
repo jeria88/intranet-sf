@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Acción | {{ goal.title }}{% endblock %}
+{% block content %}
+<div style="max-width:600px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">⚡ Añadir Acción para: {{ goal.title }}</h2>
+    <div style="background:white; border-radius:14px; padding:32px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Título de la Acción *</label>
+                <input type="text" name="title" required placeholder="Ej: Capacitación docente en herramientas digitales"
+                    style="width:100%; padding:12px 16px; border:1px solid #f0f0f0; border-radius:10px; font-size:14px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Descripción</label>
+                <textarea name="description" rows="3" placeholder="Detalla los pasos o requerimientos de esta acción..."
+                    style="width:100%; padding:12px 16px; border:1px solid #f0f0f0; border-radius:10px; font-size:14px; box-sizing:border-box; resize:vertical;"></textarea>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Evidencia / Observaciones</label>
+                <textarea name="evidence" rows="2" placeholder="Describe la evidencia necesaria o resultados obtenidos..."
+                    style="width:100%; padding:12px 16px; border:1px solid #f0f0f0; border-radius:10px; font-size:14px; box-sizing:border-box; resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Responsable</label>
+                    <select name="responsible" required
+                        style="width:100%; padding:12px 16px; border:1px solid #f0f0f0; border-radius:10px; font-size:14px; box-sizing:border-box;">
+                        <option value="">Seleccionar responsable...</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} ({{ u.get_role_display }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Fecha Límite *</label>
+                    <input type="date" name="deadline" required
+                        style="width:100%; padding:12px 16px; border:1px solid #f0f0f0; border-radius:10px; font-size:14px; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">Peso / Importancia (%)</label>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <input type="range" name="weight" min="1" max="100" value="25" oninput="this.nextElementSibling.innerText = this.value + '%'"
+                        style="flex:1; accent-color:var(--accent);">
+                    <span style="font-weight:700; color:var(--accent); min-width:40px;">25%</span>
+                </div>
+                <p style="font-size:11px; color:var(--contrast-3); margin-top:6px;">Define cuánto contribuye esta acción al progreso total de la meta.</p>
+            </div>
+
+            <div style="display:flex; gap:12px; padding-top:12px; border-top:1px solid #f0f0f0;">
+                <button type="submit"
+                    style="background:var(--accent); color:white; border:none; padding:12px 32px; border-radius:30px; font-weight:700; font-size:14px; cursor:pointer;">Crear Acción</button>
+                <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}"
+                    style="padding:12px 32px; border-radius:30px; text-decoration:none; color:#575760; font-size:14px; border:1px solid #f0f0f0; font-weight:600;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

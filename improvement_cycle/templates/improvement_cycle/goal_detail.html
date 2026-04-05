@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}{{ goal.title }} | Detalle de Meta{% endblock %}
+{% block content %}
+<div style="max-width:900px; margin:0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;">
+        <div>
+            <a href="{% url 'improvement_cycle:dashboard_ee' %}?ee={{ goal.establishment }}" style="text-decoration:none; color:var(--accent); font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+                <span>←</span> Volver al Dashboard
+            </a>
+            <h1 style="margin:0; font-size:28px; color:var(--contrast);">{{ goal.title }}</h1>
+            <p style="margin:8px 0 0; color:var(--contrast-2);">{{ goal.get_subvention_type_display }} · {{ goal.establishment }} · Plazo: {{ goal.deadline|date:"d M Y" }}</p>
+        </div>
+        {% if can_edit %}
+        <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="background:var(--accent); color:white; text-decoration:none; padding:10px 20px; border-radius:30px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">
+            <span>+</span> Añadir Acción/Hito
+        </a>
+        {% endif %}
+    </div>
+
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px;">
+        <!-- Left: Actions List -->
+        <div>
+            <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h3 style="margin:0 0 20px; font-size:18px;">📋 Acciones y Seguimiento</h3>
+                
+                {% if not actions %}
+                <div style="text-align:center; padding:40px; color:var(--contrast-3);">
+                    <p style="font-size:16px; margin-bottom:12px;">No hay acciones registradas para esta meta.</p>
+                    {% if can_edit %}
+                    <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="color:var(--accent); font-weight:600;">Crea la primera acción</a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    {% for action in actions %}
+                    <div style="border:1px solid #f0f0f0; border-radius:12px; padding:16px; display:flex; gap:16px; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                                <h4 style="margin:0; font-size:16px;">{{ action.title }}</h4>
+                                <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:12px; 
+                                    {% if action.status == 'completado' %}background:#d1e7dd; color:#0f5132;
+                                    {% elif action.status == 'en_progreso' %}background:#fff3cd; color:#856404;
+                                    {% else %}background:#e9ecef; color:#495057;{% endif %}">
+                                    {{ action.get_status_display|upper }}
+                                </span>
+                            </div>
+                            <p style="margin:0 0 10px; font-size:13px; color:var(--contrast-2); line-height:1.4;">{{ action.description }}</p>
+                            {% if action.evidence %}
+                            <div style="background:#f8f9fa; border-left:3px solid #6c757d; padding:10px; margin-bottom:12px; border-radius:4px;">
+                                <p style="font-size:11px; font-weight:700; color:#495057; margin:0 0-4px; text-transform:uppercase;">Evidencia / Observaciones:</p>
+                                <p style="font-size:12px; color:#212529; margin:6px 0 0; line-height:1.4; font-style:italic;">{{ action.evidence }}</p>
+                            </div>
+                            {% endif %}
+                            <div style="display:flex; gap:16px; font-size:12px; color:var(--contrast-3);">
+                                <span>👤 <strong>Responsable:</strong> {{ action.responsible.get_full_name|default:action.responsible.username|default:"No asignado" }}</span>
+                                <span>📅 <strong>Plazo:</strong> {{ action.deadline|date:"d/m/Y" }}</span>
+                                <span>⚖️ <strong>Peso:</strong> {{ action.weight }}%</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <form method="post" action="{% url 'improvement_cycle:action_toggle' action.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" style="width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; 
+                                    {% if action.status == 'completado' %}background:#198754; color:white;{% else %}background:#f0f0f0; color:#b2b2be;{% endif %}" 
+                                    title="Marcar como {% if action.status == 'completado' %}pendiente{% else %}completado{% endif %}">
+                                    ✓
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right: Summary & Progress -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+            <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h3 style="margin:0 0 20px; font-size:18px;">📈 Progreso General</h3>
+                <div style="text-align:center; margin-bottom:20px;">
+                    <span style="font-size:48px; font-weight:800; color:var(--accent);">{{ goal.progress_pct }}%</span>
+                </div>
+                <div style="height:12px; background:#f0f0f0; border-radius:6px; overflow:hidden; margin-bottom:12px;">
+                    <div style="height:100%; width:{{ goal.progress_pct }}%; background:var(--accent); transition:width 0.5s ease-out;"></div>
+                </div>
+                <p style="font-size:14px; text-align:center; color:var(--contrast-2);">{{ goal.actions_summary }}</p>
+            </div>
+
+            <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h4 style="margin:0 0-12px; font-size:15px; color:var(--contrast-2);">Descripción de la Meta</h4>
+                <p style="font-size:14px; line-height:1.6; color:var(--contrast); margin-top:20px;">{{ goal.description|default:"Sin descripción detallada." }}</p>
+                <div style="margin-top:20px; padding-top:20px; border-top:1px solid #f0f0f0;">
+                    <p style="font-size:13px; margin:0;"><strong>Creado por:</strong> {{ goal.created_by.get_full_name|default:goal.created_by.username }}</p>
+                    <p style="font-size:13px; margin:5px 0 0;"><strong>Fecha:</strong> {{ goal.created_at|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

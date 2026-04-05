@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}🔴 Cola de Consultas IA | Admin{% endblock %}
+{% block extra_css %}
+<style>
+    .queue-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        margin-bottom: 12px;
+        border-left: 4px solid #1e73be;
+    }
+
+    .queue-card.urgent {
+        border-left-color: #dc3545;
+    }
+
+    .queue-card.warning {
+        border-left-color: #ffc107;
+    }
+
+    .btn-sm {
+        padding: 8px 18px;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-take {
+        background: #0d6efd;
+        color: white;
+    }
+
+    .btn-answer {
+        background: #198754;
+        color: white;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:4px;">🔴 Cola de Consultas IA</h2>
+<p style="color:#575760;font-size:14px;margin-bottom:24px;">{{ queries|length }} consulta(s) pendientes de respuesta.
+</p>
+
+{% if queries %}
+{% for q in queries %}
+<div class="queue-card {% if q.hours_remaining < 6 %}urgent{% elif q.hours_remaining < 12 %}warning{% endif %}">
+    <div
+        style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div>
+            <p style="font-size:15px;font-weight:700;color:#222;margin:0;">{{
+                q.user.get_full_name|default:q.user.username }}</p>
+            <p style="font-size:12px;color:#575760;margin:2px 0 0;">{{ q.user.get_role_display }} · {{
+                q.user.get_establishment_display }}</p>
+        </div>
+        <div style="text-align:right;">
+            <p
+                style="font-size:13px;font-weight:700;color:{% if q.hours_remaining < 6 %}#dc3545{% elif q.hours_remaining < 12 %}#856404{% else %}#1e73be{% endif %};margin:0;">
+                ⏱ {{ q.hours_remaining|floatformat:1 }}h restantes
+            </p>
+            <p style="font-size:11px;color:#b2b2be;margin:2px 0 0;">Plazo: {{ q.deadline|date:"d/m H:i" }}</p>
+        </div>
+    </div>
+    <div style="background:#f7f8f9;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <p style="font-size:12px;font-weight:600;color:#b2b2be;margin:0 0 4px;">Asistente: {{ q.assistant.name }}</p>
+        <p style="font-size:14px;color:#222;margin:0;">{{ q.question }}</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{% url 'ai_modules:responder_consulta' q.pk %}" class="btn-sm btn-answer">Responder</a>
+        {% if q.status == 'pendiente' %}
+        <form method="post" action="{% url 'ai_modules:responder_consulta' q.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button name="action" value="tomar" class="btn-sm btn-take">Tomar Consulta</button>
+        </form>
+        {% else %}
+        <span
+            style="font-size:12px;padding:8px 14px;background:#cff4fc;color:#0c5460;border-radius:12px;font-weight:600;">En
+            proceso</span>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div style="text-align:center;padding:60px;color:#b2b2be;">
+    <div style="font-size:48px;margin-bottom:16px;">✅</div>
+    <p style="font-size:16px;">Sin consultas pendientes. ¡Todo al día!</p>
+</div>
+{% endif %}
+{% endblock %}

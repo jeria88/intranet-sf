@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .meetings-header {
+        text-align: center;
+        margin-bottom: 36px;
+    }
+
+    /* ── SCHEDULE WIDGET ── */
+    .schedule-widget {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        margin-bottom: 32px;
+    }
+
+    .schedule-widget h3 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--contrast-3);
+        margin: 0 0 18px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--base);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .repo-btn {
+        display: inline-block;
+        background: var(--base);
+        color: var(--accent);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        text-transform: none;
+        letter-spacing: 0;
+        transition: background 0.2s;
+    }
+
+    .repo-btn:hover {
+        background: var(--base-2);
+    }
+
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .schedule-table th {
+        text-align: left;
+        padding: 10px 12px;
+        background: var(--base-2);
+        color: var(--contrast-2);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .schedule-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--base);
+        color: var(--contrast-2);
+        vertical-align: middle;
+    }
+
+    .schedule-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .badge-upcoming {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    /* ── ROOM CARDS ── */
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+
+    .meeting-card {
+        background: white;
+        padding: 26px 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        text-align: center;
+        border-top: 5px solid var(--accent);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .meeting-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .meeting-card h3 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    .meeting-card p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--contrast-2);
+    }
+
+    .btn-enter {
+        display: block;
+        background: var(--accent);
+        color: white;
+        padding: 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 13px;
+        margin-top: auto;
+        transition: opacity 0.2s;
+    }
+
+    .btn-enter:hover {
+        opacity: 0.85;
+        color: white;
+    }
+
+    @media (max-width: 900px) {
+        .rooms-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="meetings-header">
+    <h1>Salas de Reuniones Virtuales</h1>
+    <p>Acceda a las salas de trabajo colaborativo en red.</p>
+</div>
+
+<!-- Upcoming Schedule Widget -->
+<div class="schedule-widget">
+    <h3>
+        📅 Calendario de Próximas Reuniones
+        <a href="https://intranetsfa.io/reuniones/" target="_blank" class="repo-btn">
+            📁 Repositorio de Reuniones
+        </a>
+    </h3>
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th>Reunión</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Sala</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>3ª Reunión Red Directores</td>
+                <td>Marzo 2026</td>
+                <td>Por confirmar</td>
+                <td>Sala Directores</td>
+                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+            </tr>
+            <tr>
+                <td>3ª Reunión Red Inspectores</td>
+                <td>Marzo 2026</td>
+                <td>Por confirmar</td>
+                <td>Sala Inspectores</td>
+                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+            </tr>
+            <tr>
+                <td>3ª Reunión Red Convivencia</td>
+                <td>Marzo 2026</td>
+                <td>Por confirmar</td>
+                <td>Sala Convivencia</td>
+                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+            </tr>
+            <tr>
+                <td>3ª Reunión Red UTP</td>
+                <td>Marzo 2026</td>
+                <td>Por confirmar</td>
+                <td>Sala UTP</td>
+                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Room Cards -->
+<div class="rooms-grid">
+    {% for room in rooms %}
+    <div class="meeting-card">
+        <div style="font-size: 36px;">📹</div>
+        <h3>{{ room.name }}</h3>
+        <p>Sala oficial de la red SFA.</p>
+        <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter">
+            Ingresar a Reunión
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

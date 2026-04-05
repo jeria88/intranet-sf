@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .meeting-record-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .meeting-record-header h1 {
+        margin: 0 0 6px 0;
+    }
+
+    .meeting-record-header p {
+        margin: 0;
+        color: var(--contrast-2);
+        font-size: 15px;
+    }
+
+    .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--base);
+        color: var(--contrast-2);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .section-card h3 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--contrast-3);
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--base);
+    }
+
+    .doc-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .doc-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--base);
+        font-size: 14px;
+        color: var(--contrast-2);
+    }
+
+    .doc-list li:last-child {
+        border-bottom: none;
+    }
+
+    .doc-list a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .doc-list a:hover {
+        text-decoration: underline;
+    }
+
+    .doc-list .doc-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    /* Gallery */
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+    }
+
+    .gallery-item {
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 4/3;
+        background: var(--base-2);
+        display: block;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .gallery-item:hover {
+        transform: scale(1.03);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .gallery-section-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--contrast-3);
+        margin: 16px 0 8px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--base);
+    }
+
+    .gallery-section-label:first-child {
+        margin-top: 0;
+    }
+
+    /* Info chips */
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .info-chip {
+        background: var(--base-2);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .info-chip .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--contrast-3);
+        font-weight: 600;
+    }
+
+    .info-chip .value {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--contrast);
+        margin-top: 4px;
+    }
+
+    /* Survey CTA */
+    .survey-cta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .survey-cta p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--contrast-2);
+        flex: 1;
+    }
+
+    .btn-survey {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #2563eb;
+        color: white !important;
+        padding: 12px 22px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        transition: transform 0.15s, box-shadow 0.15s;
+        white-space: nowrap;
+    }
+
+    .btn-survey:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+        color: white !important;
+    }
+
+    @media (max-width: 640px) {
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+
+        .gallery-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .survey-cta {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'evidencia:reuniones' %}" style="font-size:13px; color:var(--contrast-2); text-decoration:none;">←
+    Volver a Reuniones</a>
+
+<div class="meeting-record-header" style="margin-top: 12px;">
+    <div>
+        <h1>🏫 Primera Reunión Presencial</h1>
+        <p>Primer Encuentro Presencial de la Red de Establecimientos Educacionales SFA</p>
+    </div>
+    <div style="display:flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span class="meta-badge">📅 Julio 2024</span>
+        <span class="meta-badge">🏛 Reunión Presencial</span>
+        <span class="meta-badge" style="background: #d1fae5; color: #065f46;">✓ Realizada</span>
+    </div>
+</div>
+
+<!-- Info chips -->
+<div class="info-row">
+    <div class="info-chip">
+        <div class="label">Modalidad</div>
+        <div class="value">Presencial</div>
+    </div>
+    <div class="info-chip">
+        <div class="label">Tipo</div>
+        <div class="value">Red Directiva</div>
+    </div>
+    <div class="info-chip">
+        <div class="label">Estado</div>
+        <div class="value" style="color: #059669;">Finalizada</div>
+    </div>
+</div>
+
+<!-- Actas y Documentos -->
+<div class="section-card">
+    <h3>📋 Documentos de la Reunión</h3>
+    <ul class="doc-list">
+        <li>
+            <span class="doc-icon">📄</span>
+            <span>
+                <a href="https://intranetsfa.io/wp-content/uploads/2025/08/ENCUESTA-DE-SATISFACCION-1ER-ENCUENTRO-PRESENCIAL-RED-SFA.pdf"
+                    target="_blank">
+                    Resultados Encuesta de Satisfacción — 1er Encuentro Presencial Red SFA
+                </a><br>
+                <small style="color:var(--contrast-3);">PDF con los resultados de la encuesta aplicada a los
+                    participantes</small>
+            </span>
+        </li>
+        <li>
+            <span class="doc-icon">📝</span>
+            <span>
+                <strong>Programa de la Jornada</strong><br>
+                <small style="color:var(--contrast-3);">Agenda y programa oficial del primer encuentro
+                    presencial</small>
+            </span>
+        </li>
+        <li>
+            <span class="doc-icon">🎯</span>
+            <span>
+                <strong>Objetivos de la Jornada</strong><br>
+                <small style="color:var(--contrast-3);">Objetivos definidos para la jornada de trabajo</small>
+            </span>
+        </li>
+        <li>
+            <span class="doc-icon">🏫</span>
+            <span>
+                <strong>Presentaciones por Colegio</strong><br>
+                <small style="color:var(--contrast-3);">Material presentado por cada establecimiento
+                    participante</small>
+            </span>
+        </li>
+        <li>
+            <span class="doc-icon">👥</span>
+            <span>
+                <strong>Taller Liderazgo</strong><br>
+                <small style="color:var(--contrast-3);">Materiales y recursos del taller de liderazgo directivo</small>
+            </span>
+        </li>
+    </ul>
+</div>
+
+<!-- Encuesta de Satisfacción -->
+<div class="section-card">
+    <h3>📝 Encuesta de Satisfacción</h3>
+    <div class="survey-cta">
+        <p>
+            Participa en la encuesta de satisfacción del 1er Encuentro Presencial Red SFA.
+            Tu opinión es fundamental para mejorar las futuras jornadas.
+        </p>
+        <a href="https://forms.gle/xu75ZzHySzufPkUJ6" target="_blank" class="btn-survey">
+            📋 Ir a la Encuesta
+        </a>
+    </div>
+</div>
+
+<!-- Galería de Fotos -->
+<div class="section-card">
+    <h3>📷 Galería de Fotos</h3>
+
+    <div class="gallery-section-label">📸 Registro</div>
+    <div class="gallery-grid">
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-1.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-1-1024x768-640x480.jpeg"
+                alt="Registro 1" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-2.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-2-1024x768-640x480.jpeg"
+                alt="Registro 2" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-3.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Registro-3-1024x768-640x480.jpeg"
+                alt="Registro 3" loading="lazy">
+        </a>
+    </div>
+
+    <div class="gallery-section-label">🖥 Presentaciones</div>
+    <div class="gallery-grid">
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Presentacion-1.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Presentacion-1-1024x768-640x480.jpeg"
+                alt="Presentación 1" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Presentacion-2.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Presentacion-2-1024x768-640x480.jpeg"
+                alt="Presentación 2" loading="lazy">
+        </a>
+    </div>
+
+    <div class="gallery-section-label">🎭 Actividades</div>
+    <div class="gallery-grid">
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-1.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-1-1024x768-640x480.jpeg"
+                alt="Actividad 1" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-2.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-2-1024x768-640x480.jpeg"
+                alt="Actividad 2" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-3.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-3-768x1024-640x480.jpeg"
+                alt="Actividad 3" loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-4.jpeg" target="_blank"
+            class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Actividad-4-1024x768-640x480.jpeg"
+                alt="Actividad 4" loading="lazy">
+        </a>
+    </div>
+
+    <div class="gallery-section-label">🎉 Cierre</div>
+    <div class="gallery-grid">
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-1.jpeg" target="_blank" class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-1-1024x768-640x480.jpeg" alt="Cierre 1"
+                loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-2.jpeg" target="_blank" class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-2-1024x768-640x480.jpeg" alt="Cierre 2"
+                loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-3.jpeg" target="_blank" class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-3-1024x768-640x480.jpeg" alt="Cierre 3"
+                loading="lazy">
+        </a>
+        <a href="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-4.jpeg" target="_blank" class="gallery-item">
+            <img src="https://intranetsfa.io/wp-content/uploads/2024/07/Cierre-4-1024x768-640x480.jpeg" alt="Cierre 4"
+                loading="lazy">
+        </a>
+    </div>
+</div>
+{% endblock %}

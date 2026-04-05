@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Circular | Intranet SFA{% endblock %}
+{% block content %}
+<div style="max-width:640px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">📢 Nueva Circular</h2>
+    <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Título
+                    *</label>
+                <input type="text" name="title" required placeholder="Asunto de la circular"
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Contenido
+                    *</label>
+                <textarea name="body" rows="8" required placeholder="Redacta la circular..."
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label
+                    style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Prioridad</label>
+                <select name="priority"
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                    <option value="normal">Normal</option>
+                    <option value="importante">Importante</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                <div>
+                    <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Roles
+                        destinatarios (opcional)</label>
+                    <select name="target_roles" multiple
+                        style="width:100%;padding:8px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;box-sizing:border-box;height:90px;">
+                        {% for val, label in roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Establecimientos
+                        (opcional)</label>
+                    <select name="target_establishments" multiple
+                        style="width:100%;padding:8px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;box-sizing:border-box;height:90px;">
+                        {% for val, label in establishments %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <p style="font-size:12px;color:#b2b2be;margin-bottom:16px;">La circular quedará en estado "Pendiente de
+                Aprobación" hasta ser revisada por el Representante Legal.</p>
+            <div style="display:flex;gap:12px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Enviar
+                    para Aprobación</button>
+                <a href="{% url 'portal:index' %}"
+                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

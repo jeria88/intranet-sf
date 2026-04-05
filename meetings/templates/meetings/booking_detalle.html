@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Detalle Reunión | Intranet SFA{% endblock %}
+{% block extra_css %}
+<style>
+    .booking-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        margin-bottom: 16px;
+    }
+
+    .section-card h4 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #b2b2be;
+        margin: 0 0 14px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+
+    .agreement-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f7f8f9;
+        font-size: 14px;
+        color: #222;
+    }
+
+    .agreement-item:last-child {
+        border-bottom: none;
+    }
+
+    .attendance-pill {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        background: #d1e7dd;
+        color: #0f5132;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 3px;
+    }
+
+    @media(max-width:700px) {
+        .booking-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div
+    style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div>
+        <a href="{% url 'meetings:meeting_list' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr;
+            Volver a Salas</a>
+        <h2 style="margin:8px 0 4px;">Reunión: {{ booking.room.name }}</h2>
+        <p style="font-size:13px;color:#575760;margin:0;">📅 {{ booking.scheduled_at|date:"d/m/Y H:i" }} · {{
+            booking.get_status_display }}</p>
+    </div>
+    <a href="{% url 'meetings:meeting_room' booking.room.slug %}"
+        style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">
+        📹 Entrar a la Sala
+    </a>
+</div>
+
+{% if booking.agenda %}
+<div class="section-card" style="margin-bottom:20px;">
+    <h4>📋 Agenda</h4>
+    <p style="font-size:14px;color:#222;line-height:1.6;margin:0;white-space:pre-wrap;">{{ booking.agenda }}</p>
+</div>
+{% endif %}
+
+<div class="booking-grid">
+    <!-- Asistentes -->
+    <div class="section-card">
+        <h4>👥 Asistentes ({{ attendances|length }})</h4>
+        {% if attendances %}
+        {% for att in attendances %}
+        <span class="attendance-pill">{{ att.user.get_full_name|default:att.user.username }}</span>
+        {% endfor %}
+        {% else %}
+        <p style="color:#b2b2be;font-size:13px;margin:0;">Aún no hay asistentes registrados.</p>
+        {% endif %}
+    </div>
+
+    <!-- Documentos -->
+    <div class="section-card">
+        <h4>📎 Documentos</h4>
+        {% if documents %}
+        {% for doc in documents %}
+        <div
+            style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f7f8f9;">
+            <span style="font-size:14px;color:#222;">{{ doc.title }}</span>
+            <a href="{{ doc.file.url }}" target="_blank"
+                style="font-size:12px;color:#1e73be;text-decoration:none;">Descargar</a>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:#b2b2be;font-size:13px;margin:0 0 12px;">Sin documentos subidos.</p>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" style="margin-top:12px;">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="document">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" name="title" placeholder="Título" required
+                    style="flex:1;padding:8px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;min-width:100px;">
+                <input type="file" name="file" required style="font-size:12px;padding:6px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;">Subir</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Acuerdos -->
+<div class="section-card">
+    <h4>✅ Acuerdos y Compromisos</h4>
+    {% if agreements %}
+    {% for ag in agreements %}
+    <div class="agreement-item">
+        <p style="margin:0 0 3px;font-weight:600;">{{ ag.description }}</p>
+        <p style="margin:0;font-size:12px;color:#b2b2be;">
+            Responsable: {{ ag.responsible.get_full_name|default:ag.responsible.username }}
+            {% if ag.deadline %} · Fecha límite: {{ ag.deadline|date:"d/m/Y" }}{% endif %}
+            {% if ag.is_fulfilled %} · <span style="color:#198754;">Cumplido ✓</span>{% endif %}
+        </p>
+    </div>
+    {% endfor %}
+    {% endif %}
+    <!-- Formulario agregar acuerdo -->
+    <form method="post" style="margin-top:14px;">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="agreement">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <input type="text" name="description" placeholder="Descripción del acuerdo" required
+                style="flex:1;padding:9px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;min-width:160px;">
+            <input type="date" name="deadline"
+                style="padding:9px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;">
+            <button type="submit"
+                style="background:#198754;color:white;border:none;padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;">+
+                Agregar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

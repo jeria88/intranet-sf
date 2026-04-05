@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Responder Consulta | Admin IA{% endblock %}
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <a href="{% url 'ai_modules:cola_consultas' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr;
+        Volver a la cola</a>
+    <div
+        style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <h2 style="margin:0 0 8px;">Responder Consulta</h2>
+        <p style="font-size:13px;color:#575760;margin-bottom:20px;">
+            De: <strong>{{ query.user.get_full_name|default:query.user.username }}</strong>
+            ({{ query.user.get_role_display }}) · Plazo: <strong>{{ query.deadline|date:"d/m/Y H:i" }}</strong>
+        </p>
+        <div style="background:#f7f8f9;border-radius:10px;padding:18px;margin-bottom:24px;">
+            <p
+                style="font-size:12px;font-weight:700;color:#575760;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;">
+                Asistente: {{ query.assistant.name }}
+            </p>
+            <p style="font-size:15px;color:#222;margin:0;line-height:1.6;">{{ query.question }}</p>
+        </div>
+        <div
+            style="background:#e8f4fd;border-radius:10px;padding:14px 18px;margin-bottom:24px;border-left:3px solid #1e73be;">
+            <p style="font-size:13px;color:#1e73be;margin:0;font-weight:600;">
+                💡 Sugerencia: Consulta la IA en
+                <a href="{{ query.assistant.notebook_url }}" target="_blank" style="color:#1e73be;">{{
+                    query.assistant.name }} (NotebookLM)</a>
+                y luego pega la respuesta curada aquí.
+            </p>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:8px;">Respuesta para
+                el usuario</label>
+            <textarea name="answer" rows="10" placeholder="Escribe aquí la respuesta curada..." required
+                style="width:100%;padding:12px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;line-height:1.6;margin-bottom:20px;">{{ query.answer }}</textarea>
+            <div style="display:flex;gap:12px;">
+                <button name="action" value="responder"
+                    style="background:#198754;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">
+                    ✅ Entregar Respuesta
+                </button>
+                <a href="{% url 'ai_modules:cola_consultas' %}"
+                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

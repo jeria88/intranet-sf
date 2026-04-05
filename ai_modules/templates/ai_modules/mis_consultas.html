@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Mis Consultas IA | Intranet SFA{% endblock %}
+{% block extra_css %}
+<style>
+    .query-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        margin-bottom: 12px;
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .status-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 8px;
+        text-transform: uppercase;
+    }
+
+    .status-pendiente {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-en_proceso {
+        background: #cff4fc;
+        color: #0c5460;
+    }
+
+    .status-respondida {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .status-vencida {
+        background: #f8d7da;
+        color: #842029;
+    }
+
+    .hours-bar {
+        width: 100%;
+        height: 6px;
+        background: #f0f0f0;
+        border-radius: 3px;
+        margin-top: 6px;
+    }
+
+    .hours-fill {
+        height: 100%;
+        background: #1e73be;
+        border-radius: 3px;
+        transition: width .3s;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+    <h2 style="margin:0;">🤖 Mis Consultas IA</h2>
+    <a href="{% url 'ai_modules:ai_list' %}"
+        style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">+
+        Nueva Consulta</a>
+</div>
+{% if queries %}
+{% for q in queries %}
+<a href="{% url 'ai_modules:consulta_detalle' q.pk %}" style="text-decoration:none;">
+    <div class="query-card">
+        <div style="font-size:36px;flex-shrink:0;">🤖</div>
+        <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+                <p style="font-size:15px;font-weight:600;color:#222;margin:0 0 4px;">{{ q.assistant.name }}</p>
+                <span class="status-badge status-{{ q.status }}">{{ q.get_status_display }}</span>
+            </div>
+            <p style="font-size:13px;color:#575760;margin:0 0 8px;">{{ q.question|truncatechars:120 }}</p>
+            <div style="display:flex;gap:16px;font-size:12px;color:#b2b2be;">
+                <span>📅 {{ q.submitted_at|date:"d/m/Y H:i" }}</span>
+                <span>⏱ Plazo: {{ q.deadline|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% if q.status != 'respondida' and q.status != 'vencida' %}
+            <div class="hours-bar" title="{{ q.hours_remaining|floatformat:1 }}h restantes">
+                <div class="hours-fill"
+                    style="width:{{ q.hours_remaining|floatformat:0 }}%;background:{% if q.hours_remaining < 6 %}#dc3545{% elif q.hours_remaining < 12 %}#ffc107{% else %}#1e73be{% endif %};">
+                </div>
+            </div>
+            {% endif %}
+            {% if q.answer %}
+            <div
+                style="margin-top:10px;padding:10px 14px;background:#f7f8f9;border-radius:8px;border-left:3px solid #28a745;">
+                <p style="font-size:13px;color:#0f5132;font-weight:600;margin:0 0 4px;">Respuesta:</p>
+                <p style="font-size:13px;color:#575760;margin:0;">{{ q.answer|truncatechars:150 }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</a>
+{% endfor %}
+{% else %}
+<div style="text-align:center;padding:60px;color:#b2b2be;">
+    <div style="font-size:48px;margin-bottom:16px;">🤖</div>
+    <p>Aún no has enviado ninguna consulta.</p>
+    <a href="{% url 'ai_modules:ai_list' %}" style="color:#1e73be;">Ver asistentes disponibles →</a>
+</div>
+{% endif %}
+{% endblock %}

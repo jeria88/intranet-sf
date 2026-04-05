@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Mensaje | Intranet SFA{% endblock %}
+{% block content %}
+<div style="max-width:640px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">Nuevo Mensaje</h2>
+    <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Destinatario</label>
+                <select name="recipient" required style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                    <option value="">-- Seleccionar usuario --</option>
+                    {% for u in users %}
+                    <option value="{{ u.pk }}" {% if initial_recipient and u.pk == initial_recipient.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }} -- {{ u.get_role_display }} ({{ u.get_establishment_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Asunto</label>
+                <input type="text" name="subject" placeholder="Asunto del mensaje" required style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Mensaje</label>
+                <textarea name="body" rows="7" placeholder="Escribe tu mensaje..." required style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button type="submit" style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Enviar Mensaje</button>
+                <a href="{% url 'messaging:bandeja_entrada' %}" style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

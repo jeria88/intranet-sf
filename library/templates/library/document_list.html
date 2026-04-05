@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .sort-link {
+        text-decoration: none;
+        color: var(--contrast-2);
+        transition: color 0.1s;
+    }
+
+    .sort-link.active {
+        color: var(--accent);
+        font-weight: bold;
+    }
+
+    .sort-link:hover {
+        color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="library-header"
+    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1>Biblioteca Digital</h1>
+        <p>Repositorio central de documentos y recursos técnicos.</p>
+    </div>
+    <a href="{% url 'library:document_upload' %}" class="button"
+        style="background: var(--accent); color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold;">+
+        Subir Documento</a>
+</div>
+
+<!-- Search and Sort Bar -->
+<div class="controls-bar"
+    style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 30px; display: flex; gap: 20px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <form method="get" style="flex: 1; display: flex; gap: 10px;">
+        <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar por nombre..."
+            style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--base);">
+        <button type="submit" class="button"
+            style="background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer;">Buscar</button>
+    </form>
+    <div class="sort-controls" style="display: flex; gap: 10px; align-items: center; font-size: 14px;">
+        <span>Ordenar por:</span>
+        <a href="?sort=-upload_date&q={{ query|default:'' }}&category={{ selected_category|default:'' }}&role={{ selected_role|default:'' }}&establishment={{ selected_establishment|default:'' }}"
+            class="sort-link {% if sort == '-upload_date' %}active{% endif %}">Fecha
+            ↓</a>
+        <a href="?sort=title&q={{ query|default:'' }}&category={{ selected_category|default:'' }}&role={{ selected_role|default:'' }}&establishment={{ selected_establishment|default:'' }}"
+            class="sort-link {% if sort == 'title' %}active{% endif %}">Nombre
+            A-Z</a>
+    </div>
+</div>
+
+<div class="library-container" style="display: grid; grid-template-columns: 280px 1fr; gap: 40px;">
+    <!-- Sidebar Filters -->
+    <div class="sidebar">
+        <form method="get" id="filter-form">
+            <!-- Maintain search and sort -->
+            <input type="hidden" name="q" value="{{ query|default:'' }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+
+            <div class="filter-group" style="margin-bottom: 25px;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">Categoría</h3>
+                <select name="category" onchange="this.form.submit()"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base);">
+                    <option value="">Todas</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category == cat.id %}selected{% endif %}>
+                        {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group" style="margin-bottom: 25px;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">Rol de Autor</h3>
+                <select name="role" onchange="this.form.submit()"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base);">
+                    <option value="">Todos</option>
+                    {% for val, label in roles %}
+                    <option value="{{ val }}" {% if selected_role == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group" style="margin-bottom: 25px;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">Establecimiento</h3>
+                <select name="establishment" onchange="this.form.submit()"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--base);">
+                    <option value="">Todos</option>
+                    {% for val, label in establishments %}
+                    <option value="{{ val }}" {% if selected_establishment == val %}selected{% endif %}>{{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <a href="{% url 'library:document_list' %}"
+                style="display: block; text-align: center; font-size: 14px; color: var(--contrast-3); text-decoration: none;">Limpiar
+                Filtros</a>
+        </form>
+    </div>
+
+    <!-- Document List -->
+    <div class="document-list">
+        {% if documents %}
+        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            {% for doc in documents %}
+            <div class="document-card"
+                style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; gap: 20px; transition: transform 0.2s;">
+                <div class="file-icon"
+                    style="font-size: 40px; background: var(--base-2); padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    📄</div>
+                <div class="doc-info" style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <h3 style="margin: 0 0 10px 0; color: var(--accent);">{{ doc.title }}</h3>
+                        <span
+                            style="background: var(--base); font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: bold; color: var(--contrast-2);">{{
+                            doc.get_establishment_display }}</span>
+                    </div>
+                    <p style="font-size: 14px; color: var(--contrast-2); margin-bottom: 15px;">{{ doc.description }}</p>
+                    <div class="meta"
+                        style="font-size: 12px; color: var(--contrast-3); display: flex; flex-wrap: wrap; gap: 15px;">
+                        <span><strong>📂:</strong> {{ doc.category.name }}</span>
+                        <span><strong>👤:</strong> {{ doc.author.get_role_display|default:doc.author.username }}</span>
+                        <span><strong>📅:</strong> {{ doc.upload_date|date:"d M Y" }}</span>
+                    </div>
+                </div>
+                <div class="actions" style="display: flex; align-items: center;">
+                    <a href="{{ doc.file.url }}" class="button"
+                        style="background: var(--accent); color: white; padding: 10px 20px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: bold;"
+                        download>DESCARGAR</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div
+            style="text-align: center; padding: 100px; color: var(--contrast-3); background: white; border-radius: 15px;">
+            <p>No se encontraron documentos con los filtros seleccionados.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

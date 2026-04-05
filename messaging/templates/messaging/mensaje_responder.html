@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Responder | Mensajes{% endblock %}
+{% block content %}
+<div style="max-width:640px; margin:0 auto;">
+    <a href="{% url 'messaging:mensaje_detalle' original.pk %}"
+        style="color:#1e73be;font-size:13px;text-decoration:none;">&larr; Volver al mensaje</a>
+    <div
+        style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <h3 style="margin:0 0 16px;">Responder: {{ original.subject }}</h3>
+        <div
+            style="background:#f7f8f9;border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px;color:#575760;border-left:3px solid #b2b2be;">
+            <strong>{{ original.sender.get_full_name|default:original.sender.username }}:</strong><br>
+            {{ original.body|truncatechars:200 }}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <textarea name="body" rows="6" placeholder="Escribe tu respuesta..." required
+                style="width:100%;padding:12px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;margin-bottom:16px;"></textarea>
+            <div style="display:flex;gap:12px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:11px 26px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Enviar
+                    Respuesta</button>
+                <a href="{% url 'messaging:mensaje_detalle' original.pk %}"
+                    style="padding:11px 26px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

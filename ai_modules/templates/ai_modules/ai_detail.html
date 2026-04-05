@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .detail-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 40px;
+        align-items: start;
+    }
+
+    .detail-sidebar {
+        position: sticky;
+        top: 20px;
+        text-align: center;
+    }
+
+    .assistant-photo {
+        width: 100%;
+        border-radius: 20px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        margin-bottom: 20px;
+    }
+
+    .role-badge {
+        display: inline-block;
+        background: var(--accent);
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+    }
+
+    .btn-launch {
+        display: block;
+        background: linear-gradient(135deg, #1e73be, #0d5aa7);
+        color: white;
+        padding: 14px 20px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 15px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 12px rgba(30, 115, 190, 0.35);
+    }
+
+    .btn-launch:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(30, 115, 190, 0.45);
+        color: white;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--contrast-2);
+        text-decoration: none;
+        font-size: 13px;
+        margin-bottom: 30px;
+        transition: color 0.2s;
+    }
+
+    .btn-back:hover {
+        color: var(--accent);
+    }
+
+    .detail-content h1 {
+        font-size: 28px;
+        margin: 0 0 8px 0;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .section-card h3 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--contrast-3);
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--base);
+    }
+
+    .section-card p {
+        color: var(--contrast-2);
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    .use-case-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .use-case-list li {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--base);
+        color: var(--contrast-2);
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .use-case-list li:last-child {
+        border-bottom: none;
+    }
+
+    .use-case-list li::before {
+        content: "✓";
+        color: var(--accent);
+        font-weight: bold;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    .notice-box {
+        background: #e8f4fd;
+        border-left: 4px solid var(--accent);
+        padding: 14px 18px;
+        border-radius: 0 10px 10px 0;
+        font-size: 13px;
+        color: #1a5276;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .detail-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-sidebar {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'ai_modules:ai_list' %}" class="btn-back">← Volver a Asistentes IA</a>
+
+<div class="detail-layout">
+
+    <!-- Sidebar -->
+    <aside class="detail-sidebar">
+        <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" class="assistant-photo">
+        <div class="role-badge">{{ assistant.profile_role }}</div>
+        <a href="{{ assistant.notebook_url }}" target="_blank" class="btn-launch">
+            🚀 Abrir en NotebookLM
+        </a>
+        <p class="notice-box" style="margin-top: 16px; text-align: left;">
+            Se abrirá en una nueva pestaña. Inicia sesión con tu cuenta corporativa de Google
+            para acceder al asistente.
+        </p>
+    </aside>
+
+    <!-- Main content -->
+    <div class="detail-content">
+        <h1>{{ assistant.name }}</h1>
+        <p style="color: var(--contrast-2); margin: 0 0 24px 0; font-size: 15px;">
+            Perfil: <strong>{{ assistant.profile_role }}</strong>
+        </p>
+
+        <div class="section-card">
+            <h3>¿Qué hace este asistente?</h3>
+            <p>{{ assistant.description }}</p>
+        </div>
+
+        <div class="section-card">
+            <h3>Casos de uso — ¿Cómo puedo usarlo?</h3>
+            <ul class="use-case-list">
+                {% for case in assistant.get_use_cases_list %}
+                <li>{{ case }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section-card">
+            <h3>Importante antes de comenzar</h3>
+            <ul class="use-case-list">
+                <li>Este asistente está basado en documentos normativos reales, pero sus respuestas son orientativas —
+                    siempre valida decisiones críticas con la fuente oficial.</li>
+                <li>Para mejores resultados, formula preguntas específicas y menciona el contexto (ej: "en el contexto
+                    de un colegio subvencionado").</li>
+                <li>Puedes hacer preguntas de seguimiento dentro del mismo chat para profundizar el análisis.</li>
+            </ul>
+        </div>
+
+        <div class="section-card" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+            <h3 style="border-bottom: none; margin-bottom: 5px; color: var(--accent);"><i class="fas fa-user-tie"></i>
+                ¿Necesitas Validación Humana?</h3>
+            <p style="font-size: 13.5px; margin-bottom: 15px;">
+                Si la IA entregó una respuesta ambigua o el caso es complejo, puedes elevar tu consulta formalmente. El
+                <strong>Equipo Red u otro directivo</strong> revisará tu caso y te responderá en un plazo máximo de
+                <strong>24 horas hábiles</strong>.
+            </p>
+            <a href="{% url 'ai_modules:nueva_consulta' assistant.slug %}" class="btn-launch"
+                style="display: inline-block; padding: 10px 18px; font-size: 13px; background: white; color: var(--accent); border: 2px solid var(--accent); box-shadow: none;">
+                📝 Enviar Consulta Formal
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

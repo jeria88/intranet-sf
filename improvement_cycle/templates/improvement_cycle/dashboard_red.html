@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard Red Congregacional | Intranet SFA{% endblock %}
+{% block extra_css %}
+<style>
+    .stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .stat-box {
+        background: white;
+        border-radius: 12px;
+        padding: 18px 24px;
+        flex: 1;
+        min-width: 140px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        text-align: center;
+    }
+
+    .stat-box .num {
+        font-size: 32px;
+        font-weight: 800;
+        color: #1e73be;
+        margin: 0;
+    }
+
+    .stat-box .lbl {
+        font-size: 12px;
+        color: #575760;
+        margin: 0;
+    }
+
+    .ee-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .ee-table th {
+        background: #f7f8f9;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #b2b2be;
+        padding: 12px 16px;
+        text-align: left;
+    }
+
+    .ee-table td {
+        padding: 12px 16px;
+        border-top: 1px solid #f0f0f0;
+        font-size: 14px;
+    }
+
+    .mini-bar {
+        height: 8px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        min-width: 80px;
+    }
+
+    .mini-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <h2 style="margin:0;">🌐 Dashboard Red Congregacional</h2>
+    {% if user.is_staff %}
+    <a href="{% url 'improvement_cycle:meta_crear' %}"
+        style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">+
+        Nueva Meta</a>
+    {% endif %}
+</div>
+
+<div class="stats-row">
+    <div class="stat-box">
+        <p class="num" style="color:#1e73be;">{{ stats.en_proceso|default:0 }}</p>
+        <p class="lbl">En Proceso</p>
+    </div>
+    <div class="stat-box">
+        <p class="num" style="color:#198754;">{{ stats.completada|default:0 }}</p>
+        <p class="lbl">Completadas</p>
+    </div>
+    <div class="stat-box">
+        <p class="num" style="color:#dc3545;">{{ stats.en_riesgo|default:0 }}</p>
+        <p class="lbl">En Riesgo</p>
+    </div>
+    <div class="stat-box">
+        <p class="num" style="color:#6c757d;">{{ stats.pendiente|default:0 }}</p>
+        <p class="lbl">Pendientes</p>
+    </div>
+</div>
+
+<table class="ee-table">
+    <thead>
+        <tr>
+            <th>Establecimiento</th>
+            <th>Meta</th>
+            <th>Progreso</th>
+            <th>Estado</th>
+            <th>Plazo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for g in all_goals %}
+        <tr>
+            <td><strong>{{ g.establishment }}</strong></td>
+            <td>{{ g.title|truncatechars:40 }}</td>
+            <td>
+                <div class="mini-bar">
+                    <div class="mini-fill"
+                        style="width:{{ g.progress_pct|floatformat:0 }}%;background:
+                    {% if g.progress_pct >= 80 %}#198754{% elif g.progress_pct >= 50 %}#1e73be{% else %}#dc3545{% endif %};"></div>
+                </div>
+                <small style="color:#b2b2be;">{{ g.progress_pct|floatformat:0 }}%</small>
+            </td>
+            <td><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;
+            {% if g.status == 'completada' %}background:#d1e7dd;color:#0f5132;
+            {% elif g.status == 'en_riesgo' %}background:#fdf0f0;color:#842029;
+            {% else %}background:#f0f0f0;color:#575760;{% endif %}">{{ g.get_status_display }}</span>
+            </td>
+            <td style="color:{% if g.deadline < today%}#dc3545{% else %}#575760{% endif %};">{{ g.deadline|date:"d/m/Y"
+                }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" style="text-align:center;color:#b2b2be;padding:30px;">Sin metas registradas.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if all_alerts %}
+<h3 style="margin:28px 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:#b2b2be;">🚨 Alertas
+    Activas ({{ all_alerts|length }})</h3>
+{% for a in all_alerts %}
+<div
+    style="background:white;border-radius:10px;padding:14px 18px;margin-bottom:8px;border-left:4px solid #dc3545;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <p style="font-size:14px;font-weight:600;color:#842029;margin:0 0 3px;">{{ a.get_alert_type_display }}</p>
+        <small style="color:#b2b2be;white-space:nowrap;">{{ a.triggered_at|date:"d/m H:i" }}</small>
+    </div>
+    <p style="font-size:13px;color:#575760;margin:0;">{{ a.description }}</p>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

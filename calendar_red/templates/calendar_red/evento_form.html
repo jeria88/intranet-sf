@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Evento | Calendario SFA{% endblock %}
+
+{% block content %}
+<div style="max-width:800px; margin:0 auto; padding-bottom: 40px;">
+    <div style="margin-bottom: 30px;">
+        <a href="{% url 'calendar_red:calendario' %}" style="color:var(--accent); font-size:14px; text-decoration:none; display: flex; align-items: center; gap: 5px; font-weight: 600;">
+            &larr; Volver al Calendario
+        </a>
+        <h1 style="margin: 15px 0 5px; font-size: 28px; font-weight: 800;">📅 Agregar Nuevo Evento</h1>
+        <p style="color: var(--contrast-2); margin: 0;">Completa los detalles para calendarizar una actividad en la red.</p>
+    </div>
+
+    <div style="background:white; border-radius:24px; padding:40px; box-shadow:0 10px 40px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="margin-bottom:28px;">
+                <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Título del Evento *</label>
+                <input type="text" name="title" required placeholder="Ej: Plazo entrega PME, Reunión de Directores..."
+                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe;">
+            </div>
+
+            <div style="margin-bottom:28px;">
+                <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Descripción (Opcional)</label>
+                <textarea name="description" rows="4" placeholder="Detalles, enlaces o instrucciones relevantes..."
+                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
+                <div>
+                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Fecha del Evento *</label>
+                    <input type="date" name="event_date" required
+                        style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Categoría / Fuente *</label>
+                    <select name="event_type"
+                        style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; cursor: pointer;">
+                        {% for val, label in event_types %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
+                <div>
+                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Roles Destinatarios</label>
+                    <select name="applies_to_roles" multiple id="roles_select"
+                        style="width:100%; padding:14px; border:2px solid #f1f5f9; border-radius:12px; font-size:14px; height:120px; background: #fcfdfe;">
+                        {% for val, label in roles %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p style="font-size:11px; color:var(--contrast-3); margin-top:5px;">Deja vacío para todos los roles. Ctrl+Click para seleccionar varios.</p>
+                </div>
+                <div>
+                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Establecimientos</label>
+                    <select name="applies_to_establishments" multiple id="ee_select"
+                        style="width:100%; padding:14px; border:2px solid #f1f5f9; border-radius:12px; font-size:14px; height:120px; background: #fcfdfe;">
+                        {% for val, label in establishments %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p style="font-size:11px; color:var(--contrast-3); margin-top:5px;">Deja vacío para toda la Red SFA.</p>
+                </div>
+            </div>
+
+            <div style="background: #fff9db; border: 1px solid #ffe066; border-radius: 16px; padding: 20px; margin-bottom: 35px; display: flex; align-items: flex-start; gap: 15px;">
+                <input type="checkbox" name="is_critical" id="is_critical" style="width:20px; height:20px; cursor:pointer; margin-top: 3px;">
+                <label for="is_critical" style="cursor:pointer; flex: 1;">
+                    <span style="display:block; font-size:15px; font-weight:700; color:#856404; margin-bottom: 4px;">⚠️ Marcar como evento CRÍTICO</span>
+                    <span style="display:block; font-size:13px; color:#92791e;">Esto generará una notificación roja y alertas preventivas en el dashboard de los destinatarios.</span>
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content: flex-end; gap:16px; border-top: 1px solid #f1f5f9; padding-top: 30px;">
+                <a href="{% url 'calendar_red:calendario' %}"
+                    style="padding:14px 30px; border-radius:15px; text-decoration:none; color:var(--contrast-2); font-size:15px; font-weight:600; border:2px solid transparent; transition: all 0.2s;">
+                    Cancelar
+                </a>
+                <button type="submit"
+                    style="background:var(--accent); color:white; border:none; padding:14px 45px; border-radius:15px; font-weight:700; font-size:15px; cursor:pointer; box-shadow: 0 4px 15px rgba(30, 115, 190, 0.3); transition: transform 0.2s;">
+                    Guardar Evento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input:focus, textarea:focus, select:focus {
+        border-color: var(--accent) !important;
+        background: white !important;
+        box-shadow: 0 0 0 4px rgba(30, 115, 190, 0.1);
+    }
+    button:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+</style>
+{% endblock %}

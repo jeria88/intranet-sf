@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+        margin: 0 0 8px 0;
+    }
+
+    .page-header p {
+        color: var(--contrast-2);
+        margin: 0;
+    }
+
+    .meetings-evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .meeting-evidence-card {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-top: 5px solid var(--accent);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .meeting-evidence-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .meeting-evidence-card .icon {
+        font-size: 36px;
+    }
+
+    .meeting-evidence-card h3 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .meeting-evidence-card p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--contrast-2);
+        flex: 1;
+    }
+
+    .btn-view {
+        display: inline-block;
+        background: var(--accent);
+        color: white !important;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        text-align: center;
+        transition: opacity 0.2s;
+    }
+
+    .btn-view:hover {
+        opacity: 0.85;
+        color: white !important;
+    }
+
+    @media (max-width: 640px) {
+        .meetings-evidence-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'portal:index' %}" style="font-size:13px; color:var(--contrast-2); text-decoration:none;">←
+        Portal</a>
+    <h1 style="margin-top: 8px;">📅 Reuniones Red SFA</h1>
+    <p>Registro de las reuniones realizadas por la red de establecimientos educacionales.</p>
+</div>
+
+<div class="meetings-evidence-grid">
+    <div class="meeting-evidence-card">
+        <div class="icon">🏫</div>
+        <h3>Primera Reunión Presencial</h3>
+        <p>Registro y documentación del primer encuentro presencial de la Red SFA. Incluye actas, fotos y evidencias de
+            la jornada.</p>
+        <a href="{% url 'evidencia:reunion_presencial' %}" class="btn-view">Ver Registro →</a>
+    </div>
+
+    <div class="meeting-evidence-card">
+        <div class="icon">💻</div>
+        <h3>Primera Reunión Virtual</h3>
+        <p>Registro y documentación de la primera reunión virtual de la Red SFA. Incluye actas y materiales compartidos
+            durante la sesión.</p>
+        <a href="{% url 'evidencia:reunion_virtual' %}" class="btn-view">Ver Registro →</a>
+    </div>
+</div>
+
+<div
+    style="background: #e8f4fd; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 10px 10px 0; font-size: 14px; color: #1a5276;">
+    <strong>📌 Nota:</strong> Las actas y documentos de cada reunión están disponibles dentro de cada registro. Para
+    subir nuevas actas o fotos, utilice las opciones del menú "Evidencia Red".
+</div>
+{% endblock %}

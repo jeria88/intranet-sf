@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .meeting-record-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+    }
+
+    .meeting-record-header h1 {
+        margin: 0 0 6px 0;
+    }
+
+    .meeting-record-header p {
+        margin: 0;
+        color: var(--contrast-2);
+        font-size: 15px;
+    }
+
+    .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--base);
+        color: var(--contrast-2);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .section-card h3 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--contrast-3);
+        margin: 0 0 16px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--base);
+    }
+
+    .doc-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .doc-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--base);
+        font-size: 14px;
+        color: var(--contrast-2);
+    }
+
+    .doc-list li:last-child {
+        border-bottom: none;
+    }
+
+    .doc-list a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .doc-list a:hover {
+        text-decoration: underline;
+    }
+
+    .doc-list .doc-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    /* Info chips */
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .info-chip {
+        background: var(--base-2);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .info-chip .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--contrast-3);
+        font-weight: 600;
+    }
+
+    .info-chip .value {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--contrast);
+        margin-top: 4px;
+    }
+
+    /* CTA buttons */
+    .link-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: var(--base-2);
+        border-radius: 12px;
+        border: 1px solid var(--base);
+        margin-bottom: 12px;
+        text-decoration: none;
+        color: var(--contrast);
+        transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .link-card:hover {
+        background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        color: var(--contrast);
+    }
+
+    .link-card .lc-icon {
+        font-size: 32px;
+        flex-shrink: 0;
+    }
+
+    .link-card .lc-body {
+        flex: 1;
+    }
+
+    .link-card .lc-title {
+        font-weight: 700;
+        font-size: 15px;
+        margin-bottom: 3px;
+        color: var(--accent);
+    }
+
+    .link-card .lc-desc {
+        font-size: 13px;
+        color: var(--contrast-2);
+        margin: 0;
+    }
+
+    .link-card .lc-arrow {
+        color: var(--contrast-3);
+        font-size: 20px;
+    }
+
+    @media (max-width: 640px) {
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'evidencia:reuniones' %}" style="font-size:13px; color:var(--contrast-2); text-decoration:none;">←
+    Volver a Reuniones</a>
+
+<div class="meeting-record-header" style="margin-top: 12px;">
+    <div>
+        <h1>💻 Primera Reunión Virtual</h1>
+        <p>Primer Encuentro Virtual de la Red de Establecimientos Educacionales SFA</p>
+    </div>
+    <div style="display:flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span class="meta-badge">📅 Mayo 2024</span>
+        <span class="meta-badge">🌐 Reunión Virtual</span>
+        <span class="meta-badge" style="background: #d1fae5; color: #065f46;">✓ Realizada</span>
+    </div>
+</div>
+
+<!-- Info chips -->
+<div class="info-row">
+    <div class="info-chip">
+        <div class="label">Modalidad</div>
+        <div class="value">Virtual</div>
+    </div>
+    <div class="info-chip">
+        <div class="label">Tipo</div>
+        <div class="value">Red Directiva</div>
+    </div>
+    <div class="info-chip">
+        <div class="label">Estado</div>
+        <div class="value" style="color: #059669;">Finalizada</div>
+    </div>
+</div>
+
+<!-- Documentos -->
+<div class="section-card">
+    <h3>📋 Documentos de la Reunión</h3>
+    <ul class="doc-list">
+        <li>
+            <span class="doc-icon">📄</span>
+            <span>
+                <a href="https://intranetsfa.io/wp-content/uploads/2025/08/Levantamiento-de-datos-Red-de-establecimientos-educacionales-_Congregacion-Hermanas-Terceras-Franciscanas-Misioneras-de-la-Inmaculada-Concepcion_.pdf"
+                    target="_blank">
+                    Resultados Levantamiento de Datos — Red de Establecimientos Educacionales
+                </a><br>
+                <small style="color:var(--contrast-3);">PDF con los resultados del levantamiento de datos de la Red
+                    SFA</small>
+            </span>
+        </li>
+    </ul>
+</div>
+
+<!-- Links y Recursos -->
+<div class="section-card">
+    <h3>🔗 Recursos y Enlaces</h3>
+
+    <a href="https://forms.gle/xYetDdsEFGdm4e5t5" target="_blank" class="link-card">
+        <span class="lc-icon">📋</span>
+        <div class="lc-body">
+            <div class="lc-title">Encuesta — Levantamiento de Datos Red SFA</div>
+            <p class="lc-desc">
+                Encuesta de levantamiento de datos de la Red de Establecimientos Educacionales
+                «Congregación Hermanas Terceras Franciscanas Misioneras de la Inmaculada Concepción»
+            </p>
+        </div>
+        <span class="lc-arrow">→</span>
+    </a>
+
+    <a href="https://docs.google.com/document/d/1UIDVyKUS9ice2urx5hk4mPuUqUo9DOkwdATp7cBGPD4/edit?usp=sharing_eip_m&ts=6636eba8"
+        target="_blank" class="link-card">
+        <span class="lc-icon">📄</span>
+        <div class="lc-body">
+            <div class="lc-title">Proyecto Educativo (Editable)</div>
+            <p class="lc-desc">
+                Documento colaborativo del Proyecto Educativo Institucional. Acceso al Google Doc
+                compartido con posibilidad de edición.
+            </p>
+        </div>
+        <span class="lc-arrow">→</span>
+    </a>
+</div>
+
+<!-- Nota informativa -->
+<div
+    style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px 20px; border-radius: 0 10px 10px 0; font-size: 14px; color: #1e40af;">
+    <strong>📌 Nota:</strong> Esta reunión se realizó en formato virtual. Para acceder a la grabación
+    u otros materiales adicionales, comuníquese con la coordinación de la Red SFA.
+</div>
+{% endblock %}

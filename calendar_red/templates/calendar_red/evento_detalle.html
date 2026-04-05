@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.title }} | Calendario{% endblock %}
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <a href="{% url 'calendar_red:calendario' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr;
+        Volver al Calendario</a>
+    <div
+        style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:20px;">
+            <div
+                style="min-width:64px;text-align:center;background:{% if event.is_critical %}#dc3545{% else %}#1e73be{% endif %};color:white;border-radius:12px;padding:10px 8px;">
+                <div style="font-size:26px;font-weight:800;line-height:1;">{{ event.event_date|date:"d" }}</div>
+                <div style="font-size:12px;opacity:.85;">{{ event.event_date|date:"M Y" }}</div>
+            </div>
+            <div>
+                <span
+                    style="display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:8px;background:#f0f0f0;color:#575760;margin-bottom:8px;">{{
+                    event.get_event_type_display }}</span>
+                {% if event.is_critical %}<span
+                    style="background:#dc3545;color:white;font-size:11px;padding:3px 10px;border-radius:8px;font-weight:700;margin-left:6px;">🚨
+                    CRÍTICO</span>{% endif %}
+                <h2 style="margin:0;">{{ event.title }}</h2>
+            </div>
+        </div>
+        {% if event.description %}
+        <p style="font-size:15px;line-height:1.7;color:#575760;margin-bottom:24px;">{{ event.description }}</p>
+        {% endif %}
+        {% if event.event_time %}
+        <p style="font-size:14px;color:#222;"><strong>Hora:</strong> {{ event.event_time }}</p>
+        {% endif %}
+        {% if event.applies_to_roles %}
+        <p style="font-size:14px;color:#222;"><strong>Roles:</strong> {{ event.applies_to_roles|join:", " }}</p>
+        {% endif %}
+        {% if event.applies_to_establishments %}
+        <p style="font-size:14px;color:#222;"><strong>Establecimientos:</strong> {{
+            event.applies_to_establishments|join:", " }}</p>
+        {% endif %}
+        <p style="font-size:12px;color:#b2b2be;margin-top:16px;">Creado por {{
+            event.created_by.get_full_name|default:event.created_by.username|default:"Sistema" }} · {{
+            event.created_at|date:"d/m/Y" }}</p>
+    </div>
+</div>
+{% endblock %}

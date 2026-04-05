@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}{{ circular.title }} | Intranet SFA{% endblock %}
+{% block content %}
+<div style="max-width:720px; margin:0 auto;">
+    <a href="{% url 'portal:index' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr; Volver al
+        Portal</a>
+    <div
+        style="background:white;border-radius:14px;padding:36px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:16px;">
+        <div
+            style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:8px;
+                {% if circular.priority == 'urgente' %}background:#fdf0f0;color:#842029;
+                {% elif circular.priority == 'importante' %}background:#fff3cd;color:#856404;
+                {% else %}background:#e8f4fd;color:#1e73be;{% endif %}">
+                {{ circular.get_priority_display }}
+            </span>
+            <span style="font-size:12px;color:#b2b2be;">{{ circular.published_at|date:"d/m/Y H:i"|default:"Sin publicar"
+                }}</span>
+        </div>
+        <h1 style="font-size:22px;margin:0 0 16px;">{{ circular.title }}</h1>
+        <p style="font-size:13px;color:#575760;margin-bottom:24px;">
+            Emitida por: <strong>{{ circular.author.get_full_name|default:circular.author.username }}</strong>
+            {% if circular.approved_by %} · Aprobada por: <strong>{{
+                circular.approved_by.get_full_name|default:circular.approved_by.username }}</strong>{% endif %}
+        </p>
+        <hr style="border:none;border-top:1px solid #f0f0f0;margin-bottom:24px;">
+        <div style="font-size:15px;line-height:1.8;color:#222;white-space:pre-wrap;">{{ circular.body }}</div>
+        {% if circular.target_roles or circular.target_establishments %}
+        <hr style="border:none;border-top:1px solid #f0f0f0;margin-top:24px;margin-bottom:16px;">
+        <p style="font-size:12px;color:#b2b2be;margin:0;">
+            Dirigido a:
+            {% if circular.target_roles %}Roles: {{ circular.target_roles|join:", " }}{% endif %}
+            {% if circular.target_establishments %}· EE: {{ circular.target_establishments|join:", " }}{% endif %}
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

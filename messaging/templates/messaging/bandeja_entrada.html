@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Bandeja de Entrada | Intranet SFA{% endblock %}
+{% block extra_css %}
+<style>
+    .inbox-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 24px;
+    }
+
+    .msg-list {
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+    .msg-list-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .msg-list-header h3 {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    .msg-item {
+        display: block;
+        padding: 14px 20px;
+        border-bottom: 1px solid #f7f8f9;
+        text-decoration: none;
+        color: inherit;
+        transition: background .15s;
+    }
+
+    .msg-item:hover {
+        background: #f7f8f9;
+    }
+
+    .msg-item.unread {
+        background: #f0f7ff;
+        border-left: 3px solid #1e73be;
+    }
+
+    .msg-item .msg-from {
+        font-size: 13px;
+        font-weight: 600;
+        color: #222;
+    }
+
+    .msg-item .msg-subject {
+        font-size: 13px;
+        color: #575760;
+        margin: 2px 0;
+    }
+
+    .msg-item .msg-time {
+        font-size: 11px;
+        color: #b2b2be;
+    }
+
+    .nav-links {
+        background: white;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .nav-links a {
+        display: block;
+        padding: 10px 14px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #575760;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        transition: background .15s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+        background: #f0f7ff;
+        color: #1e73be;
+    }
+
+    .badge {
+        background: #1e73be;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+
+    @media(max-width:700px) {
+        .inbox-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h2 style="margin:0;">✉️ Mensajería Interna</h2>
+    <a href="{% url 'messaging:mensaje_nuevo' %}"
+        style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">+
+        Nuevo Mensaje</a>
+</div>
+<div class="inbox-layout">
+    <div>
+        <div class="nav-links">
+            <a href="{% url 'messaging:bandeja_entrada' %}" class="active">
+                📥 Entrada {% if unread_count %}<span class="badge">{{ unread_count }}</span>{% endif %}
+            </a>
+            <a href="{% url 'messaging:bandeja_enviados' %}">📤 Enviados</a>
+        </div>
+    </div>
+    <div class="msg-list">
+        <div class="msg-list-header">
+            <h3>Bandeja de Entrada</h3>
+            <span style="color:#b2b2be;font-size:13px;">{{ messages_in|length }} mensaje(s)</span>
+        </div>
+        {% if messages_in %}
+        {% for msg in messages_in %}
+        <a href="{% url 'messaging:mensaje_detalle' msg.pk %}"
+            class="msg-item {% if not msg.is_read %}unread{% endif %}">
+            <div style="display:flex;justify-content:space-between;">
+                <span class="msg-from">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                <span class="msg-time">{{ msg.sent_at|date:"d/m H:i" }}</span>
+            </div>
+            <p class="msg-subject">{{ msg.subject }}</p>
+            <p style="font-size:12px;color:#b2b2be;margin:0;">{{ msg.body|truncatechars:60 }}</p>
+        </a>
+        {% endfor %}
+        {% else %}
+        <p style="text-align:center;padding:40px;color:#b2b2be;font-size:14px;">📭 No hay mensajes en tu bandeja.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

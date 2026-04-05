@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .assistant-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 30px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+    }
+
+    .assistant-header img {
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        object-fit: cover;
+    }
+
+    .assistant-header h2 {
+        font-size: 20px;
+        margin: 0;
+        color: var(--contrast);
+    }
+
+    .assistant-header p {
+        font-size: 13px;
+        color: var(--contrast-2);
+        margin: 4px 0 0 0;
+    }
+
+    .sla-notice {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 0 8px 8px 0;
+        font-size: 13px;
+        color: #856404;
+        margin-bottom: 30px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: var(--contrast);
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #1e73be, #0d5aa7);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 20px;
+        font-size: 15px;
+        transition: opacity 0.2s;
+    }
+
+    .btn-submit:hover {
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'ai_modules:ai_detail' assistant.slug %}"
+    style="display:inline-block; margin-bottom: 20px; color: var(--contrast-2); text-decoration: none;">← Volver al
+    instructivo</a>
+
+<div class="form-container">
+    <div class="assistant-header">
+        <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
+        <div>
+            <h2>Enviar Consulta Formal</h2>
+            <p>Dirigida al {{ assistant.name }}</p>
+        </div>
+    </div>
+
+    <div class="sla-notice">
+        <strong>⏱ Plazo de Respuesta (SLA)</strong><br>
+        Tu consulta será analizada por el Equipo de Validación Humana y recibirás una respuesta oficial en un plazo
+        máximo de <strong>24 horas hábiles</strong>.
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_question">¿Cuál es tu consulta o situación a revisar?</label>
+            {{ form.question }}
+        </div>
+        <div class="form-group" style="margin-top: 16px;">
+            <label for="id_attachment"
+                style="display:block; font-weight:600; color:var(--contrast); margin-bottom:8px; font-size:14px;">
+                📎 Adjuntar archivo (opcional)
+            </label>
+            {{ form.attachment }}
+            <p style="font-size:12px; color:var(--contrast-2); margin:6px 0 0;">PDF, imagen o Word — máximo 10 MB</p>
+        </div>
+
+        <button type="submit" class="btn-submit">Enviar para Validación</button>
+    </form>
+</div>
+{% endblock %}

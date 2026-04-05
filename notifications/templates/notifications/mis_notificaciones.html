@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Notificaciones | Intranet SFA{% endblock %}
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">🔔 Mis Notificaciones</h2>
+    {% if notifications %}
+    <div style="display:grid;gap:10px;">
+        {% for n in notifications %}
+        <div
+            style="background:white;border-radius:12px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);display:flex;gap:14px;align-items:flex-start;">
+            <div style="font-size:24px;flex-shrink:0;">
+                {% if n.notification_type == 'circular' %}📢
+                {% elif n.notification_type == 'mensaje' %}✉️
+                {% elif n.notification_type == 'ai_respuesta' %}🤖
+                {% elif n.notification_type == 'ai_vencida' %}⏰
+                {% elif n.notification_type == 'reunion' %}📹
+                {% elif n.notification_type == 'alerta' %}🚨
+                {% else %}📌{% endif %}
+            </div>
+            <div style="flex:1;">
+                <p style="font-size:14px;font-weight:600;color:#222;margin:0 0 4px;">{{ n.title }}</p>
+                <p style="font-size:13px;color:#575760;margin:0 0 6px;">{{ n.message }}</p>
+                <span style="font-size:11px;color:#b2b2be;">{{ n.created_at|date:"d/m/Y H:i" }}</span>
+                {% if n.url %}
+                <a href="{{ n.url }}" style="font-size:12px;color:#1e73be;text-decoration:none;margin-left:12px;">Ver
+                    →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:60px;color:#b2b2be;">
+        <div style="font-size:48px;margin-bottom:16px;">🔔</div>
+        <p style="font-size:16px;">No tienes notificaciones recientes.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
