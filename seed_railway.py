@@ -29,6 +29,25 @@ if not User.objects.filter(username='admin').exists():
 else:
     print("ℹ️  Superusuario 'admin' ya existe")
 
+# ── Usuarios de demo por rol ─────────────────────────────────────────────────
+DEMO_USERS = [
+    {'username': 'director.demo',     'first_name': 'Director',     'last_name': 'Demo',    'role': 'DIRECTOR',     'establishment': 'ANGOL',    'email': 'director@demo.cl'},
+    {'username': 'utp.demo',          'first_name': 'UTP',          'last_name': 'Demo',    'role': 'UTP',          'establishment': 'TEMUCO',   'email': 'utp@demo.cl'},
+    {'username': 'inspector.demo',    'first_name': 'Inspector',    'last_name': 'Demo',    'role': 'INSPECTOR',    'establishment': 'LAUTARO',  'email': 'inspector@demo.cl'},
+    {'username': 'convivencia.demo', 'first_name': 'Convivencia', 'last_name': 'Demo',    'role': 'CONVIVENCIA', 'establishment': 'IMPERIAL', 'email': 'convivencia@demo.cl'},
+    {'username': 'red.demo',          'first_name': 'Red',          'last_name': 'Demo',    'role': 'RED',          'establishment': 'RED',      'email': 'red@demo.cl'},
+]
+
+for ud in DEMO_USERS:
+    if not User.objects.filter(username=ud['username']).exists():
+        User.objects.create_user(
+            password='Demo1234!',
+            **ud
+        )
+        print(f"✅ Usuario demo creado: {ud['username']} (pass: Demo1234!)")
+    else:
+        print(f"ℹ️  Usuario ya existe: {ud['username']}")
+
 # ── Salas de Reunión Jitsi ──────────────────────────────────────────────
 ROOMS = [
     {'name': 'Directores', 'slug': 'sfatcodirectores', 'allowed_roles': ['DIRECTOR']},
