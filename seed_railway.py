@@ -1,11 +1,8 @@
 """
-Script de datos iniciales — Intranet Congregacional (Railway Edition)
-Ejecutar desde /intranet_railway/:
-    python manage.py shell < seed_railway.py
-  o bien:
-    source venv/bin/activate && python seed_railway.py
+Script de datos iniciales para intranet_v3.
+Ejecutar: cd intranet_v3 && venv/bin/python3 seed_v3.py
 
-Crea: superusuario admin, salas de reunión (Jitsi), asistentes IA por perfil.
+Crea: superusuario admin, salas de reuniones Jitsi, asistentes IA.
 """
 import os
 import django
@@ -17,9 +14,7 @@ from users.models import User
 from meetings.models import MeetingRoom
 from ai_modules.models import AIAssistant
 
-print("🚀 Iniciando seed de datos para Intranet Congregacional...")
-
-# ── Superusuario ────────────────────────────────────────────────────────────
+# ── Superusuario ────────────────────────────────────────────────────────
 if not User.objects.filter(username='admin').exists():
     User.objects.create_superuser(
         username='admin',
@@ -34,32 +29,13 @@ if not User.objects.filter(username='admin').exists():
 else:
     print("ℹ️  Superusuario 'admin' ya existe")
 
-# ── Usuarios de demo por rol ─────────────────────────────────────────────────
-DEMO_USERS = [
-    {'username': 'director.angol', 'first_name': 'Patricia', 'last_name': 'Muñoz', 'role': 'DIRECTOR',     'establishment': 'ANGOL',    'email': 'director.angol@intranet.cl'},
-    {'username': 'utp.temuco',     'first_name': 'Carlos',   'last_name': 'Rojas',  'role': 'UTP',          'establishment': 'TEMUCO',   'email': 'utp.temuco@intranet.cl'},
-    {'username': 'inspector.lautaro', 'first_name': 'Juan', 'last_name': 'Pérez', 'role': 'INSPECTOR',    'establishment': 'LAUTARO',  'email': 'inspector.lautaro@intranet.cl'},
-    {'username': 'convivencia.imperial', 'first_name': 'María', 'last_name': 'Silva', 'role': 'CONVIVENCIA', 'establishment': 'IMPERIAL', 'email': 'convivencia.imperial@intranet.cl'},
-    {'username': 'equipo.red',     'first_name': 'Franco',   'last_name': 'Jeria',  'role': 'RED',          'establishment': 'RED',      'email': 'equipo.red@intranet.cl'},
-]
-
-for ud in DEMO_USERS:
-    if not User.objects.filter(username=ud['username']).exists():
-        User.objects.create_user(
-            password='Demo1234!',
-            **ud
-        )
-        print(f"✅ Usuario demo: {ud['username']} (pass: Demo1234!)")
-    else:
-        print(f"ℹ️  Usuario ya existe: {ud['username']}")
-
-# ── Salas de Reunión Jitsi ──────────────────────────────────────────────────
+# ── Salas de Reunión Jitsi ──────────────────────────────────────────────
 ROOMS = [
-    {'name': 'Directores',           'slug': 'sfatcodirectores',         'allowed_roles': ['DIRECTOR'],     'is_unlimited': False},
-    {'name': 'Inspectores Generales','slug': 'sfatcoinspectores',         'allowed_roles': ['INSPECTOR'],    'is_unlimited': False},
-    {'name': 'Convivencia Escolar',  'slug': 'sfatcoconvivenciaescolar',  'allowed_roles': ['CONVIVENCIA'],  'is_unlimited': False},
-    {'name': 'UTP',                  'slug': 'sfatcoutp',                 'allowed_roles': ['UTP'],          'is_unlimited': False},
-    {'name': 'Equipo Red',           'slug': 'sfatcoequipored',           'allowed_roles': [],               'is_unlimited': True},
+    {'name': 'Directores', 'slug': 'sfatcodirectores', 'allowed_roles': ['DIRECTOR']},
+    {'name': 'Inspectores Generales', 'slug': 'sfatcoinspectores', 'allowed_roles': ['INSPECTOR']},
+    {'name': 'Convivencia Escolar', 'slug': 'sfatcoconvivenciaescolar', 'allowed_roles': ['CONVIVENCIA']},
+    {'name': 'UTP', 'slug': 'sfatcoutp', 'allowed_roles': ['UTP']},
+    {'name': 'Equipo Red', 'slug': 'sfatcoequipored', 'allowed_roles': [], 'is_unlimited': True},
 ]
 
 for r in ROOMS:
@@ -67,18 +43,14 @@ for r in ROOMS:
         slug=r['slug'],
         defaults={
             'name': r['name'],
-            'allowed_roles': r['allowed_roles'],
-            'is_unlimited': r['is_unlimited'],
+            'allowed_roles': r.get('allowed_roles', []),
+            'is_unlimited': r.get('is_unlimited', False),
         }
     )
     if created:
         print(f"✅ Sala creada: {room.name}")
-    else:
-        print(f"ℹ️  Sala ya existe: {room.name}")
 
-# ── Asistentes IA por Perfil ────────────────────────────────────────────────
-# Integración: NotebookLM (URLs reales del proyecto)
-# Jornada 10-13: migrar a DeepSeek V4 API directa
+# ── Asistentes IA ───────────────────────────────────────────────────────
 ASSISTANTS = [
     {
         'slug': 'director',
@@ -86,7 +58,7 @@ ASSISTANTS = [
         'profile_role': 'DIRECTOR',
         'notebook_url': 'https://notebooklm.google.com/notebook/57b5d3dd-fe89-495b-b425-101cb235fe4a',
         'image_name': 'asistente-director.jpg',
-        'description': 'Soporte en PEI, fiscalización, Reglamento Orgánico y riesgos jurídicos.',
+        'description': 'Soporte en PEI, fiscalización, RO y riesgos jurídicos.',
         'use_cases': (
             'Consultar normativa sobre evaluación docente y desempeño directivo.\n'
             'Revisar marcos legales aplicables a la gestión escolar.\n'
@@ -100,7 +72,7 @@ ASSISTANTS = [
         'profile_role': 'UTP',
         'notebook_url': 'https://notebooklm.google.com/notebook/ddbbd461-ecad-49a6-b48b-8468bc955aef',
         'image_name': 'asistente-utp.jpg',
-        'description': 'Validación de Reglamento de Evaluación (D67-D83) y gestión curricular.',
+        'description': 'Validación de Reglamento de Evaluación (D67-D83).',
         'use_cases': (
             'Revisar y alinear planificaciones con Bases Curriculares.\n'
             'Preparar talleres de acompañamiento docente.\n'
@@ -145,17 +117,5 @@ for data in ASSISTANTS:
     )
     if created:
         print(f"✅ Asistente IA creado: {assistant.name}")
-    else:
-        print(f"ℹ️  Asistente ya existe: {assistant.name}")
 
-print("\n" + "="*60)
-print("🎉 Seed completado correctamente.")
-print("="*60)
-print("\nAccesos de demo:")
-print("  Admin:       admin / Admin1234!")
-print("  Director:    director.angol / Demo1234!")
-print("  UTP:         utp.temuco / Demo1234!")
-print("  Inspector:   inspector.lautaro / Demo1234!")
-print("  Convivencia: convivencia.imperial / Demo1234!")
-print("  Equipo Red:  equipo.red / Demo1234!")
-print("\nEjecutar servidor: python manage.py runserver")
+print("\n🚀 Datos iniciales cargados. Ejecuta: venv/bin/python3 manage.py runserver")

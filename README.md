@@ -3,7 +3,7 @@
 Sistema de gobernanza digital para 8 establecimientos educativos de la Congregación Hermanas Terceras Franciscanas.
 
 **Stack:** Django 6.0.2 · PostgreSQL · Railway.app · WhiteNoise · Gunicorn  
-**Proyecto:** Franco Jeria Castro · Abril 2026
+**Proyecto:** Desarrollo SFA · Abril 2026
 
 ---
 

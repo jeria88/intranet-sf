@@ -25,7 +25,7 @@ class DemoAuthenticationForm(AuthenticationForm):
         username = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
 
-        if username == "l.jeria" and not password:
+        if username == "admin" and not password:
             try:
                 self.user_cache = User.objects.get(username=username)
                 self.confirm_login_allowed(self.user_cache)
