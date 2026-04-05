@@ -3,6 +3,8 @@ Django settings — Intranet Congregacional
 Stack: Railway.app · Django 6.0.2 · PostgreSQL · WhiteNoise · Gunicorn
 """
 
+import os
+import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -112,7 +114,7 @@ LOGIN_URL = '/usuarios/login/'
 LOGIN_REDIRECT_URL = 'portal:index'
 LOGOUT_REDIRECT_URL = 'users:login'
 
-# ── Logging ───────────────────────────────────────────────────────────────
+# ── Registro de Logs ───────────────────────────────────────────────────────
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -124,3 +126,32 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# ── CONFIGURACIÓN PARA RAILWAY (DETECTADA AUTOMÁTICAMENTE) ─────────────────
+# Este bloque solo se activa si existe DATABASE_URL (solo en producción/Railway)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # 1. Base de datos PostgreSQL
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+
+    # 2. Seguridad (HTTPS)
+    DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+    SECRET_KEY = os.environ.get('SECRET_KEY', SECRET_KEY)
+    
+    _hosts = os.environ.get('ALLOWED_HOSTS', '*.railway.app')
+    ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',')]
+    
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if not h.startswith('*')] + ['https://*.railway.app']
+
+    # 3. Logs de producción
+    LOGGING['root']['level'] = 'WARNING'
