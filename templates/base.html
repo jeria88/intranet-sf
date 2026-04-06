@@ -168,6 +168,18 @@
             margin: 6px 0;
         }
 
+        /* Messages */
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+        .message-success { background: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .message-error { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .message-info { background: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+
         /* Utility */
         .hidden {
             display: none !important;
@@ -277,6 +289,7 @@
                     <li><a href="{% url 'portal:index' %}">Portal Principal</a></li>
                     <li><a href="{% url 'ai_modules:ai_list' %}">Asistentes IA</a></li>
                     <li><a href="{% url 'meetings:meeting_list' %}">Salas de Reunión</a></li>
+                    <li><a href="{% url 'meetings:recording_list' %}">Repositorio Grabaciones</a></li>
                     <li><a href="{% url 'library:document_list' %}">Biblioteca Digital</a></li>
 
                     <!-- Evidencia Red Dropdown -->
@@ -324,6 +337,16 @@
     </nav>
 
     <div class="container">
+        {% if messages %}
+        <div class="messages-container" style="margin-bottom: 20px;">
+            {% for message in messages %}
+            <div class="message message-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         {% block content %}{% endblock %}
     </div>
 

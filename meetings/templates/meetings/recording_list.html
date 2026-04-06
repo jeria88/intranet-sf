@@ -115,8 +115,18 @@
         <h1 style="margin: 0 0 8px 0;">📹 Repositorio de Reuniones</h1>
         <p style="margin: 0; color: var(--contrast-2);">Historial de videollamadas grabadas según tu perfil</p>
     </div>
-    <a href="{% url 'meetings:meeting_list' %}"
-        style="text-decoration: none; color: var(--contrast-2); font-weight: 600;">← Volver a Salas</a>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        {% if user.is_staff or user.is_red_team %}
+        <form action="{% url 'meetings:sync_daily_recordings' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                🔄 Sincronizar con Daily.co
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'meetings:meeting_list' %}"
+            style="text-decoration: none; color: var(--contrast-2); font-weight: 600;">← Volver a Salas</a>
+    </div>
 </div>
 
 <!-- Filtros del Repositorio -->

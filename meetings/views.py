@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse, JsonResponse
+import json
 from django.utils import timezone
 from django.conf import settings
 import requests
@@ -253,3 +257,102 @@ def recording_list(request):
         'establishments': request.user.ESTABLISHMENT_CHOICES,
         'roles': request.user.ROLE_CHOICES,
     })
+
+
+@csrf_exempt
+def recording_webhook(request):
+    """
+    Recibe notificaciones de Daily.co cuando una grabación está lista.
+    """
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    
+    try:
+        data = json.loads(request.body)
+        event_type = data.get('type')
+        payload = data.get('payload', {})
+        
+        if event_type == 'recording.ready-to-download':
+            room_id = payload.get('room_name')
+            download_url = payload.get('download_url')
+            
+            if room_id and download_url:
+                # Buscar la sala por su identificador de Daily
+                room = MeetingRoom.objects.filter(daily_identifier=room_id).first()
+                if room:
+                    # Vincular a la reserva más reciente (activa o recientemente programada)
+                    booking = MeetingBooking.objects.filter(room=room).order_by('-scheduled_at').first()
+                    if booking:
+                        booking.recording_url = download_url
+                        booking.save(update_fields=['recording_url'])
+                        print(f"✅ Grabación vinculada a reserva: {booking}")
+        
+        return JsonResponse({"status": "received"})
+    except Exception as e:
+        print(f"Webhook Error: {e}")
+        return HttpResponse(status=400)
+
+
+@login_required
+def sync_daily_recordings(request):
+    """
+    Sincroniza manualmente las grabaciones desde la API de Daily.co.
+    Especialmente útil para el plan gratuito que no tiene webhooks.
+    """
+    if not request.user.is_staff and not request.user.is_red_team:
+        messages.error(request, "No tienes permiso para realizar esta acción.")
+        return redirect('meetings:recording_list')
+
+    api_key = settings.DAILY_API_KEY
+    if not api_key:
+        messages.error(request, "Error de configuración: DAILY_API_KEY no encontrada.")
+        return redirect('meetings:recording_list')
+
+    url = "https://api.daily.co/v1/recordings"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            messages.error(request, f"Error API Daily: {response.status_code}")
+            return redirect('meetings:recording_list')
+        
+        data = response.json()
+        recordings = data.get('data', [])
+        synced_count = 0
+
+        for rec in recordings:
+            room_name = rec.get('room_name')
+            download_url = rec.get('download_url')
+            # Daily usa timestamps UNIX para start_time
+            start_time_ts = rec.get('start_time')
+            
+            if room_name and download_url and start_time_ts:
+                from datetime import datetime
+                rec_dt = datetime.fromtimestamp(start_time_ts, tz=timezone.utc)
+                
+                # Buscar sala vinculada
+                room = MeetingRoom.objects.filter(daily_identifier=room_name).first()
+                if room:
+                    # Buscar la reserva más cercana a la hora de inicio de la grabación (margen 1h)
+                    margin = timezone.timedelta(hours=1)
+                    booking = MeetingBooking.objects.filter(
+                        room=room,
+                        scheduled_at__range=(rec_dt - margin, rec_dt + margin),
+                        recording_url='' # Evitar sobreescribir si ya tiene algo (o actualizar si es necesario)
+                    ).first()
+                    
+                    if booking:
+                        booking.recording_url = download_url
+                        booking.save(update_fields=['recording_url'])
+                        synced_count += 1
+        
+        if synced_count > 0:
+            messages.success(request, f"Se han sincronizado {synced_count} grabaciones nuevas.")
+        else:
+            messages.info(request, "No se encontraron grabaciones nuevas para sincronizar.")
+
+    except Exception as e:
+        messages.error(request, f"Error durante la sincronización: {str(e)}")
+    
+    return redirect('meetings:recording_list')

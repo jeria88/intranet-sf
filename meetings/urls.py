@@ -10,4 +10,6 @@ urlpatterns = [
     path('<slug:slug>/reservar/', views.booking_crear, name='booking_crear'),
     path('reserva/<int:pk>/', views.booking_detalle, name='booking_detalle'),
     path('reserva/<int:pk>/grabar/', views.start_recording, name='start_recording'),
+    path('webhook/recording/', views.recording_webhook, name='recording_webhook'),
+    path('sync/', views.sync_daily_recordings, name='sync_daily_recordings'),
 ]
