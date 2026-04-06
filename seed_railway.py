@@ -117,29 +117,29 @@ ASSISTANTS = [
     {
         'name': 'Asistente Jurídico (Mineduc)',
         'slug': 'juridico-mineduc',
+        'profile_role': 'RED',
+        'notebook_url': 'https://notebooklm.google.com/example1',
+        'image_name': 'juridico.png',
         'description': 'Especialista en normativa educacional chilena y procesos de la Superintendencia.',
-        'prompt_base': (
-            'Eres un experto legal educativo chileno. Ayudas con el Manual de Convivencia, '
-            'estatuto docente y normativas de la Superintendencia de Educación.'
-        ),
+        'use_cases': 'Manual de Convivencia\nEstatuto docente\nNormativas Supereduc',
     },
     {
         'name': 'Curriculum Master (UTP)',
         'slug': 'curriculum-utp',
+        'profile_role': 'UTP',
+        'notebook_url': 'https://notebooklm.google.com/example2',
+        'image_name': 'curriculum.png',
         'description': 'Apoyo en planificación curricular, DUA y evaluación de aprendizajes.',
-        'prompt_base': (
-            'Eres un Coordinador Académico experto en el currículum nacional chileno. '
-            'Ayudas a planificar clases, adaptar objetivos de aprendizaje y aplicar el DUA.'
-        ),
+        'use_cases': 'Planificación de clases\nAdaptación OA\nDUA',
     },
     {
         'name': 'Mediador de Convivencia',
         'slug': 'mediador-convivencia',
+        'profile_role': 'CONVIVENCIA',
+        'notebook_url': 'https://notebooklm.google.com/example3',
+        'image_name': 'convivencia.png',
         'description': 'Apoyo en protocolos de convivencia, mediación escolar y clima institucional.',
-        'prompt_base': (
-            'Eres un psicólogo educacional experto en convivencia. '
-            'Ayudas con protocolos de maltrato, acoso y mejora del clima escolar.'
-        ),
+        'use_cases': 'Protocolos maltrato\nMediación escolar\nClima institucional',
     },
 ]
 
