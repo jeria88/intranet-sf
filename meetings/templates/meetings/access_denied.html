@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 80px auto; text-align: center; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+    <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+    <h1 style="color: var(--contrast-1); margin-bottom: 16px;">Acceso no agendado</h1>
+    <p style="color: var(--contrast-2); line-height: 1.6; margin-bottom: 30px;">
+        Esta sala está protegida. Para ingresar, la reunión debe haber sido registrada previamente en el sistema de agenda y coordinada con el calendario institucional.
+    </p>
+    
+    <div style="background: var(--base); padding: 20px; border-radius: 12px; margin-bottom: 30px; text-align: left;">
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: var(--contrast-1);">Sala: {{ room.name }}</p>
+        <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--contrast-2);">Estado: Sin reserva activa en este horario.</p>
+    </div>
+
+    <div style="display: flex; gap: 15px; justify-content: center;">
+        <a href="{% url 'meetings:meeting_list' %}" class="btn-primary" style="text-decoration: none;">
+            Volver a la lista
+        </a>
+        <a href="{% url 'meetings:booking_crear' room.slug %}" class="btn-secondary" style="text-decoration: none; background: var(--accent); color: white;">
+            📅 Agendar ahora
+        </a>
+    </div>
+</div>
+{% endblock %}
