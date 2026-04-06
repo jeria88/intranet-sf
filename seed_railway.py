@@ -48,13 +48,31 @@ for ud in DEMO_USERS:
     else:
         print(f"ℹ️  Usuario ya existe: {ud['username']}")
 
-# ── Salas de Reunión Jitsi ──────────────────────────────────────────────
+# ── Salas de Reunión (Jitsi & Daily.co) ──────────────────────────────────
 ROOMS = [
-    {'name': 'Directores', 'slug': 'sfatcodirectores', 'allowed_roles': ['DIRECTOR']},
-    {'name': 'Inspectores Generales', 'slug': 'sfatcoinspectores', 'allowed_roles': ['INSPECTOR']},
-    {'name': 'Convivencia Escolar', 'slug': 'sfatcoconvivenciaescolar', 'allowed_roles': ['CONVIVENCIA']},
-    {'name': 'UTP', 'slug': 'sfatcoutp', 'allowed_roles': ['UTP']},
-    {'name': 'Equipo Red', 'slug': 'sfatcoequipored', 'allowed_roles': [], 'is_unlimited': True},
+    # Salas Legacy (Jitsi)
+    {'name': 'Directores (Jitsi)', 'slug': 'sfatcodirectores', 'allowed_roles': ['DIRECTOR']},
+    {'name': 'Inspectores (Jitsi)', 'slug': 'sfatcoinspectores', 'allowed_roles': ['INSPECTOR']},
+    {'name': 'Convivencia (Jitsi)', 'slug': 'sfatcoconvivenciaescolar', 'allowed_roles': ['CONVIVENCIA']},
+    {'name': 'UTP (Jitsi)', 'slug': 'sfatcoutp', 'allowed_roles': ['UTP']},
+    {'name': 'Equipo Red (Jitsi)', 'slug': 'sfatcoequipored', 'allowed_roles': [], 'is_unlimited': True},
+    
+    # Salas Daily.co por Establecimiento
+    {'name': 'Sala Angol', 'slug': 'daily-angol', 'room_type': 'daily', 'daily_identifier': 'angol', 'target_establishment': 'ANGOL'},
+    {'name': 'Sala Arauco', 'slug': 'daily-arauco', 'room_type': 'daily', 'daily_identifier': 'arauco', 'target_establishment': 'ARAUCO'},
+    {'name': 'Sala Imperial', 'slug': 'daily-imperial', 'room_type': 'daily', 'daily_identifier': 'imperial', 'target_establishment': 'IMPERIAL'},
+    {'name': 'Sala Lautaro', 'slug': 'daily-lautaro', 'room_type': 'daily', 'daily_identifier': 'lautaro', 'target_establishment': 'LAUTARO'},
+    {'name': 'Sala Ercilla', 'slug': 'daily-ercilla', 'room_type': 'daily', 'daily_identifier': 'ercilla', 'target_establishment': 'ERCILLA'},
+    {'name': 'Sala Santiago', 'slug': 'daily-santiago', 'room_type': 'daily', 'daily_identifier': 'santiago', 'target_establishment': 'SANTIAGO'},
+    {'name': 'Sala Renaico', 'slug': 'daily-renaico', 'room_type': 'daily', 'daily_identifier': 'renaico', 'target_establishment': 'RENAICO'},
+    {'name': 'Sala Temuco', 'slug': 'daily-temuco', 'room_type': 'daily', 'daily_identifier': 'temuco', 'target_establishment': 'TEMUCO'},
+    
+    # Salas Daily.co por Perfil
+    {'name': 'Videollamada UTP', 'slug': 'daily-utp', 'room_type': 'daily', 'daily_identifier': 'utp', 'target_role': 'UTP'},
+    {'name': 'Videollamada Director', 'slug': 'daily-director', 'room_type': 'daily', 'daily_identifier': 'director', 'target_role': 'DIRECTOR'},
+    {'name': 'Videollamada Inspector', 'slug': 'daily-inspector', 'room_type': 'daily', 'daily_identifier': 'inspector', 'target_role': 'INSPECTOR'},
+    {'name': 'Videollamada Convivencia', 'slug': 'daily-convivencia', 'room_type': 'daily', 'daily_identifier': 'convivenciaescolar', 'target_role': 'CONVIVENCIA'},
+    {'name': 'Videollamada Equipo Red', 'slug': 'daily-red', 'room_type': 'daily', 'daily_identifier': 'red', 'target_role': 'RED'},
 ]
 
 for r in ROOMS:
@@ -62,12 +80,16 @@ for r in ROOMS:
         slug=r['slug'],
         defaults={
             'name': r['name'],
+            'room_type': r.get('room_type', 'jitsi'),
+            'daily_identifier': r.get('daily_identifier', ''),
+            'target_establishment': r.get('target_establishment', ''),
+            'target_role': r.get('target_role', ''),
             'allowed_roles': r.get('allowed_roles', []),
             'is_unlimited': r.get('is_unlimited', False),
         }
     )
     if created:
-        print(f"✅ Sala creada: {room.name}")
+        print(f"✅ Sala creada: {room.name} ({room.get_room_type_display()})")
 
 # ── Asistentes IA ───────────────────────────────────────────────────────
 ASSISTANTS = [
