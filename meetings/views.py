@@ -31,15 +31,13 @@ def meeting_list(request):
         rooms_est = MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily')
         rooms_role = MeetingRoom.objects.filter(target_role=user.role, room_type='daily')
 
-    # Helper para detectar salas activas ahora
-
-    # Helper para detectar salas activas ahora
+    # Helper para detectar salas activas ahora (margen de 15 min)
     def _get_active_booking(room):
         return MeetingBooking.objects.filter(
             room=room,
             scheduled_at__lte=now + margin,
             status__in=['programada', 'activa']
-        ).first()
+        ).order_by('-scheduled_at').first()
 
     # Procesar salas Daily para el template
     for r in rooms_est:
@@ -64,13 +62,12 @@ def meeting_room(request, slug):
     now = timezone.now()
     margin = timezone.timedelta(minutes=15)
     
-    # Buscar reserva activa (rango: desde 15 min antes hasta el fin de la duración + 15 min)
-    # Para simplificar, buscamos si hay una reserva que ya empezó o empezará en breve.
+    # Buscar reserva activa
     booking = MeetingBooking.objects.filter(
         room=room, 
         scheduled_at__lte=now + margin,
         status__in=['programada', 'activa']
-    ).first()
+    ).order_by('-scheduled_at').first()
 
     # Validar acceso: Solo entrar si hay reserva activa o es staff
     if not booking and not request.user.is_staff:
