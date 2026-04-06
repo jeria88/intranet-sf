@@ -46,9 +46,6 @@ def meeting_list(request):
         r.active_booking = _get_active_booking(r)
     for r in rooms_role:
         r.active_booking = _get_active_booking(r)
-    for r in rooms_legacy:
-        if isinstance(r, MeetingRoom):
-            r.active_booking = _get_active_booking(r)
 
     month_year = now.strftime('%Y-%m')
     user_count = MeetingBooking.objects.filter(booked_by=user, month_year=month_year).exclude(status='cancelada').count()
