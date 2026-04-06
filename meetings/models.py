@@ -3,10 +3,21 @@ from django.conf import settings
 
 
 class MeetingRoom(models.Model):
+    ROOM_TYPES = [
+        ('jitsi', 'Jitsi Meet (Clásico)'),
+        ('daily', 'Daily.co (Nuevo)'),
+    ]
     name = models.CharField(max_length=100, verbose_name='Nombre de la Sala')
-    slug = models.SlugField(unique=True, verbose_name='Slug Jitsi')
+    slug = models.SlugField(unique=True, verbose_name='Slug Identificador')
     description = models.TextField(blank=True)
-    allowed_roles = models.JSONField(default=list, blank=True, verbose_name='Roles permitidos')
+    room_type = models.CharField(max_length=10, choices=ROOM_TYPES, default='jitsi')
+    daily_identifier = models.CharField(max_length=100, blank=True, help_text='ID al final de la URL de Daily')
+    
+    # Para segmentación automática
+    target_establishment = models.CharField(max_length=20, blank=True, verbose_name='Establecimiento vinculado')
+    target_role = models.CharField(max_length=20, blank=True, verbose_name='Rol vinculado')
+    
+    allowed_roles = models.JSONField(default=list, blank=True, verbose_name='Roles permitidos (Manual)')
     is_unlimited = models.BooleanField(default=False, verbose_name='Reuniones ilimitadas')
 
     class Meta:
@@ -30,6 +41,13 @@ class MeetingBooking(models.Model):
     duration_minutes = models.PositiveIntegerField(default=60, verbose_name='Duración (min)')
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='programada')
     agenda = models.TextField(blank=True, verbose_name='Agenda')
+    
+    # Sincronización con Calendario Red
+    calendar_event = models.OneToOneField(
+        'calendar_red.CalendarEvent', on_delete=models.SET_NULL, 
+        null=True, blank=True, related_name='meeting_booking'
+    )
+    
     recording_url = models.URLField(blank=True, null=True, verbose_name='URL de Grabación', help_text='Enlace al video de la reunión')
     # Para control de cuota (4 reuniones/mes por rol, excepto RED)
     month_year = models.CharField(max_length=7, verbose_name='Mes-Año (YYYY-MM)', editable=False)
