@@ -27,12 +27,11 @@ def meeting_list(request):
     if user.is_staff:
         rooms_est = MeetingRoom.objects.filter(room_type='daily').exclude(target_establishment='')
         rooms_role = MeetingRoom.objects.filter(room_type='daily').exclude(target_role='')
-        rooms_legacy = MeetingRoom.objects.filter(room_type='jitsi')
     else:
         rooms_est = MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily')
         rooms_role = MeetingRoom.objects.filter(target_role=user.role, room_type='daily')
-        all_jitsi = MeetingRoom.objects.filter(room_type='jitsi')
-        rooms_legacy = [r for r in all_jitsi if user.role in r.allowed_roles or not r.allowed_roles]
+
+    # Helper para detectar salas activas ahora
 
     # Helper para detectar salas activas ahora
     def _get_active_booking(room):
@@ -58,7 +57,6 @@ def meeting_list(request):
     return render(request, 'meetings/meeting_list.html', {
         'rooms_est': rooms_est,
         'rooms_role': rooms_role,
-        'rooms_legacy': rooms_legacy,
         'quota_remaining': quota_remaining,
     })
 

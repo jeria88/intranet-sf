@@ -267,28 +267,5 @@
     </section>
     {% endif %}
 
-    {% if rooms_legacy %}
-    <section>
-        <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🌐 Salas Globales (Jitsi)</h2>
-        <div class="rooms-grid">
-            {% for room in rooms_legacy %}
-            <div class="meeting-card">
-                <div style="font-size: 32px;">📹</div>
-                <h3>{{ room.name }}</h3>
-                <p>Sala oficial de la red SFA.</p>
-                <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter">
-                    Ingresar a Reunión
-                </a>
-                {% if not user.is_red_team %}
-                <a href="{% url 'meetings:booking_crear' room.slug %}" style="font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 600;">
-                    📅 Agendar Reunión
-                </a>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
 </div>
 {% endblock %}

@@ -50,13 +50,6 @@ for ud in DEMO_USERS:
 
 # ── Salas de Reunión (Jitsi & Daily.co) ──────────────────────────────────
 ROOMS = [
-    # Salas Legacy (Jitsi)
-    {'name': 'Directores (Jitsi)', 'slug': 'sfatcodirectores', 'allowed_roles': ['DIRECTOR']},
-    {'name': 'Inspectores (Jitsi)', 'slug': 'sfatcoinspectores', 'allowed_roles': ['INSPECTOR']},
-    {'name': 'Convivencia (Jitsi)', 'slug': 'sfatcoconvivenciaescolar', 'allowed_roles': ['CONVIVENCIA']},
-    {'name': 'UTP (Jitsi)', 'slug': 'sfatcoutp', 'allowed_roles': ['UTP']},
-    {'name': 'Equipo Red (Jitsi)', 'slug': 'sfatcoequipored', 'allowed_roles': [], 'is_unlimited': True},
-    
     # Salas Daily.co por Establecimiento
     {'name': 'Sala Angol', 'slug': 'daily-angol', 'room_type': 'daily', 'daily_identifier': 'angol', 'target_establishment': 'ANGOL'},
     {'name': 'Sala Arauco', 'slug': 'daily-arauco', 'room_type': 'daily', 'daily_identifier': 'arauco', 'target_establishment': 'ARAUCO'},
