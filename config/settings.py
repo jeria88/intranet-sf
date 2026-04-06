@@ -38,6 +38,9 @@ INSTALLED_APPS = [
 # ── SLA ───────────────────────────────────────────────────────────────────
 AI_QUERY_SLA_HOURS = 24
 
+# ── Daily.co ─────────────────────────────────────────────────────────────
+DAILY_BASE_URL = os.environ.get('DAILY_BASE_URL', 'https://intranet-sfa.daily.co/')
+
 # ── Middleware ─────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -18,7 +18,7 @@ Sistema de gobernanza digital para 8 establecimientos educativos de la Congregac
 
 ```
 SECRET_KEY         = <genera uno con: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
-DJANGO_SETTINGS_MODULE = config.settings_prod
+DJANGO_SETTINGS_MODULE = config.settings
 DATABASE_URL       = <Railway lo provee automáticamente>
 ALLOWED_HOSTS      = tu-proyecto.railway.app
 ```
@@ -28,8 +28,8 @@ ALLOWED_HOSTS      = tu-proyecto.railway.app
 # Build command:
 pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
 
-# Start command:
-gunicorn config.wsgi --log-file -
+# Start command (en Railway: Settings > Start Command):
+python manage.py migrate && python seed_railway.py && gunicorn config.wsgi --log-file -
 ```
 
 ---
@@ -65,8 +65,7 @@ Admin: http://127.0.0.1:8000/admin/ → admin / Admin1234!
 ```
 intranet_railway/
 ├── config/               # Configuración Django
-│   ├── settings.py       # Dev (SQLite)
-│   ├── settings_prod.py  # Producción (PostgreSQL Railway)
+│   ├── settings.py       # Configuración unificada (Dev/Prod)
 │   ├── urls.py
 │   ├── wsgi.py           # Entrypoint Gunicorn
 │   └── asgi.py
@@ -92,6 +91,38 @@ intranet_railway/
 ├── seed_railway.py       # Datos iniciales
 └── .env.example          # Variables de entorno documentadas
 ```
+
+---
+
+## 🎥 Módulo Videollamadas (Daily.co)
+
+Guía para la implementación del sistema de salas dinámicas por Establecimiento y Rol.
+
+### 1. Preparar Rama de Desarrollo
+Inicia el trabajo en una rama aislada para este módulo:
+```bash
+git checkout -b modulo-videollamadas
+```
+
+### 2. Configuración en `.env`
+Documentar las claves y la base de las salas:
+```env
+# Daily.co Configuration
+DAILY_API_KEY=tu_api_key_aqui
+DAILY_DOMAIN=intranet-sfa
+```
+
+### 3. Lógica de Salas Identificadas
+Las salas seguirán el formato simétrico `https://intranet-sfa.daily.co/{identificador}`.
+
+**Mapeo de URLs:**
+- **Por Rol:** `https://intranet-sfa.daily.co/director`, `https://intranet-sfa.daily.co/utp`, etc.
+- **Por Establecimiento:** `https://intranet-sfa.daily.co/temuco`, `https://intranet-sfa.daily.co/angol`, etc.
+
+### 4. Pasos de Implementación (Próximamente)
+1.  **Refactorización de Modelos:** Ajustar `MeetingRoom` en `meetings/models.py` para incluir campos de filtrado por establecimiento y mejorar la validación de roles.
+2.  **Lógica de Redirección:** Modificar la vista principal de `meetings` para que detecte el origen del clic (Rol vs Establecimiento) y redirija a la URL de Daily correspondiente.
+3.  **Interfaz Dinámica:** Actualizar los botones en el frontend para que solo se muestren las salas permitidas según el contexto del usuario autenticado.
 
 ---
 
