@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -335,12 +336,12 @@ def sync_daily_recordings(request):
                 room = MeetingRoom.objects.filter(daily_identifier=room_name).first()
                 if room:
                     # Buscar la reserva más cercana a la hora de inicio de la grabación (margen 1h)
-                    margin = timezone.timedelta(hours=1)
+                    margin = timezone.timedelta(hours=2) # Ampliamos a 2h por desfase
                     booking = MeetingBooking.objects.filter(
+                        Q(recording_url__isnull=True) | Q(recording_url=''),
                         room=room,
-                        scheduled_at__range=(rec_dt - margin, rec_dt + margin),
-                        recording_url='' # Evitar sobreescribir si ya tiene algo (o actualizar si es necesario)
-                    ).first()
+                        scheduled_at__range=(rec_dt - margin, rec_dt + margin)
+                    ).order_by('scheduled_at').first()
                     
                     if booking:
                         booking.recording_url = download_url
