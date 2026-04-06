@@ -40,6 +40,7 @@ AI_QUERY_SLA_HOURS = 24
 
 # ── Daily.co ─────────────────────────────────────────────────────────────
 DAILY_BASE_URL = os.environ.get('DAILY_BASE_URL', 'https://intranet-sfa.daily.co/')
+DAILY_API_KEY = os.environ.get('DAILY_API_KEY')
 
 # ── Middleware ─────────────────────────────────────────────────────────────
 MIDDLEWARE = [

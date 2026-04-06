@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.conf import settings
+import requests
 from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement
 
 MONTHLY_QUOTA = 4  # Reuniones máximas por usuario por mes (salvo RED)
@@ -16,6 +17,39 @@ def _check_quota(user, room):
         booked_by=user, month_year=month_year
     ).exclude(status='cancelada').count()
     return count < MONTHLY_QUOTA
+
+
+def _generate_daily_token(room_name, user_name, is_owner=False):
+    """
+    Solicita un token de acceso a la API de Daily.co.
+    """
+    api_key = settings.DAILY_API_KEY
+    if not api_key:
+        return None
+    
+    url = "https://api.daily.co/v1/meeting-tokens"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "properties": {
+            "room_name": room_name,
+            "user_name": user_name,
+            "is_owner": is_owner
+        }
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=5)
+        if response.status_code == 200:
+            return response.json().get('token')
+        else:
+            print(f"Daily API Error: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Daily Connection Error: {e}")
+    
+    return None
 
 
 @login_required
@@ -76,6 +110,17 @@ def meeting_room(request, slug):
     # Redirección dinámica si es Daily.co
     if room.room_type == 'daily':
         daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
+        
+        # Generar token para acceso seguro y personalización
+        token = _generate_daily_token(
+            room.daily_identifier, 
+            request.user.get_full_name() or request.user.username,
+            is_owner=request.user.is_staff
+        )
+        
+        if token:
+            daily_url = f"{daily_url}?t={token}"
+            
         if booking:
             MeetingAttendance.objects.get_or_create(booking=booking, user=request.user)
         return redirect(daily_url)
