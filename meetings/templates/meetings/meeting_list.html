@@ -212,17 +212,83 @@
     </table>
 </div>
 
-<!-- Room Cards -->
-<div class="rooms-grid">
-    {% for room in rooms %}
-    <div class="meeting-card">
-        <div style="font-size: 36px;">📹</div>
-        <h3>{{ room.name }}</h3>
-        <p>Sala oficial de la red SFA.</p>
-        <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter">
-            Ingresar a Reunión
-        </a>
-    </div>
-    {% endfor %}
+<!-- Room Cards Grid -->
+<div style="display: grid; grid-template-columns: 1fr; gap: 40px;">
+
+    {% if rooms_est %}
+    <section>
+        <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🏢 Mi Establecimiento</h2>
+        <div class="rooms-grid">
+            {% for room in rooms_est %}
+            <div class="meeting-card" style="border-top-color: #28a745;">
+                <div style="font-size: 32px;">🏫</div>
+                <h3>{{ room.name }}</h3>
+                <p>Sala exclusiva para tu colegio.</p>
+                {% if room.active_booking %}
+                <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #28a745;">
+                    Ingresar a Videollamada (Activa)
+                </a>
+                <p style="font-size: 11px; color: #155724; font-weight: 600;">En curso: {{ room.active_booking.scheduled_at|time:"H:i" }}</p>
+                {% else %}
+                <a href="{% url 'meetings:booking_crear' room.slug %}" class="btn-enter" style="background: var(--contrast-3);">
+                    📅 Agendar para usar
+                </a>
+                <p style="font-size: 11px; color: var(--contrast-3);">Sala disponible para reserva</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if rooms_role %}
+    <section>
+        <h2 style="font-size: 18px; border-left: 4px solid #eab308; padding-left: 12px; margin-bottom: 20px;">👤 Mi Perfil / Cargo</h2>
+        <div class="rooms-grid">
+            {% for room in rooms_role %}
+            <div class="meeting-card" style="border-top-color: #eab308;">
+                <div style="font-size: 32px;">💼</div>
+                <h3>{{ room.name }}</h3>
+                <p>Sala de red según tu rol.</p>
+                {% if room.active_booking %}
+                <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #28a745;">
+                    Ingresar a Videollamada (Activa)
+                </a>
+                <p style="font-size: 11px; color: #155724; font-weight: 600;">En curso: {{ room.active_booking.scheduled_at|time:"H:i" }}</p>
+                {% else %}
+                <a href="{% url 'meetings:booking_crear' room.slug %}" class="btn-enter" style="background: var(--contrast-3);">
+                    📅 Agendar para usar
+                </a>
+                <p style="font-size: 11px; color: var(--contrast-3);">Sala disponible para reserva</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if rooms_legacy %}
+    <section>
+        <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🌐 Salas Globales (Jitsi)</h2>
+        <div class="rooms-grid">
+            {% for room in rooms_legacy %}
+            <div class="meeting-card">
+                <div style="font-size: 32px;">📹</div>
+                <h3>{{ room.name }}</h3>
+                <p>Sala oficial de la red SFA.</p>
+                <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter">
+                    Ingresar a Reunión
+                </a>
+                {% if not user.is_red_team %}
+                <a href="{% url 'meetings:booking_crear' room.slug %}" style="font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 600;">
+                    📅 Agendar Reunión
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
 </div>
 {% endblock %}
