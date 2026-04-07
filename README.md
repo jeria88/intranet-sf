@@ -166,3 +166,35 @@ Las salas seguirán el formato simétrico `https://intranet-sfa.daily.co/{identi
 | `RED` | Equipo Red Congregacional (acceso total) |
 
 **Establecimientos:** Temuco · Lautaro · Renaico · Santiago · Imperial · Ercilla · Arauco · Angol
+
+---
+
+## 🧠 Manual de Entrenamiento RAG (DeepSeek)
+
+Este manual describe el flujo para actualizar el conocimiento de los 40 asesores IA (5 roles × 8 establecimientos) utilizando **DeepSeek v4** y documentos **PDF** institucionales.
+
+### 1. Segmentación de Fuentes (PDF)
+Para que el entrenamiento coincida con la configuración de la intranet, los documentos deben organizarse por categorías:
+- **Nivel Red (Global):** Estatuto Docente, Normas Mineduc, Manuales de Convivencia General.
+- **Nivel Establecimiento:** Reglamento Interno (RICE), PME local, protocolos de seguridad específicos.
+- **Nivel Rol:** Formatos de planificación (UTP), manuales de liderazgo (Director), actas de mediación (Convivencia).
+
+### 2. Procesamiento del Conocimiento (Embedding)
+Para que DeepSeek pueda "leer" los PDFs con precisión:
+1. **Extracción:** Convertir PDFs a Markdown para preservar la jerarquía de títulos.
+2. **Chunking:** Dividir el texto en bloques de **1000 tokens** con un solapamiento (overlap) de **200 tokens**. Esto evita que la IA pierda el contexto entre páginas.
+3. **Indexación:** Generar vectores (embeddings) que se almacenarán en el Vector Store vinculado a la API de DeepSeek.
+
+### 3. Configuración de Identidad (System Prompt)
+Cada IA tiene una instrucción base distinta según su `slug` en la base de datos. La estructura del prompt debe ser:
+> "Eres el Asistente IA de **[ROL]** del establecimiento **[ESTABLECIMIENTO]**. Tu conocimiento está basado en los documentos adjuntos. Responde siempre con un tono profesional y utiliza los protocolos locales del establecimiento cuando la consulta lo requiera."
+
+### 4. Flujo de Respuesta RAG
+1. **Consulta:** El usuario pregunta algo en la intranet.
+2. **Búsqueda (Retrieval):** El sistema busca en el Vector Store los 3 bloques de PDF más relevantes.
+3. **Aumentación (Augmentation):** Se combinan esos bloques con el *System Prompt* del rol.
+4. **Generación:** DeepSeek procesa todo y entrega la respuesta final basada únicamente en el conocimiento institucional.
+
+### 5. Ciclo de Actualización
+- **Documentos Normativos:** Actualización inmediata tras publicarse en la Biblioteca Digital.
+- **Documentos Operativos:** Sincronización mensual (Metas PME, Acuerdos de Reunión).
