@@ -231,21 +231,26 @@ def start_recording(request, pk):
 @login_required
 def recording_list(request):
     """
-    Lista las reuniones grabadas con filtros por establecimiento, rol y mes.
+    Repositorio de grabaciones. Filtrado por perfil de usuario.
     """
-    bookings = MeetingBooking.objects.filter(recording_url__isnull=False).exclude(recording_url='')
-    
-    # 1. Filtro de permisos (Python-side for SQLite compatibility)
-    if not request.user.is_red_team:
-        all_rooms = MeetingRoom.objects.all()
-        allowed_room_ids = [r.id for r in all_rooms if request.user.role in r.allowed_roles or not r.allowed_roles]
-        bookings = bookings.filter(room_id__in=allowed_room_ids)
+    # 1. Base del QuerySet: solo aquello que tiene video
+    bookings = MeetingBooking.objects.filter(
+        Q(recording_url__isnull=False)
+    ).exclude(recording_url='')
 
-    # 2. Filtros de búsqueda (GET params)
+    # 2. Filtro de SEGURIDAD (Segmentación por Perfil)
+    if not request.user.is_red_team and not request.user.is_staff:
+        # El usuario solo ve videos de: Su establecimiento O Su Rol
+        bookings = bookings.filter(
+            Q(room__target_establishment=request.user.establishment) |
+            Q(room__target_role=request.user.role)
+        )
+
+    # 3. Filtros Manuales de Búsqueda (GET params)
     est = request.GET.get('establishment')
     role = request.GET.get('role')
-    month = request.GET.get('month') # Formato 'MM'
-
+    month = request.GET.get('month')
+    
     if est:
         bookings = bookings.filter(booked_by__establishment=est)
     if role:

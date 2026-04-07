@@ -113,7 +113,7 @@
 <div class="repo-header">
     <div>
         <h1 style="margin: 0 0 8px 0;">📹 Repositorio de Reuniones</h1>
-        <p style="margin: 0; color: var(--contrast-2);">Historial de videollamadas grabadas según tu perfil</p>
+        <p style="margin: 0; color: var(--contrast-2);">Mostrando grabaciones de <strong>{{ user.get_establishment_display }}</strong> y del cargo <strong>{{ user.get_role_display }}</strong></p>
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
         {% if user.is_staff or user.is_red_team %}
