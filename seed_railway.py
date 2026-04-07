@@ -112,34 +112,43 @@ for slug in test_rooms:
     else:
         print(f"✅ Nueva reserva de prueba creada para: {room.name} (ACTIVA)")
 
-# ── Asistentes IA ──────────────────────────────────────────────────────────
+# ── Asistentes IA Oficiales ────────────────────────────────────────────────
 ASSISTANTS = [
     {
-        'name': 'Asistente Jurídico (Mineduc)',
-        'slug': 'juridico-mineduc',
-        'profile_role': 'RED',
-        'notebook_url': 'https://notebooklm.google.com/example1',
-        'image_name': 'juridico.png',
-        'description': 'Especialista en normativa educacional chilena y procesos de la Superintendencia.',
-        'use_cases': 'Manual de Convivencia\nEstatuto docente\nNormativas Supereduc',
+        'name': 'Asistente Estratégico (Director)',
+        'slug': 'director',
+        'profile_role': 'DIRECTOR',
+        'notebook_url': 'https://notebooklm.google.com/example/director',
+        'image_name': 'asistente-director.jpg',
+        'description': 'Apoyo en gestión institucional, liderazgo y normativa.',
+        'use_cases': 'Gestión de recursos\nLiderazgo educativo\nPlan de Mejoramiento Educativo (PME)',
     },
     {
-        'name': 'Curriculum Master (UTP)',
-        'slug': 'curriculum-utp',
+        'name': 'Asistente Curricular (UTP)',
+        'slug': 'utp',
         'profile_role': 'UTP',
-        'notebook_url': 'https://notebooklm.google.com/example2',
-        'image_name': 'curriculum.png',
-        'description': 'Apoyo en planificación curricular, DUA y evaluación de aprendizajes.',
-        'use_cases': 'Planificación de clases\nAdaptación OA\nDUA',
+        'notebook_url': 'https://notebooklm.google.com/example/utp',
+        'image_name': 'asistente-utp.jpg',
+        'description': 'Apoyo en planificación, evaluación y DUA.',
+        'use_cases': 'Acompañamiento docente\nPlanificación curricular\nAnálisis de resultados',
     },
     {
-        'name': 'Mediador de Convivencia',
-        'slug': 'mediador-convivencia',
+        'name': 'Asistente de Disciplina e Inspectoría',
+        'slug': 'inspector',
+        'profile_role': 'INSPECTOR',
+        'notebook_url': 'https://notebooklm.google.com/example/inspector',
+        'image_name': 'asistente-inspector.jpg',
+        'description': 'Apoyo en reglamento interno, asistencia y procesos administrativos.',
+        'use_cases': 'Reglamento Interno (RICE)\nGestión de asistencia\nProtocolos de seguridad',
+    },
+    {
+        'name': 'Asistente de Convivencia Escolar',
+        'slug': 'convivencia',
         'profile_role': 'CONVIVENCIA',
-        'notebook_url': 'https://notebooklm.google.com/example3',
-        'image_name': 'convivencia.png',
-        'description': 'Apoyo en protocolos de convivencia, mediación escolar y clima institucional.',
-        'use_cases': 'Protocolos maltrato\nMediación escolar\nClima institucional',
+        'notebook_url': 'https://notebooklm.google.com/example/convivencia',
+        'image_name': 'asistente-convivencia.jpg',
+        'description': 'Apoyo en mediación escolar, protocolos de maltrato escolar y clima institucional.',
+        'use_cases': 'Protocolos de actuación\nMediación escolar\nEntrevistas apoderados',
     },
 ]
 

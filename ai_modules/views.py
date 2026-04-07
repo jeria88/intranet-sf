@@ -9,18 +9,19 @@ from .forms import AIQueryForm
 
 @login_required
 def ai_list(request):
-    """Muestra el catálogo de asistentes si es staff, o redirige según rol."""
-    if request.user.is_staff:
-        # Administradores ven todos los asistentes activos
+    """Muestra el catálogo de asistentes si es staff/Red, o redirige según rol."""
+    # Admins y Equipo Red ven todos los asistentes oficiales
+    if request.user.is_staff or request.user.is_red_team:
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
-    # Usuarios regulares son redirigidos a su asistente asignado
+    # Usuarios regulares son redirigidos directamente a su asistente asignado
     assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).first()
     
     if assistant:
         return redirect('ai_modules:ai_detail', slug=assistant.slug)
     
+    # Si no tiene un asistente asignado, mostramos página de no acceso
     return render(request, 'ai_modules/no_access.html')
 
 @login_required
