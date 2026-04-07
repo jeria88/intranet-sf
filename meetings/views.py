@@ -334,8 +334,8 @@ def sync_daily_recordings(request):
             start_time_ts = rec.get('start_ts')
             
             if room_name and recording_id and start_time_ts:
-                from datetime import datetime
-                rec_dt = datetime.fromtimestamp(start_time_ts, tz=timezone.utc)
+                import datetime
+                rec_dt = datetime.datetime.fromtimestamp(start_time_ts, tz=datetime.timezone.utc)
                 
                 # Buscar sala vinculada
                 room = MeetingRoom.objects.filter(daily_identifier__iexact=room_name).first()
