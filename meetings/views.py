@@ -327,26 +327,17 @@ def sync_daily_recordings(request):
         for rec in recordings:
             recording_id = rec.get('id')
             room_name = (rec.get('room_name') or "").lower().strip()
-            # Daily FREE no da download_url directo, usamos el link al dashboard
             dashboard_url = f"https://dashboard.daily.co/recordings/{recording_id}"
             
-            # El campo correcto en la API es start_ts (timestamp UNIX)
-            start_time_ts = rec.get('start_ts')
-            
-            if room_name and recording_id and start_time_ts:
-                import datetime
-                rec_dt = datetime.datetime.fromtimestamp(start_time_ts, tz=datetime.timezone.utc)
-                
+            if room_name and recording_id:
                 # Buscar sala vinculada
                 room = MeetingRoom.objects.filter(daily_identifier__iexact=room_name).first()
                 if room:
-                    # Margen de 4 horas
-                    margin = timezone.timedelta(hours=4)
+                    # Buscamos la reserva MÁS RECIENTE de esta sala que NO tenga video aún
                     booking = MeetingBooking.objects.filter(
                         Q(recording_url__isnull=True) | Q(recording_url=''),
-                        room=room,
-                        scheduled_at__range=(rec_dt - margin, rec_dt + margin)
-                    ).order_by('scheduled_at').first()
+                        room=room
+                    ).order_by('-scheduled_at').first()
                     
                     if booking:
                         booking.recording_url = dashboard_url
