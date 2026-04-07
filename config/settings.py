@@ -6,8 +6,11 @@ Stack: Railway.app · Django 6.0.2 · PostgreSQL · WhiteNoise · Gunicorn
 import os
 import dj_database_url
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # ── Seguridad ──────────────────────────────────────────────────────────────
 SECRET_KEY = 'django-insecure-dev-key-change-in-production-intranet-sfa-2026'

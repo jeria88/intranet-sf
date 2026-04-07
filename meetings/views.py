@@ -298,7 +298,7 @@ def recording_webhook(request):
 def sync_daily_recordings(request):
     """
     Sincroniza manualmente las grabaciones desde la API de Daily.co.
-    Incluye diagnósticos para resolución de problemas.
+    Adaptado para obtener enlaces al Dashboard en planes gratuitos.
     """
     if not request.user.is_staff and not request.user.is_red_team:
         messages.error(request, "No tienes permiso para realizar esta acción.")
@@ -325,19 +325,22 @@ def sync_daily_recordings(request):
         matches_room_but_not_time = 0
 
         for rec in recordings:
-            # Normalizar nombres para comparación segura
+            recording_id = rec.get('id')
             room_name = (rec.get('room_name') or "").lower().strip()
-            download_url = rec.get('download_url')
-            start_time_ts = rec.get('start_time')
+            # Daily FREE no da download_url directo, usamos el link al dashboard
+            dashboard_url = f"https://dashboard.daily.co/recordings/{recording_id}"
             
-            if room_name and download_url and start_time_ts:
+            # El campo correcto en la API es start_ts (timestamp UNIX)
+            start_time_ts = rec.get('start_ts')
+            
+            if room_name and recording_id and start_time_ts:
                 from datetime import datetime
                 rec_dt = datetime.fromtimestamp(start_time_ts, tz=timezone.utc)
                 
-                # Buscar sala vinculada (normalizado)
+                # Buscar sala vinculada
                 room = MeetingRoom.objects.filter(daily_identifier__iexact=room_name).first()
                 if room:
-                    # Margen amplio de 4 horas por desfases de servidor/zona horaria
+                    # Margen de 4 horas
                     margin = timezone.timedelta(hours=4)
                     booking = MeetingBooking.objects.filter(
                         Q(recording_url__isnull=True) | Q(recording_url=''),
@@ -346,23 +349,22 @@ def sync_daily_recordings(request):
                     ).order_by('scheduled_at').first()
                     
                     if booking:
-                        booking.recording_url = download_url
+                        booking.recording_url = dashboard_url
                         booking.save(update_fields=['recording_url'])
                         synced_count += 1
                     else:
                         matches_room_but_not_time += 1
         
-        # Mensajes de diagnóstico
         if synced_count > 0:
             messages.success(request, f"✅ Sincronización exitosa: {synced_count} grabaciones nuevas vinculadas.")
         elif matches_room_but_not_time > 0:
-            messages.warning(request, f"ℹ️ Se encontraron {matches_room_but_not_time} grabaciones en la sala correcta, pero fuera del rango de tiempo de las reuniones agendadas.")
+            messages.warning(request, f"ℹ️ Se encontraron {matches_room_but_not_time} grabaciones en la sala correcta, pero fuera del rango de tiempo.")
         elif total_found > 0:
-            messages.info(request, f"🔎 Se encontraron {total_found} grabaciones en Daily.co, pero ninguna coincide con las salas configuradas en la intranet.")
+            messages.info(request, f"🔎 Se encontraron {total_found} grabaciones en Daily.co, pero no coinciden con las salas de la intranet.")
         else:
-            messages.info(request, "📭 No se encontraron grabaciones disponibles en tu cuenta de Daily.co.")
+            messages.info(request, "📭 No se encontraron grabaciones nuevas.")
 
     except Exception as e:
-        messages.error(request, f"❌ Error durante la sincronización: {str(e)}")
+        messages.error(request, f"❌ Error: {str(e)}")
     
     return redirect('meetings:recording_list')
