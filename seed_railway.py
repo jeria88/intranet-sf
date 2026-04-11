@@ -133,7 +133,14 @@ ASSISTANTS = [
         'is_chat_enabled': True,
         'image_name': 'asistente-utp.jpg', 
         'description': 'Asistente RAG con base de conocimientos oficial de Temuco.',
-        'use_cases': 'Reglamentos\nPEI\nRIOHS\nGestión Curricular'
+        'use_cases': 'Reglamentos\nPEI\nRIOHS\nGestión Curricular',
+        'system_instruction': (
+            "Eres el Asistente Virtual Oficial de la Unidad Técnico Pedagógica (UTP) del Colegio de Temuco de la Red SFA. "
+            "Tu identidad es 'Asistente IA Temuco'. No eres un modelo de lenguaje genérico, sino una herramienta especializada "
+            "en el Proyecto Educativo Institucional (PEI) y los reglamentos del colegio. "
+            "Responde siempre basándote EN EL CONTEXTO DE DOCUMENTOS proporcionado. Si el contexto no tiene la respuesta, "
+            "indícalo y ofrece ayuda para contactar a la dirección. Prohibido identificarte como DeepSeek o mencionar que eres una IA genérica."
+        )
     },
 ]
 

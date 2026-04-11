@@ -13,7 +13,17 @@ def call_deepseek_ai(system_instruction, context_text, messages_history):
         return "Error: DEEPSEEK_API_KEY no configurado."
 
     # Combinamos la instrucción de sistema con el contexto de los documentos
-    full_system_prompt = f"{system_instruction}\n\nCONTEXTO DE DOCUMENTOS (Fuente de verdad):\n{context_text}"
+    full_system_prompt = (
+        f"{system_instruction}\n\n"
+        "### REGLAS CRÍTICAS:\n"
+        "1. Usa EXCLUSIVAMENTE la información del 'CONTEXTO DE DOCUMENTOS' para responder.\n"
+        "2. Si la información no está en el contexto, di que no lo sabes.\n"
+        "3. Nunca menciones que eres DeepSeek ni que eres un modelo de IA.\n"
+        "4. Mantén siempre la identidad del asistente asignado.\n\n"
+        "### CONTEXTO DE DOCUMENTOS (Fuente de Verdad):\n"
+        f"{context_text}\n"
+        "--- FIN DEL CONTEXTO ---"
+    )
     
     messages = [{"role": "system", "content": full_system_prompt}]
     
