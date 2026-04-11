@@ -118,19 +118,63 @@ MeetingBooking.objects.create(
     agenda='Prueba de reunión activa para UTP Angol'
 )
 
-# ── 5. Asistentes IA Oficiales ────────────────────────────────────────────────
+# ── 5. Asistentes IA Oficiales y RAG automático ───────────────────────────────
+print("\n🤖 Sincronizando Asistentes IA y Base de Conocimientos...")
 ASSISTANTS = [
     {'name': 'Asistente Estratégico (Director)', 'slug': 'director', 'profile_role': 'DIRECTOR', 'notebook_url': 'https://notebooklm.google.com/example/director', 'image_name': 'asistente-director.jpg', 'description': 'Apoyo en gestión institucional.', 'use_cases': 'PME\nGestión'},
     {'name': 'Asistente Curricular (UTP)', 'slug': 'utp', 'profile_role': 'UTP', 'notebook_url': 'https://notebooklm.google.com/example/utp', 'image_name': 'asistente-utp.jpg', 'description': 'Apoyo en planificación.', 'use_cases': 'DUA\nPlanificación'},
     {'name': 'Asistente de Disciplina e Inspectoría', 'slug': 'inspector', 'profile_role': 'INSPECTOR', 'notebook_url': 'https://notebooklm.google.com/example/inspector', 'image_name': 'asistente-inspector.jpg', 'description': 'Apoyo en reglamento.', 'use_cases': 'RICE\nAsistencia'},
     {'name': 'Asistente de Convivencia Escolar', 'slug': 'convivencia', 'profile_role': 'CONVIVENCIA', 'notebook_url': 'https://notebooklm.google.com/example/convivencia', 'image_name': 'asistente-convivencia.jpg', 'description': 'Apoyo en mediación.', 'use_cases': 'Mediación\nClima'},
+    {
+        'name': 'Asistente IA UTP Temuco', 
+        'slug': 'utp-temuco', 
+        'profile_role': 'UTP', 
+        'establishment': 'TEMUCO',
+        'is_chat_enabled': True,
+        'image_name': 'asistente-utp.jpg', 
+        'description': 'Asistente RAG con base de conocimientos oficial de Temuco.',
+        'use_cases': 'Reglamentos\nPEI\nRIOHS\nGestión Curricular'
+    },
 ]
 
 for data in ASSISTANTS:
-    AIAssistant.objects.get_or_create(
+    assistant, created = AIAssistant.objects.get_or_create(
         slug=data['slug'],
         defaults={k: v for k, v in data.items() if k != 'slug'},
     )
+    if not created:
+        # Actualizar campos por si cambiaron (ej: habilitar chat)
+        for key, value in data.items():
+            setattr(assistant, key, value)
+        assistant.save()
+
+# Procesamiento automático de PDFs para RAG (si el contexto está vacío)
+temuco_assistant = AIAssistant.objects.filter(slug='utp-temuco').first()
+if temuco_assistant and not temuco_assistant.context_text:
+    print("📚 Base de conocimientos vacía para Temuco. Iniciando procesamiento RAG...")
+    from ai_modules.utils import process_knowledge_base_file
+    
+    kb_path = os.path.join(os.path.dirname(__file__), 'ai_modules', 'knowledge_base')
+    if os.path.exists(kb_path):
+        pdfs = [f for f in os.listdir(kb_path) if f.endswith('.pdf')]
+        print(f"  -> Encontrados {len(pdfs)} documentos en {kb_path}")
+        
+        for pdf_name in pdfs:
+            pdf_path = os.path.join(kb_path, pdf_name)
+            try:
+                with open(pdf_path, 'rb') as f:
+                    # Envolviendo el archivo en un objeto compatible si es necesario
+                    # Pero process_knowledge_base_file espera un objeto similar a un archivo de Django (con .name)
+                    # Vamos a simularlo mínimamente
+                    setattr(f, 'name', pdf_name)
+                    process_knowledge_base_file(temuco_assistant, f)
+                print(f"  ✅ Procesado: {pdf_name}")
+            except Exception as e:
+                print(f"  ❌ Error procesando {pdf_name}: {e}")
+        
+        print(f"✨ RAG inicializado. Contexto total: {len(temuco_assistant.context_text)} caracteres.")
+    else:
+        print(f"⚠️  Carpeta de conocimientos no encontrada en: {kb_path}")
 
 print("\n🚀 MEGA-SEED completado con éxito.")
 print("💡 Tip: Para probar, usa p.ej. 'utp.temuco' / 'Admin1234!'")
