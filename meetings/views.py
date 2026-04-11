@@ -370,7 +370,8 @@ def sync_daily_recordings(request):
         for rec in recordings:
             recording_id = rec.get('id')
             room_name = (rec.get('room_name') or "").lower().strip()
-            dashboard_url = f"https://dashboard.daily.co/recordings/{recording_id}"
+            # Priorizamos download_url para descarga directa, fallback al dashboard
+            download_link = rec.get('download_url') or f"https://dashboard.daily.co/recordings/{recording_id}"
             
             if room_name and recording_id:
                 # Buscar sala vinculada
@@ -383,7 +384,7 @@ def sync_daily_recordings(request):
                     ).order_by('-scheduled_at').first()
                     
                     if booking:
-                        booking.recording_url = dashboard_url
+                        booking.recording_url = download_link
                         booking.save(update_fields=['recording_url'])
                         synced_count += 1
                     else:
