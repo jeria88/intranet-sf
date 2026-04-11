@@ -13,6 +13,9 @@ class AIAssistant(models.Model):
     use_cases = models.TextField(blank=True, verbose_name='Casos de uso (uno por línea)')
     image_name = models.CharField(max_length=100, verbose_name='Nombre de imagen')
     establishment = models.CharField(max_length=20, blank=True, verbose_name='Establecimiento (opcional)')
+    system_instruction = models.TextField(blank=True, verbose_name='Instrucción de Sistema (Prompt)')
+    context_text = models.TextField(blank=True, verbose_name='Contexto Extraído (RAG)')
+    is_chat_enabled = models.BooleanField(default=False, verbose_name='¿Habilitar Chat Interno?')
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -20,6 +23,26 @@ class AIAssistant(models.Model):
 
     def get_use_cases_list(self):
         return [u.strip() for u in self.use_cases.splitlines() if u.strip()]
+
+    def update_context_text(self):
+        """Agrega el texto de todos los documentos procesados al contexto principal."""
+        texts = self.knowledge_base.filter(is_processed=True).values_list('extracted_text', flat=True)
+        self.context_text = "\n\n".join(texts)
+        self.save(update_fields=['context_text'])
+
+
+class AIKnowledgeBase(models.Model):
+    assistant = models.ForeignKey(
+        AIAssistant, on_delete=models.CASCADE, related_name='knowledge_base'
+    )
+    name = models.CharField(max_length=255, verbose_name='Nombre del documento')
+    file = models.FileField(upload_to='ai_knowledge/', verbose_name='Archivo PDF')
+    extracted_text = models.TextField(blank=True, verbose_name='Texto extraído')
+    is_processed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.assistant.name}"
 
 
 class AIQuery(models.Model):
@@ -42,6 +65,7 @@ class AIQuery(models.Model):
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pendiente')
     # Respuesta del admin
     answer = models.TextField(blank=True, verbose_name='Respuesta')
+    ai_suggestion = models.TextField(blank=True, verbose_name='Sugerencia de la IA (RAG)')
     answered_at = models.DateTimeField(null=True, blank=True)
     answered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -72,3 +96,23 @@ class AIQuery(models.Model):
 
     def __str__(self):
         return f"[{self.get_status_display()}] {self.user} → {self.assistant.name}"
+
+
+class AIChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'Usuario'),
+        ('assistant', 'IA'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_chat_messages')
+    assistant = models.ForeignKey(AIAssistant, on_delete=models.CASCADE, related_name='chat_messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = 'Mensaje de Chat IA'
+        verbose_name_plural = 'Mensajes de Chat IA'
+
+    def __str__(self):
+        return f"{self.user.username} ({self.role}): {self.content[:50]}..."

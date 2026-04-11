@@ -2,9 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-from .models import AIAssistant, AIQuery
+from .models import AIAssistant, AIQuery, AIChatMessage
 from notifications.models import Notification
 from .forms import AIQueryForm
+from .services import call_deepseek_ai
+from django.http import JsonResponse
 
 
 @login_required
@@ -51,6 +53,18 @@ def nueva_consulta(request, slug):
             query.user = request.user
             query.assistant = assistant
             query.save()
+            
+            # Generar sugerencia automática de la IA (RAG)
+            if assistant.system_instruction or assistant.context_text:
+                # El historial para una consulta única es solo la pregunta actual
+                history = [{"role": "user", "content": query.question}]
+                suggestion = call_deepseek_ai(
+                    assistant.system_instruction,
+                    assistant.context_text,
+                    history
+                )
+                query.ai_suggestion = suggestion
+                query.save(update_fields=['ai_suggestion'])
             
             # Notificar a todos los admins (staff)
             from users.models import User
@@ -122,3 +136,67 @@ def responder_consulta(request, pk):
         return redirect('ai_modules:cola_consultas')
 
     return render(request, 'ai_modules/responder_consulta.html', {'query': query})
+
+
+@login_required
+def ai_chat(request, slug):
+    """Vista de chat tipo ChatGPT para asistentes internos."""
+    assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True, is_chat_enabled=True)
+    
+    # Verificación de seguridad básica (UTP y Admin)
+    # Si el usuario es de Temuco y el asistente es de Temuco, o es Admin
+    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role == 'UTP')
+    if not request.user.is_staff and not is_temuco_user:
+        return render(request, 'ai_modules/no_access.html')
+
+    if request.method == 'POST':
+        user_message = request.POST.get('message', '').strip()
+        if not user_message:
+            return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+        
+        # 1. Guardar mensaje del usuario
+        AIChatMessage.objects.create(
+            user=request.user,
+            assistant=assistant,
+            role='user',
+            content=user_message
+        )
+        
+        # 2. Obtener historial reciente para el contexto
+        history_objs = AIChatMessage.objects.filter(
+            user=request.user, assistant=assistant
+        ).order_by('timestamp')
+        
+        history = []
+        for h in history_objs:
+            history.append({'role': h.role, 'content': h.content})
+        
+        # 3. Llamar a la IA
+        ai_response = call_deepseek_ai(
+            assistant.system_instruction,
+            assistant.context_text,
+            history
+        )
+        
+        # 4. Guardar respuesta de la IA
+        AIChatMessage.objects.create(
+            user=request.user,
+            assistant=assistant,
+            role='assistant',
+            content=ai_response
+        )
+        
+        return JsonResponse({
+            'response': ai_response,
+            'status': 'success'
+        })
+
+    # Para GET: Cargar historial y renderizar template
+    messages = AIChatMessage.objects.filter(
+        user=request.user, assistant=assistant
+    ).order_by('timestamp')
+    
+    return render(request, 'ai_modules/chat.html', {
+        'assistant': assistant,
+        'chat_messages': messages
+    })

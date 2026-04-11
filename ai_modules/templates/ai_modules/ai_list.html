@@ -115,6 +115,11 @@
             <a href="{% url 'ai_modules:ai_detail' assistant.slug %}" class="btn-detail" style="background: #28a745;">
                 Ver Instructivo →
             </a>
+            {% if assistant.is_chat_enabled %}
+            <a href="{% url 'ai_modules:ai_chat' assistant.slug %}" class="btn-detail" style="background: #5436DA; margin-top: 10px;" target="_blank">
+                Entrar al Chat (Beta) 💬
+            </a>
+            {% endif %}
         </div>
     </div>
     {% else %}
@@ -126,6 +131,11 @@
             <a href="{% url 'ai_modules:ai_detail' assistant.slug %}" class="btn-detail">
                 Ver Instructivo →
             </a>
+            {% if assistant.is_chat_enabled %}
+            <a href="{% url 'ai_modules:ai_chat' assistant.slug %}" class="btn-detail" style="background: #5436DA; margin-top: 10px;" target="_blank">
+                Entrar al Chat (Beta) 💬
+            </a>
+            {% endif %}
         </div>
     </div>
     {% endif %}

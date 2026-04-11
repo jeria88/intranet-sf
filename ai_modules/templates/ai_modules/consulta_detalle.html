@@ -24,6 +24,15 @@
                 Tu consulta</p>
             <p style="font-size:15px;color:#222;margin:0;line-height:1.6;">{{ query.question }}</p>
         </div>
+
+        {% if query.ai_suggestion and not query.answer %}
+        <div style="background:#f0f7ff;border-radius:10px;padding:18px;margin-bottom:20px;border-left:4px solid #007bff;">
+            <p style="font-size:12px;font-weight:700;color:#0056b3;text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;">
+                🤖 Sugerencia de la IA (Basada en documentos)</p>
+            <p style="font-size:14px;color:#333;margin:0;line-height:1.6;white-space:pre-wrap;">{{ query.ai_suggestion }}</p>
+            <p style="font-size:11px;color:#6c757d;margin-top:10px;font-style:italic;">* Esta es una respuesta generada automáticamente para tu análisis previo. Un administrador revisará y dará la respuesta oficial pronto.</p>
+        </div>
+        {% endif %}
         {% if query.answer %}
         <div style="background:#f0f9f4;border-radius:10px;padding:18px;border-left:4px solid #28a745;">
             <p

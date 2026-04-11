@@ -45,6 +45,10 @@ AI_QUERY_SLA_HOURS = 24
 DAILY_BASE_URL = os.environ.get('DAILY_BASE_URL', 'https://intranet-sfa.daily.co/')
 DAILY_API_KEY = os.environ.get('DAILY_API_KEY')
 
+# ── DeepSeek ─────────────────────────────────────────────────────────────
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
+DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
+
 # ── Middleware ─────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
