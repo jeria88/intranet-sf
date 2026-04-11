@@ -1,7 +1,8 @@
 import requests
 from django.conf import settings
+from .utils import get_relevant_chunks
 
-def call_deepseek_ai(system_instruction, context_text, messages_history):
+def call_deepseek_ai(system_instruction, context_text, messages_history, user_query):
     """
     Realiza una llamada a la API de DeepSeek inyectando el contexto (RAG) 
     y el historial de la conversación.
@@ -12,16 +13,20 @@ def call_deepseek_ai(system_instruction, context_text, messages_history):
     if not api_key:
         return "Error: DEEPSEEK_API_KEY no configurado."
 
-    # Combinamos la instrucción de sistema con el contexto de los documentos
+    # RAG: Filtramos solo los fragmentos relevantes para ahorrar tokens y ganar precisión
+    relevant_context = get_relevant_chunks(context_text, user_query)
+
+    # Combinamos la instrucción de sistema con el contexto filtrado
     full_system_prompt = (
         f"{system_instruction}\n\n"
         "### REGLAS CRÍTICAS:\n"
         "1. Usa EXCLUSIVAMENTE la información del 'CONTEXTO DE DOCUMENTOS' para responder.\n"
         "2. Si la información no está en el contexto, di que no lo sabes.\n"
         "3. Nunca menciones que eres DeepSeek ni que eres un modelo de IA.\n"
-        "4. Mantén siempre la identidad del asistente asignado.\n\n"
-        "### CONTEXTO DE DOCUMENTOS (Fuente de Verdad):\n"
-        f"{context_text}\n"
+        "4. Mantén siempre la identidad del asistente asignado.\n"
+        "5. Cita siempre que sea posible el artículo o sección del reglamento.\n\n"
+        "### CONTEXTO DE DOCUMENTOS RELEVANTES (Fuente de Verdad):\n"
+        f"{relevant_context}\n"
         "--- FIN DEL CONTEXTO ---"
     )
     

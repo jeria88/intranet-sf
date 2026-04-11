@@ -194,7 +194,8 @@ def ai_chat(request, slug):
         ai_response = call_deepseek_ai(
             assistant.system_instruction,
             assistant.context_text,
-            history
+            history,
+            user_message
         )
         
         # 4. Guardar respuesta de la IA
