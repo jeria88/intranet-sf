@@ -384,7 +384,8 @@ def sync_daily_recordings(request):
                     ).order_by('-scheduled_at').first()
                     
                     if booking:
-                        booking.recording_url = download_link
+                        # Guardamos el ID de la grabación con un prefijo para identificarla
+                        booking.recording_url = f"daily_id:{recording_id}"
                         booking.save(update_fields=['recording_url'])
                         synced_count += 1
                     else:
@@ -403,3 +404,41 @@ def sync_daily_recordings(request):
         messages.error(request, f"❌ Error: {str(e)}")
     
     return redirect('meetings:recording_list')
+
+
+@login_required
+def download_recording(request, pk):
+    """
+    Genera un enlace de descarga fresco desde Daily.co y redirige al usuario.
+    Esto evita problemas con los enlaces firmados de S3 que expiran.
+    """
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    
+    if not booking.recording_url or not booking.recording_url.startswith('daily_id:'):
+        # Si es un link antiguo o no es de Daily, intentamos redirigir directo
+        if booking.recording_url:
+            return redirect(booking.recording_url)
+        messages.error(request, "No se encontró el ID de grabación para esta sesión.")
+        return redirect('meetings:recording_list')
+
+    daily_id = booking.recording_url.replace('daily_id:', '')
+    api_key = settings.DAILY_API_KEY
+    headers = {"Authorization": f"Bearer {api_key}"}
+    access_url = f"https://api.daily.co/v1/recordings/{daily_id}/access-link"
+
+    try:
+        response = requests.get(access_url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            # El campo correcto en la API de Daily es 'download_link'
+            download_link = data.get('download_link')
+            if download_link:
+                return redirect(download_link)
+        
+        # Fallback: Si falla el link directo, intentar el dashboard como ultima opcion
+        messages.warning(request, "No se pudo obtener el enlace de descarga directa. Redirigiendo al panel de Daily.co.")
+        return redirect(f"https://dashboard.daily.co/recordings/{daily_id}")
+
+    except Exception as e:
+        messages.error(request, f"Error al conectar con Daily.co: {str(e)}")
+        return redirect('meetings:recording_list')

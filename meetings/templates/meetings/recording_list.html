@@ -187,7 +187,7 @@
                 <span>⏰ Hora: {{ booking.scheduled_at|date:"H:i" }} hrs</span>
             </div>
 
-            <a href="{{ booking.recording_url }}" target="_blank" class="btn-watch">Descargar Grabación 📥</a>
+            <a href="{% url 'meetings:download_recording' booking.id %}" target="_blank" class="btn-watch">Descargar Grabación 📥</a>
         </div>
     </div>
     {% endfor %}
