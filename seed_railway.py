@@ -13,7 +13,7 @@ from ai_modules.models import AIAssistant
 
 User = get_user_model()
 
-print("🌱 Iniciando carga de datos iniciales...")
+print("🌱 Iniciando carga de datos iniciales optimizados...")
 
 # ── Superusuario ─────────────────────────────────────────────────────────────
 if not User.objects.filter(username='admin').exists():
@@ -22,13 +22,16 @@ if not User.objects.filter(username='admin').exists():
 else:
     print("ℹ️  Superusuario 'admin' ya existe")
 
-# ── Usuarios de demo (Consolidados en ANGOL para pruebas) ──────────────────
+# ── Usuarios de demo (Cubre todos los roles para pruebas) ──────────────────
 DEMO_USERS = [
     {'username': 'director.demo',     'first_name': 'Director',     'last_name': 'Demo',    'role': 'DIRECTOR',     'establishment': 'ANGOL',    'email': 'director@demo.cl'},
     {'username': 'utp.demo',          'first_name': 'UTP',          'last_name': 'Demo',    'role': 'UTP',          'establishment': 'ANGOL',    'email': 'utp@demo.cl'},
     {'username': 'inspector.demo',    'first_name': 'Inspector',    'last_name': 'Demo',    'role': 'INSPECTOR',    'establishment': 'ANGOL',    'email': 'inspector@demo.cl'},
     {'username': 'convivencia.demo', 'first_name': 'Convivencia', 'last_name': 'Demo',    'role': 'CONVIVENCIA', 'establishment': 'ANGOL',    'email': 'convivencia@demo.cl'},
     {'username': 'red.demo',          'first_name': 'Red',          'last_name': 'Demo',    'role': 'RED',          'establishment': 'RED',      'email': 'red@demo.cl'},
+    
+    # Usuarios en otros establecimientos para probar el filtrado multi-colegio
+    {'username': 'director.temuco',   'first_name': 'Director',     'last_name': 'Temuco',  'role': 'DIRECTOR',     'establishment': 'TEMUCO',   'email': 'director.tmu@demo.cl'},
 ]
 
 for ud in DEMO_USERS:
@@ -44,10 +47,10 @@ for ud in DEMO_USERS:
         }
     )
     if not created:
-        # Asegurar que el establecimiento esté actualizado para pruebas
         user.establishment = ud['establishment']
+        user.role = ud['role']
         user.save()
-        print(f"ℹ️  Usuario actualizado: {ud['username']} en {ud['establishment']}")
+        print(f"ℹ️  Usuario actualizado: {ud['username']} como {ud['role']} en {ud['establishment']}")
     else:
         print(f"✅ Usuario demo creado: {ud['username']} (pass: Demo1234!)")
 
@@ -76,41 +79,58 @@ for r_data in ROOMS:
         slug=r_data['slug'],
         defaults={k: v for k, v in r_data.items() if k != 'slug'}
     )
-    if created:
-        print(f"✅ Sala creada: {room.name} (Daily.co (Nuevo))")
-    else:
-        # Actualizar campos por si acaso
+    if not created:
         for key, value in r_data.items():
             setattr(room, key, value)
         room.save()
-        print(f"ℹ️  Sala actualizada: {room.name}")
 
-# ── Reservas Activas para Pruebas (AHORA) ──────────────────────────────────
-print("\n📅 Creando reuniones de prueba activas...")
+# ── Reservas de Prueba Coherentes ──────────────────────────────────
+print("\n📅 Generando historial y agenda de reuniones...")
 now = timezone.now()
-test_rooms = ['daily-angol', 'daily-utp']
 admin_user = User.objects.get(username='admin')
+utp_user = User.objects.get(username='utp.demo')
 
-for slug in test_rooms:
-    room = MeetingRoom.objects.get(slug=slug)
-    # Crear una reserva que empezó hace 5 minutos y dura 2 horas
-    booking, created = MeetingBooking.objects.get_or_create(
-        room=room,
-        booked_by=admin_user,
-        status='activa',
-        defaults={
-            'scheduled_at': now - timedelta(minutes=5),
-            'duration_minutes': 120,
-            'agenda': 'Reunión de prueba para validación de multiperfil y accesos.'
-        }
-    )
-    if not created:
-        booking.scheduled_at = now - timedelta(minutes=5)
-        booking.status = 'activa'
-        booking.save()
-        print(f"✅ Reserva existente actualizada para: {room.name} (ACTIVA)")
-    else:
-        print(f"✅ Nueva reserva de prueba creada para: {room.name} (ACTIVA)")
+# 1. Reunión PASADA (Hoy temprano) - Para probar historial
+room_angol = MeetingRoom.objects.get(slug='daily-angol')
+MeetingBooking.objects.get_or_create(
+    room=room_angol,
+    booked_by=admin_user,
+    scheduled_at=now - timedelta(hours=5),
+    defaults={
+        'duration_minutes': 60,
+        'status': 'cerrada',
+        'agenda': 'Reunión de coordinación técnica matutina.'
+    }
+)
+
+# 2. Reunión PRÓXIMA (En 2 horas) - Para probar estado "PRÓXIMA"
+MeetingBooking.objects.get_or_create(
+    room=room_angol,
+    booked_by=utp_user,
+    scheduled_at=now + timedelta(hours=2),
+    defaults={
+        'duration_minutes': 45,
+        'status': 'programada',
+        'agenda': 'Revisión de avances PME segundo trimestre.'
+    }
+)
+
+# 3. Reunión EN CURSO (Solo en Salas de Perfil para pruebas rápidas)
+room_utp = MeetingRoom.objects.get(slug='daily-utp')
+active_booking, created = MeetingBooking.objects.get_or_create(
+    room=room_utp,
+    booked_by=admin_user,
+    scheduled_at=now - timedelta(minutes=10),
+    defaults={
+        'duration_minutes': 90,
+        'status': 'activa',
+        'agenda': 'Taller de Inteligencia Artificial para el Equipo Red.'
+    }
+)
+if not created:
+    active_booking.status = 'activa'
+    active_booking.scheduled_at = now - timedelta(minutes=10)
+    active_booking.save()
 
 # ── Asistentes IA Oficiales ────────────────────────────────────────────────
 ASSISTANTS = [
@@ -157,7 +177,5 @@ for data in ASSISTANTS:
         slug=data['slug'],
         defaults={k: v for k, v in data.items() if k != 'slug'},
     )
-    if created:
-        print(f"✅ Asistente IA creado: {assistant.name}")
 
 print("\n🚀 Datos iniciales cargados con éxito.")

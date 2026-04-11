@@ -61,6 +61,12 @@ class MeetingBooking(models.Model):
         self.month_year = self.scheduled_at.strftime('%Y-%m')
         super().save(*args, **kwargs)
 
+    @property
+    def end_time(self):
+        """Calcula la hora de finalización basada en la duración."""
+        from datetime import timedelta
+        return self.scheduled_at + timedelta(minutes=self.duration_minutes)
+
     def __str__(self):
         return f"{self.room.name} — {self.booked_by} — {self.scheduled_at:%Y-%m-%d %H:%M}"
 
