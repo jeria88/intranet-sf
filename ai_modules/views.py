@@ -18,7 +18,20 @@ def ai_list(request):
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
     # Usuarios regulares son redirigidos directamente a su asistente asignado
-    assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).first()
+    # Prioridad 1: Rol + Establecimiento (ej: UTP Temuco)
+    assistant = AIAssistant.objects.filter(
+        profile_role=request.user.role, 
+        establishment=request.user.establishment,
+        is_active=True
+    ).first()
+    
+    # Prioridad 2: Solo Rol (Asistente genérico)
+    if not assistant:
+        assistant = AIAssistant.objects.filter(
+            profile_role=request.user.role, 
+            establishment='', # Genéricos tienen establishment vacío
+            is_active=True
+        ).first()
     
     if assistant:
         return redirect('ai_modules:ai_detail', slug=assistant.slug)
@@ -30,9 +43,15 @@ def ai_list(request):
 def ai_detail(request, slug):
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
     
-    # 3. Verificación de seguridad: solo puede ver su propio asistente
-    if not request.user.is_staff and assistant.profile_role != request.user.role:
-        return render(request, 'ai_modules/no_access.html')
+    # 3. Verificación de seguridad: solo puede ver su propio asistente o uno de su establecimiento
+    if not request.user.is_staff:
+        # Si el asistente es de rol distinto, denegar
+        if assistant.profile_role != request.user.role:
+            return render(request, 'ai_modules/no_access.html')
+        
+        # Si el asistente es de un establecimiento distinto al del usuario, denegar
+        if assistant.establishment and assistant.establishment != request.user.establishment:
+            return render(request, 'ai_modules/no_access.html')
 
     user_queries = AIQuery.objects.filter(
         user=request.user, assistant=assistant
