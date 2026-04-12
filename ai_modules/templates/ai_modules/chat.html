@@ -67,8 +67,7 @@
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <p style="margin: 0; font-size: 14px; font-weight: 700; color: var(--accent);">ID ASESORÍA: #<span id="print-id"></span></p>
-                    <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Fecha: <span id="print-date"></span></p>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Fecha de Emisión: <span id="print-date"></span></p>
                 </div>
             </div>
         </div>
@@ -110,14 +109,8 @@
                 
                 <div class="canvas-actions">
                     <button onclick="window.print()" class="btn-canvas btn-print">
-                        <span>🖨️</span> Imprimir PDF
+                        <span>🖨️</span> Generar Reporte PDF
                     </button>
-                    <a href="#" id="btn-add-calendar" class="btn-canvas btn-calendar">
-                        <span>📅</span> Agendar en Calendario
-                    </a>
-                    <a href="#" id="btn-add-cycle" class="btn-canvas btn-cycle">
-                        <span>📈</span> Iniciar Ciclo de Mejora
-                    </a>
                 </div>
             </div>
         </div>
@@ -186,15 +179,7 @@
             const checklistHtml = marked.parse(partC);
             sectionC.innerHTML = checklistHtml.replace(/<li>/g, '<li class="checklist-item"><input type="checkbox"> ');
 
-            // Título para botones e impresión
-            const titleMatch = partB.match(/\|\s*([^|]+)\s*\|/);
-            const cleanTitle = titleMatch ? titleMatch[1].trim() : 'Acción Sugerida IA';
-            
-            btnCalendar.href = `{% url 'calendar_red:evento_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent('Acción derivada de asesoría IA UTP Temuco.')}`;
-            btnCycle.href = `{% url 'improvement_cycle:meta_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent(partA.substring(0, 100) + '...')}`;
-            
             document.getElementById('print-date').innerText = new Date().toLocaleDateString();
-            document.getElementById('print-id').innerText = Math.floor(1000 + Math.random() * 9000);
         }
     }
 
