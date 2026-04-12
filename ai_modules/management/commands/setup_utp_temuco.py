@@ -59,13 +59,22 @@ class Command(BaseCommand):
         assistant.chunks.all().delete()
 
         chunks_to_create = []
+        doc_counters = {} # Para llevar el índice por documento
+
         for item in data:
+            doc_name = item['metadatos'].get('fuente_archivo', 'Desconocido')
+            if doc_name not in doc_counters:
+                doc_counters[doc_name] = 0
+            
             chunks_to_create.append(AIKnowledgeChunk(
                 assistant=assistant,
                 content=item['texto_contenido'],
                 metadata=item['metadatos'],
-                chunk_id=item['metadatos']['chunk_id']
+                chunk_id=item['metadatos']['chunk_id'],
+                document_name=doc_name,
+                index=doc_counters[doc_name]
             ))
+            doc_counters[doc_name] += 1
 
         # Creación masiva para eficiencia
         AIKnowledgeChunk.objects.bulk_create(chunks_to_create)
