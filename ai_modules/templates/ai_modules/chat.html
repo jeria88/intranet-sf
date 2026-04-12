@@ -10,10 +10,8 @@
     <div class="chat-sidebar">
         <div class="chat-header">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 32px; height: 32px; border-radius: 6px;">
-                <div>
-                    <h2 style="font-size: 14px; margin: 0; font-weight: 800; color: var(--text-dark);">Asesoría UTP — {{ assistant.name }}</h2>
-                </div>
+                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 34px; height: 34px; border-radius: 8px;">
+                <h2 style="font-size: 15px; margin: 0; font-weight: 800; color: var(--text-dark);">{{ assistant.name }}</h2>
             </div>
             
             <button id="btn-main-print" class="btn-header-pdf" style="display: none;" onclick="window.print()">
@@ -24,7 +22,7 @@
         <div class="chat-messages" id="chat-messages">
             {% if not chat_messages %}
             <div class="message-row ai">
-                <div class="message-content">¡Buen día! Soy tu **{{ assistant.name }}**. He cargado toda la normativa de **{{ assistant.establishment }}** para apoyarte. ¿Qué situación deseas revisar?</div>
+                <div class="message-content">¡Buen día! Soy tu **{{ assistant.name }}**. ¿En qué situación normativa puedo asesorarte hoy?</div>
             </div>
             {% endif %}
 
@@ -39,61 +37,54 @@
         </div>
 
         <div class="chat-input-area" style="padding: 20px; background: white; border-top: 1px solid #edf2f7;">
-            <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                <textarea id="chat-input" placeholder="Describa el caso o consulte el reglamento..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:15px;"></textarea>
-                <button id="send-btn" style="background:var(--accent); color:white; border:none; width: 36px; height: 36px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+                <textarea id="chat-input" placeholder="Escribir consulta..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:15px; color: var(--text-base);"></textarea>
+                <button id="send-btn" style="background:var(--accent); color:white; border:none; width: 40px; height: 40px; border-radius:10px; cursor:pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2z"></path></svg>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Contenedor de Reporte PDF (Solo visible en impresión) -->
+    <!-- Contenedor 'Off-Screen' para el PDF (Asegura Calidad y Flujo) -->
     <div class="canvas-container" id="canvas-container">
-        <!-- Encabezado Institucional -->
-        <div class="print-only-header" style="display: none; border-bottom: 2px solid #334155; padding-bottom: 20px; margin-bottom: 30px;">
+        <div class="print-only-header" style="display: none; border-bottom: 2px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 70px; height: auto;">
                     <div>
-                        <h1 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Minuta de Asesoría Normativa UTP</h1>
-                        <p style="margin: 2px 0 0; color: #64748b; font-weight: 600;">Establecimiento: {{ assistant.establishment }}</p>
+                        <h1 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Minuta de Asesoría Normativa</h1>
+                        <p style="margin: 2px 0 0; color: #475569; font-weight: 700;">{{ assistant.establishment }}</p>
                     </div>
                 </div>
-                <div style="text-align: right; font-size: 11px;">
-                    <p style="margin: 0; font-weight: 700;">Fecha de Emisión: <span id="print-date"></span></p>
-                    <p style="margin: 2px 0 0;">Red Educacional Hermanas Franciscanas</p>
+                <div style="text-align: right; font-size: 11px; font-weight: 600;">
+                    <p style="margin: 0;">Fecha: <span id="print-date"></span></p>
+                    <p style="margin: 2px 0 0;">Red Educacional SFA</p>
                 </div>
             </div>
         </div>
 
         <div id="canvas-content" class="canvas-grid">
-            <!-- Sección A -->
             <div class="canvas-card">
                 <div class="card-header"><h3>1. Sustento Teórico y Normativo</h3></div>
                 <div id="canvas-section-a" class="card-body"></div>
             </div>
-            
-            <!-- Sección B (Ruta) -->
             <div class="canvas-card">
                 <div class="card-header"><h3>2. Hoja de Ruta Operativa</h3></div>
                 <div id="canvas-section-b" class="card-body"></div>
             </div>
-
-            <!-- Sección C (Checklist) -->
             <div class="canvas-card">
-                <div class="card-header"><h3>3. Checklist de Monitoreo de Cumplimiento</h3></div>
+                <div class="card-header"><h3>3. Checklist de Monitoreo</h3></div>
                 <div id="canvas-section-c" class="card-body"></div>
             </div>
         </div>
 
-        <!-- Descargo de Responsabilidad (Solo PDF) -->
-        <div class="print-disclaimer" style="display: none; margin-top: 50px; padding: 15px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.5; color: #475569; text-align: justify;">
-            <p><strong>DESCARGO DE RESPONSABILIDAD:</strong> El presente reporte técnico ha sido generado asistido por inteligencia artificial sobre la base de la normativa institucional de {{ assistant.establishment }}. Este documento constituye una propuesta técnica de carácter sugerido y no vinculante, la cual debe ser obligatoriamente revisada, validada y ajustada por el profesional experto a cargo antes de su implementación operativa. El sistema IA no asume responsabilidad por las decisiones administrativas, pedagógicas o legales adoptadas a partir del contenido de este material.</p>
+        <div class="print-disclaimer" style="display: none; margin-top: 50px; padding: 15px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.5; color: #4a5568; text-align: justify;">
+            <p><strong>DESCARGO DE RESPONSABILIDAD:</strong> Este reporte técnico es una propuesta sugerida basada en la normativa institucional. Debe ser obligatoriamente revisada y validada por el profesional experto a cargo del establecimiento antes de su ejecución.</p>
         </div>
 
-        <div class="print-only-footer" style="display: none; margin-top: 25px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #777;">
-            <p>© 2026 Red Educacional Hermanas Franciscanas — Registro de Gestión Técnica Permanente</p>
+        <div class="print-only-footer" style="display: none; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #999;">
+            <p>© 2026 Red Educacional Hermanas Franciscanas — Soporte Técnico de Gestión</p>
         </div>
     </div>
 </div>
@@ -108,25 +99,20 @@
     const printBtn = document.getElementById('btn-main-print');
     const assistantSlug = '{{ assistant.slug }}';
 
-    // Secciones de Reporte (Hidden en UI)
     const sectionA = document.getElementById('canvas-section-a');
     const sectionB = document.getElementById('canvas-section-b');
     const sectionC = document.getElementById('canvas-section-c');
 
-    function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
 
     function updateReportData(text) {
         if (!text) return;
-        
         const regexA = /A\.\s+SUSTENTO/i;
         const regexB = /B\.\s+RUTA/i;
         const regexC = /C\.\s+CHECKLIST/i;
 
         if (text.match(regexA) || text.match(regexB) || text.match(regexC)) {
             printBtn.style.display = 'flex';
-
             const parts = text.split(regexB);
             const partA = (parts[0] || '').replace(regexA, '').trim();
             const remainBC = parts[1] || '';
@@ -136,33 +122,21 @@
 
             sectionA.innerHTML = marked.parse(partA);
             sectionB.innerHTML = marked.parse(partB);
-            
-            // Checklist interactivo/visual
-            const checklistHtml = marked.parse(partC);
-            sectionC.innerHTML = checklistHtml.replace(/<li>/g, '<li style="list-style: none; margin-bottom: 5px;">[ ] ');
-
+            sectionC.innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style: none; margin-bottom: 5px;">[ ] ');
             document.getElementById('print-date').innerText = new Date().toLocaleDateString('es-CL');
-            
-            // Mostrar disclaimer en el DOM de impresión
             document.querySelector('.print-disclaimer').style.display = 'block';
         }
     }
 
-    // Carga inicial
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
-    if (initialResponse && initialResponse !== 'None') {
-        updateReportData(initialResponse);
-    }
+    if (initialResponse && initialResponse !== 'None') { updateReportData(initialResponse); }
 
-    // --- Lógica de Chat ---
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
-
         chatInput.value = '';
         appendMessage('user', text);
         scrollToBottom();
-
         const loadingId = 'loading-' + Date.now();
         appendLoading(loadingId);
 
@@ -172,22 +146,14 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
                 body: new URLSearchParams({ 'message': text })
             });
-
             const data = await response.json();
             document.getElementById(loadingId).remove();
-
             if (data.status === 'success') {
                 appendMessage('assistant', data.response);
                 updateReportData(data.response);
-            } else {
-                appendMessage('assistant', 'Error en la respuesta.');
             }
             scrollToBottom();
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById(loadingId).remove();
-            appendMessage('assistant', 'Error de conexión.');
-        }
+        } catch (error) { document.getElementById(loadingId).remove(); }
     }
 
     function appendMessage(role, content) {
@@ -202,23 +168,17 @@
         const div = document.createElement('div');
         div.className = 'message-row ai';
         div.id = id;
-        div.innerHTML = `<div class="message-content">IA analizando normativa...</div>`;
+        div.innerHTML = `<div class="message-content">IA analizando...</div>`;
         chatMessages.appendChild(div);
     }
 
     sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    });
+    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-    // Renderizar Markdown inicial desde el contenido oculto para evitar errores de codificación
     document.querySelectorAll('.chat-messages .message-content').forEach(div => {
         const rawSpan = div.querySelector('.raw-message');
         const renderedDiv = div.querySelector('.rendered-message');
-        if (rawSpan && renderedDiv) {
-            renderedDiv.innerHTML = marked.parse(rawSpan.textContent);
-        }
+        if (rawSpan && renderedDiv) { renderedDiv.innerHTML = marked.parse(rawSpan.textContent); }
     });
-
 </script>
 {% endblock %}
