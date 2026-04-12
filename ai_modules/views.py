@@ -233,7 +233,11 @@ def ai_chat(request, slug):
         user=request.user, assistant=assistant
     ).order_by('timestamp')
     
+    # Obtener la última respuesta de la IA (para el Canvas)
+    last_ai_response = messages.filter(role='assistant').last()
+    
     return render(request, 'ai_modules/chat.html', {
         'assistant': assistant,
-        'chat_messages': messages
+        'chat_messages': messages,
+        'last_ai_response': last_ai_response.content if last_ai_response else None
     })

@@ -2,233 +2,96 @@
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'ai_modules/css/ia_canvas.css' %}">
 <style>
-    :root {
-        --chat-bg: #f7f7f8;
-        --chat-user-bg: #ffffff;
-        --chat-ai-bg: #f7f7f8;
-        --chat-text: #374151;
-        --chat-accent: var(--accent);
-    }
-
-    .chat-container {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 120px);
-        max-width: 900px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .chat-header {
-        padding: 20px 30px;
-        background: white;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        z-index: 10;
-    }
-
-    .chat-header img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .chat-header h2 {
-        font-size: 18px;
-        margin: 0;
-        color: var(--contrast);
-    }
-
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 40px 0;
-        scroll-behavior: smooth;
-        background: var(--chat-bg);
-    }
-
-    .message-row {
-        width: 100%;
-        display: flex;
-        padding: 24px 30px;
-        gap: 20px;
-    }
-
-    .message-row.ai {
-        background: var(--chat-ai-bg);
-    }
-
-    .message-row.user {
-        background: var(--chat-user-bg);
-    }
-
-    .avatar-chat {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 12px;
-    }
-
-    .avatar-chat.ai {
-        background: var(--chat-accent);
-        color: white;
-    }
-
-    .avatar-chat.user {
-        background: #5436DA;
-        color: white;
-    }
-
-    .message-content {
-        flex: 1;
-        font-size: 15px;
-        line-height: 1.6;
-        color: var(--chat-text);
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-
-    .chat-input-area {
-        padding: 20px 30px 40px;
-        background: white;
-        border-top: 1px solid #f0f0f0;
-    }
-
-    .input-wrapper {
-        display: flex;
-        align-items: flex-end;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 10px 15px;
-        box-shadow: 0 0 15px rgba(0,0,0,0.05);
-        transition: border-color 0.2s;
-    }
-
-    .input-wrapper:focus-within {
-        border-color: var(--chat-accent);
-    }
-
-    textarea#chat-input {
-        flex: 1;
-        border: none;
-        outline: none;
-        resize: none;
-        max-height: 200px;
-        min-height: 24px;
-        padding: 5px 0;
-        font-family: inherit;
-        font-size: 15px;
-        line-height: 1.5;
-    }
-
-    #send-btn {
-        background: none;
-        border: none;
-        color: var(--chat-accent);
-        cursor: pointer;
-        padding: 5px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.5;
-        transition: opacity 0.2s;
-    }
-
-    #send-btn.active {
-        opacity: 1;
-    }
-
-    #send-btn svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    /* Loading animation */
-    .typing {
-        display: flex;
-        gap: 4px;
-        padding-top: 5px;
-    }
-
-    .dot {
-        width: 6px;
-        height: 6px;
-        background: #94a3b8;
-        border-radius: 50%;
-        animation: blink 1.4s infinite both;
-    }
-
-    .dot:nth-child(2) { animation-delay: 0.2s; }
-    .dot:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes blink {
-        0%, 80%, 100% { opacity: 0; }
-        40% { opacity: 1; }
-    }
-
-    .footer-note {
-        text-align: center;
-        font-size: 11px;
-        color: #9ca3af;
-        margin-top: 10px;
+    /* Quick overrides to make it full width if possible */
+    .container {
+        max-width: 1400px !important;
+        padding: 20px !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="chat-container">
-    <div class="chat-header">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
-            <div>
-                <h2>{{ assistant.name }}</h2>
-                <span style="font-size: 11px; color: #28a745;">● En línea — Soporte RAG</span>
+<div class="chat-main-layout">
+    <!-- Sidebar de Conversación -->
+    <div class="chat-sidebar">
+        <div class="chat-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 32px; height: 32px; border-radius: 50%;">
+                <h2 style="font-size: 14px; margin: 0;">{{ assistant.name }}</h2>
             </div>
         </div>
-        <a href="{% url 'portal:index' %}" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(0,0,0,0.1); color: var(--contrast-2); border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 12px; text-decoration: none;">Volver al Portal</a>
-    </div>
 
-    <div class="chat-messages" id="chat-messages">
-        <!-- Mensaje de bienvenida si no hay historial -->
-        {% if not chat_messages %}
-        <div class="message-row ai">
-            <div class="avatar-chat ai">AI</div>
-            <div class="message-content">¡Hola! Soy tu {{ assistant.name }}. He analizado los documentos oficiales de la sede Temuco (Reglamentos, PEI, RIOHS). ¿En qué puedo ayudarte hoy?</div>
-        </div>
-        {% endif %}
-
-        {% for msg in chat_messages %}
-        <div class="message-row {{ msg.role }}">
-            <div class="avatar-chat {{ msg.role }}">
-                {% if msg.role == 'user' %}U{% else %}AI{% endif %}
+        <div class="chat-messages" id="chat-messages">
+            {% if not chat_messages %}
+            <div class="message-row ai">
+                <div class="message-content">¡Hola! Soy tu {{ assistant.name }}. ¿En qué situación pedagógica puedo asesorarte hoy?</div>
             </div>
-            <div class="message-content">{{ msg.content }}</div>
+            {% endif %}
+
+            {% for msg in chat_messages %}
+            <div class="message-row {{ msg.role }}">
+                <div class="message-content">{{ msg.content }}</div>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+
+        <div class="chat-input-area" style="padding: 15px; border-top: 1px solid #eee;">
+            <div style="display: flex; gap: 10px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px;">
+                <textarea id="chat-input" placeholder="Escribir..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:13px;"></textarea>
+                <button id="send-btn" style="background:none; border:none; color:var(--accent); cursor:pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div class="chat-input-area">
-        <div class="input-wrapper">
-            <textarea id="chat-input" placeholder="Escribe tu consulta aquí..." rows="1"></textarea>
-            <button id="send-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
+    <!-- Lienzo Canvas (Dashboard Operativo) -->
+    <div class="canvas-container">
+        <div id="canvas-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8; text-align: center;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            <h3 style="margin-top: 20px;">Lienzo Operativo UTP</h3>
+            <p>Realiza una consulta para poblar este tablero con sustento legal, rutas y checklists.</p>
         </div>
-        <div class="footer-note">La IA puede cometer errores. Verifica siempre la información en los documentos originales.</div>
+
+        <div id="canvas-content" class="canvas-grid" style="display: none;">
+            <!-- A. Sustento Normativo -->
+            <div class="canvas-card">
+                <div class="card-header">
+                    <span>⚖️</span>
+                    <h3>Sustento Normativo</h3>
+                </div>
+                <div class="card-body" id="canvas-section-a"></div>
+            </div>
+
+            <!-- C. Checklist -->
+            <div class="canvas-card">
+                <div class="card-header">
+                    <span>✅</span>
+                    <h3>Checklist de Monitoreo</h3>
+                </div>
+                <div class="card-body" id="canvas-section-c"></div>
+            </div>
+
+            <!-- B. Ruta de Acciones -->
+            <div class="canvas-card full-width">
+                <div class="card-header">
+                    <span>🚀</span>
+                    <h3>Ruta de Acción Operativa</h3>
+                </div>
+                <div class="card-body" id="canvas-section-b"></div>
+                
+                <div class="canvas-actions">
+                    <a href="#" id="btn-add-calendar" class="btn-canvas btn-calendar">
+                        <span>📅</span> Agendar en Calendario
+                    </a>
+                    <a href="#" id="btn-add-cycle" class="btn-canvas btn-cycle">
+                        <span>📈</span> Iniciar Ciclo de Mejora
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -241,115 +104,113 @@
     const sendBtn = document.getElementById('send-btn');
     const assistantSlug = '{{ assistant.slug }}';
 
-    // Auto-scroll al final
+    // Canvas Elements
+    const canvasEmpty = document.getElementById('canvas-empty-state');
+    const canvasContent = document.getElementById('canvas-content');
+    const sectionA = document.getElementById('canvas-section-a');
+    const sectionB = document.getElementById('canvas-section-b');
+    const sectionC = document.getElementById('canvas-section-c');
+    
+    // Action Buttons
+    const btnCalendar = document.getElementById('btn-add-calendar');
+    const btnCycle = document.getElementById('btn-add-cycle');
+
     function scrollToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-    scrollToBottom();
 
-    // Resize textarea automáticamente
-    chatInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-        
-        if (this.value.trim() !== '') {
-            sendBtn.classList.add('active');
-        } else {
-            sendBtn.classList.remove('active');
+    // --- Lógica del Canvas ---
+
+    function updateCanvas(text) {
+        if (!text) return;
+
+        // Intentar parsear las secciones A, B y C
+        // Usamos regex para encontrar los marcadores. 
+        // Formatos esperados: "A. SUSTENTO", "B. RUTA", "C. CHECKLIST"
+        const partA = text.split(/B\.\s+RUTA/i)[0].replace(/A\.\s+SUSTENTO/i, '').trim();
+        const remainBC = text.split(/B\.\s+RUTA/i)[1] || '';
+        const partB = remainBC.split(/C\.\s+CHECKLIST/i)[0].trim();
+        const partC = remainBC.split(/C\.\s+CHECKLIST/i)[1] || '';
+
+        if (partA || partB || partC) {
+            canvasEmpty.style.display = 'none';
+            canvasContent.style.display = 'grid';
+
+            sectionA.innerHTML = marked.parse(partA);
+            sectionB.innerHTML = marked.parse(partB);
+            
+            // Transformar checklist plano en items interactivos si es posible
+            const checklistHtml = marked.parse(partC);
+            sectionC.innerHTML = checklistHtml.replace(/<li>/g, '<li class="checklist-item"><input type="checkbox"> ');
+
+            // Actualizar botones de integración con datos inteligentes
+            const titleMatch = partB.match(/\|\s*([^|]+)\s*\|/); // Intentar sacar primer item de tabla
+            const cleanTitle = titleMatch ? titleMatch[1].trim() : 'Acción Sugerida por IA';
+            
+            btnCalendar.href = `{% url 'calendar_red:evento_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent('Acción derivada de asesoría IA UTP Temuco.')}`;
+            btnCycle.href = `{% url 'improvement_cycle:meta_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent(partA.substring(0, 100) + '...')}`;
         }
-    });
+    }
 
-    // Limpiar Chat eliminado por requerimiento de usuario
+    // Carga inicial si hay una respuesta previa
+    const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
+    if (initialResponse && initialResponse !== 'None') {
+        updateCanvas(initialResponse);
+    }
 
+    // --- Lógica de Chat ---
 
-    // Manejar envío
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
 
-        // Limpiar input
         chatInput.value = '';
-        chatInput.style.height = 'auto';
-        sendBtn.classList.remove('active');
-
-        // Añadir mensaje del usuario al DOM
         appendMessage('user', text);
         scrollToBottom();
 
-        // Mostrar indicador de carga
         const loadingId = 'loading-' + Date.now();
         appendLoading(loadingId);
-        scrollToBottom();
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos
-
             const response = await fetch(`/ia/${assistantSlug}/chat/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: new URLSearchParams({ 'message': text }),
-                signal: controller.signal
+                body: new URLSearchParams({ 'message': text })
             });
 
-            clearTimeout(timeoutId);
             const data = await response.json();
-            
-            // Eliminar indicador de carga
             document.getElementById(loadingId).remove();
 
             if (data.status === 'success') {
                 appendMessage('assistant', data.response);
+                updateCanvas(data.response); // Actualizar Dashboard
             } else {
-                appendMessage('assistant', 'Hubo un error al procesar tu mensaje. Intenta de nuevo.');
+                appendMessage('assistant', 'Error en la respuesta.');
             }
             scrollToBottom();
         } catch (error) {
             console.error('Error:', error);
             document.getElementById(loadingId).remove();
-            if (error.name === 'AbortError') {
-                appendMessage('assistant', 'La consulta está tomando demasiado tiempo. Por favor intenta con una pregunta más corta.');
-            } else {
-                appendMessage('assistant', 'Error de conexión con el servidor. Por favor, intenta de nuevo en unos segundos.');
-            }
-            scrollToBottom();
+            appendMessage('assistant', 'Error de conexión.');
         }
     }
 
     function appendMessage(role, content) {
-        const messageRow = document.createElement('div');
-        messageRow.className = `message-row ${role}`;
-        messageRow.innerHTML = `
-            <div class="avatar-chat ${role}">${role === 'user' ? 'U' : 'AI'}</div>
-            <div class="message-content"></div>
-        `;
-        const contentDiv = messageRow.querySelector('.message-content');
-        if (role === 'ai' || role === 'assistant') {
-            contentDiv.innerHTML = marked.parse(content);
-        } else {
-            contentDiv.textContent = content;
-        }
-        chatMessages.appendChild(messageRow);
+        const div = document.createElement('div');
+        div.className = `message-row ${role}`;
+        div.innerHTML = `<div class="message-content">${marked.parse(content)}</div>`;
+        chatMessages.appendChild(div);
     }
 
     function appendLoading(id) {
-        const row = document.createElement('div');
-        row.className = 'message-row ai';
-        row.id = id;
-        row.innerHTML = `
-            <div class="avatar-chat ai">AI</div>
-            <div class="message-content">
-                <div class="typing">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-            </div>
-        `;
-        chatMessages.appendChild(row);
+        const div = document.createElement('div');
+        div.className = 'message-row ai';
+        div.id = id;
+        div.innerHTML = `<div class="message-content">IA está pensando...</div>`;
+        chatMessages.appendChild(div);
     }
 
     sendBtn.addEventListener('click', sendMessage);
@@ -359,9 +220,11 @@
             sendMessage();
         }
     });
-    // Renderizar mensajes existentes al cargar
-    document.querySelectorAll('.message-row.ai .message-content, .message-row.assistant .message-content').forEach(div => {
+
+    // Renderizar Markdown inicial en el chat sidebar
+    document.querySelectorAll('.chat-messages .message-content').forEach(div => {
         div.innerHTML = marked.parse(div.innerText);
     });
+
 </script>
 {% endblock %}
