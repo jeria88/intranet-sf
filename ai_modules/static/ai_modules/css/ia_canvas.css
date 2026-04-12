@@ -1,28 +1,29 @@
 :root {
-    --canvas-bg: #f3f4f6;
-    --card-bg: rgba(255, 255, 255, 0.9);
-    --accent-rgb: 30, 115, 190;
-    --border-glass: rgba(226, 232, 240, 0.8);
+    --bg-main: #fcfcfc;
+    --sidebar-bg: #ffffff;
+    --accent: #1e73be;
+    --text-dark: #2c3e50;
+    --text-base: #4a5568;
+    --border-soft: #edf2f7;
 }
 
-/* Layout Principal: Cambiamos a Flex para mayor control de colapso */
+/* Master Layout */
 .chat-main-layout {
     display: flex;
     width: 100%;
-    height: calc(100vh - 160px); /* Ajustado para dar aire al footer y header */
-    background: var(--canvas-bg);
-    border-radius: 16px;
+    height: calc(100vh - 140px);
+    background: #f8fafc;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    margin-top: -20px; /* Sube un poco para compensar el container */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
-/* Sidebar de Chat: Flex vertical para empujar el input al fondo */
+/* Sidebar de Chat (32%) */
 .chat-sidebar {
-    width: 380px;
+    width: 32%;
     min-width: 380px;
-    background: white;
-    border-right: 1px solid #e5e7eb;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-soft);
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
@@ -30,7 +31,7 @@
 
 .chat-header {
     padding: 15px 20px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--border-soft);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -40,70 +41,54 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    background: #fafafa;
+    background: #ffffff;
 }
 
-.chat-input-area {
-    padding: 15px;
-    background: white;
-    border-top: 1px solid #f1f5f9;
+/* Markdown Harmony: Restaurando la Legibilidad */
+.message-content {
+    line-height: 1.6;
+    color: var(--text-base);
+    font-size: 14px;
 }
 
-/* Lienzo Canvas */
-.canvas-container {
-    flex: 1;
-    padding: 25px;
-    overflow-y: auto;
-    background: radial-gradient(circle at 2px 2px, #e5e7eb 1px, transparent 0);
-    background-size: 32px 32px;
-    transition: all 0.3s ease;
-}
+.message-content p { margin-bottom: 15px; }
+.message-content ul, .message-content ol { margin-bottom: 15px; padding-left: 20px; }
+.message-content li { margin-bottom: 8px; }
 
-/* Estado Colapsado */
-.canvas-collapsed .canvas-container {
-    flex: 0;
-    width: 0;
-    padding: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.canvas-collapsed .chat-sidebar {
+/* Tablas Corporativas */
+.message-content table {
     width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
 }
 
-.canvas-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    max-width: 1100px;
-    margin: 0 auto;
+.message-content th {
+    background: #f8fafc;
+    color: #2d3748;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #cbd5e0;
 }
 
-.canvas-card {
-    background: var(--card-bg);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--border-glass);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+.message-content td {
+    padding: 10px;
+    border-bottom: 1px solid #edf2f7;
 }
 
-.canvas-card.full-width {
-    grid-column: span 2;
-}
+.message-content tr:nth-child(even) { background: #fafcfe; }
 
-/* Botón Toggle Moderno */
+/* Toggle Minimalista */
 #toggle-canvas {
     background: #f1f5f9;
-    border: none;
-    padding: 8px;
-    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 6px;
+    border-radius: 6px;
     cursor: pointer;
-    color: #64748b;
+    color: #718096;
     display: flex;
     align-items: center;
-    justify-content: center;
     transition: all 0.2s;
 }
 
@@ -112,39 +97,92 @@
     color: var(--accent);
 }
 
-/* Micro-ajustes de componentes internos */
+/* Canvas de Gestión */
+.canvas-container {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    background: #f1f5f9;
+    transition: all 0.3s ease;
+}
+
+.canvas-collapsed .canvas-container { flex: 0; width: 0; padding: 0; opacity: 0; pointer-events: none; }
+.canvas-collapsed .chat-sidebar { width: 100%; max-width: 100%; }
+
+.canvas-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.canvas-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.canvas-card.full-width { grid-column: span 2; }
+
 .card-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 15px;
-    color: #1e293b;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
 }
 
 .card-header h3 {
     margin: 0;
-    font-size: 14px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.btn-canvas {
-    padding: 8px 16px;
-    font-size: 12px;
-}
-
-/* Estilos para el Markdown renderizado */
-.message-content table {
-    width: 100%;
     font-size: 13px;
-    border-collapse: collapse;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #4a5568;
+    letter-spacing: 0.5px;
 }
 
-.message-content th { background: #f1f5f9; padding: 6px; }
-.message-content td { border: 1px solid #eee; padding: 6px; }
-
-@media (max-width: 1100px) {
-    .chat-sidebar { width: 320px; min-width: 320px; }
-    .canvas-grid { grid-template-columns: 1fr; }
-    .canvas-card.full-width { grid-column: span 1; }
+/* Modo Impresión PDF Vertical */
+@media print {
+    @page { size: portrait; margin: 20mm; }
+    
+    html, body { background: white !important; }
+    #main-wrapper { display: block !important; border: none !important; box-shadow: none !important; }
+    .chat-sidebar, #toggle-canvas, .canvas-actions, .site-header, .main-navigation, footer { display: none !important; }
+    
+    #canvas-container {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+    }
+    
+    .print-only-header, .print-only-footer { display: block !important; }
+    
+    .canvas-grid { display: block !important; }
+    .canvas-card {
+        display: block !important;
+        break-inside: avoid;
+        margin-bottom: 30px !important;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        padding: 20px !important;
+    }
 }
+
+.btn-print {
+    background: #2d3748;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-print:hover { background: #1a202c; }
