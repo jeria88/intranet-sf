@@ -191,12 +191,15 @@
 
 {% block content %}
 <div class="chat-container">
-    <div class="chat-header">
-        <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
-        <div>
-            <h2>{{ assistant.name }}</h2>
-            <span style="font-size: 11px; color: #28a745;">● En línea — Soporte RAG</span>
+    <div class="chat-header" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
+            <div>
+                <h2>{{ assistant.name }}</h2>
+                <span style="font-size: 11px; color: #28a745;">● En línea — Soporte RAG</span>
+            </div>
         </div>
+        <button id="clear-chat-btn" style="background: none; border: 1px solid #dc3545; color: #dc3545; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px;">Limpiar Chat</button>
     </div>
 
     <div class="chat-messages" id="chat-messages">
@@ -252,6 +255,28 @@
             sendBtn.classList.add('active');
         } else {
             sendBtn.classList.remove('active');
+        }
+    });
+
+    // Limpiar Chat
+    document.getElementById('clear-chat-btn').addEventListener('click', async function() {
+        if(confirm('¿Estás seguro de que quieres limpiar todo el historial de este chat? Esto evitará que la IA mezcle preguntas anteriores con las nuevas.')) {
+            try {
+                const response = await fetch(`/ia/${assistantSlug}/chat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({ 'action': 'clear_history' })
+                });
+                const data = await response.json();
+                if(data.status === 'success') {
+                    location.reload();
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
     });
 

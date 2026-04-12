@@ -171,6 +171,12 @@ def ai_chat(request, slug):
     if request.method == 'POST':
         import traceback
         try:
+            # Opción para limpiar historial
+            action = request.POST.get('action')
+            if action == 'clear_history':
+                AIChatMessage.objects.filter(user=request.user, assistant=assistant).delete()
+                return JsonResponse({'status': 'success'})
+
             user_message = request.POST.get('message', '').strip()
             if not user_message:
                 return JsonResponse({'error': 'Mensaje vacío'}, status=400)
