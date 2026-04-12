@@ -1,211 +1,150 @@
 :root {
-    --canvas-bg: #f0f2f5;
-    --card-bg: rgba(255, 255, 255, 0.85);
-    --accent-soft: rgba(var(--accent-rgb), 0.1);
-    --border-glass: rgba(255, 255, 255, 0.3);
+    --canvas-bg: #f3f4f6;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --accent-rgb: 30, 115, 190;
+    --border-glass: rgba(226, 232, 240, 0.8);
 }
 
+/* Layout Principal: Cambiamos a Flex para mayor control de colapso */
 .chat-main-layout {
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    height: calc(100vh - 80px); /* Ajustado para el header de la intranet */
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 160px); /* Ajustado para dar aire al footer y header */
     background: var(--canvas-bg);
+    border-radius: 16px;
     overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    margin-top: -20px; /* Sube un poco para compensar el container */
 }
 
-/* Sidebar de Chat */
+/* Sidebar de Chat: Flex vertical para empujar el input al fondo */
 .chat-sidebar {
+    width: 380px;
+    min-width: 380px;
     background: white;
     border-right: 1px solid #e5e7eb;
     display: flex;
     flex-direction: column;
-    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .chat-messages {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    background: #f8fafc;
+    background: #fafafa;
 }
 
-.message-row {
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-row.ai .message-content {
+.chat-input-area {
+    padding: 15px;
     background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px 12px 12px 0;
-}
-
-.message-row.user .message-content {
-    background: var(--accent);
-    color: white;
-    border-radius: 12px 12px 0 12px;
-    align-self: flex-end;
-}
-
-.message-content {
-    padding: 12px 16px;
-    max-width: 90%;
-    font-size: 14px;
-    line-height: 1.5;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border-top: 1px solid #f1f5f9;
 }
 
 /* Lienzo Canvas */
 .canvas-container {
-    padding: 30px;
+    flex: 1;
+    padding: 25px;
     overflow-y: auto;
     background: radial-gradient(circle at 2px 2px, #e5e7eb 1px, transparent 0);
-    background-size: 24px 24px; /* Patrón de borrador/blueprint */
+    background-size: 32px 32px;
+    transition: all 0.3s ease;
+}
+
+/* Estado Colapsado */
+.canvas-collapsed .canvas-container {
+    flex: 0;
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.canvas-collapsed .chat-sidebar {
+    width: 100%;
 }
 
 .canvas-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 25px;
-    max-width: 1200px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 1100px;
     margin: 0 auto;
 }
 
 .canvas-card {
     background: var(--card-bg);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--border-glass);
-    border-radius: 16px;
-    padding: 25px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s;
-}
-
-.canvas-card:hover {
-    transform: translateY(-2px);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .canvas-card.full-width {
     grid-column: span 2;
 }
 
+/* Botón Toggle Moderno */
+#toggle-canvas {
+    background: #f1f5f9;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+#toggle-canvas:hover {
+    background: #e2e8f0;
+    color: var(--accent);
+}
+
+/* Micro-ajustes de componentes internos */
 .card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    padding-bottom: 12px;
-}
-
-.card-header i {
-    font-size: 20px;
-    color: var(--accent);
+    gap: 10px;
+    margin-bottom: 15px;
+    color: #1e293b;
 }
 
 .card-header h3 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    color: #1e293b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.card-body {
-    flex: 1;
     font-size: 14px;
-    color: #334155;
-    line-height: 1.6;
-}
-
-/* Tablas en el Canvas */
-.card-body table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-.card-body th {
-    background: #1e293b;
-    color: white;
-    text-align: left;
-    padding: 10px;
-    font-size: 12px;
-}
-
-.card-body td {
-    padding: 10px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-/* Checklist Premium */
-.checklist-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding: 8px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.5);
-}
-
-.checklist-item input[type="checkbox"] {
-    margin-top: 4px;
-}
-
-/* Botones de Integración */
-.canvas-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(0,0,0,0.05);
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .btn-canvas {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
+/* Estilos para el Markdown renderizado */
+.message-content table {
+    width: 100%;
     font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.2s;
+    border-collapse: collapse;
 }
 
-.btn-calendar {
-    background: #5436DA;
-    color: white;
-}
+.message-content th { background: #f1f5f9; padding: 6px; }
+.message-content td { border: 1px solid #eee; padding: 6px; }
 
-.btn-cycle {
-    background: #0ea5e9;
-    color: white;
-}
-
-.btn-canvas:hover {
-    filter: brightness(1.1);
-    transform: scale(1.02);
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .chat-main-layout {
-        grid-template-columns: 1fr;
-    }
-    .chat-sidebar {
-        display: none; /* O un toggle menu */
-    }
-    .canvas-grid {
-        grid-template-columns: 1fr;
-    }
-    .canvas-card.full-width {
-        grid-column: span 1;
-    }
+@media (max-width: 1100px) {
+    .chat-sidebar { width: 320px; min-width: 320px; }
+    .canvas-grid { grid-template-columns: 1fr; }
+    .canvas-card.full-width { grid-column: span 1; }
 }

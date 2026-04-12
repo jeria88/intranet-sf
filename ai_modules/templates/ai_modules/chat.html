@@ -4,23 +4,28 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'ai_modules/css/ia_canvas.css' %}">
 <style>
-    /* Quick overrides to make it full width if possible */
+    /* Asegurar que el container base no rompa el dashboard de pantalla completa */
     .container {
-        max-width: 1400px !important;
-        padding: 20px !important;
+        max-width: 100% !important;
+        padding: 10px 20px !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="chat-main-layout">
+<div id="main-wrapper" class="chat-main-layout">
     <!-- Sidebar de Conversación -->
     <div class="chat-sidebar">
         <div class="chat-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 32px; height: 32px; border-radius: 50%;">
-                <h2 style="font-size: 14px; margin: 0;">{{ assistant.name }}</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 28px; height: 28px; border-radius: 50%;">
+                <h2 style="font-size: 13px; margin: 0; font-weight: 700; color: #334155;">{{ assistant.name }}</h2>
             </div>
+            
+            <!-- Botón Toggle de Lienzo -->
+            <button id="toggle-canvas" title="Expandir/Contraer Lienzo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            </button>
         </div>
 
         <div class="chat-messages" id="chat-messages">
@@ -37,22 +42,26 @@
             {% endfor %}
         </div>
 
-        <div class="chat-input-area" style="padding: 15px; border-top: 1px solid #eee;">
-            <div style="display: flex; gap: 10px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px;">
-                <textarea id="chat-input" placeholder="Escribir..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:13px;"></textarea>
-                <button id="send-btn" style="background:none; border:none; color:var(--accent); cursor:pointer;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <!-- Área de Entrada: Siempre al fondo -->
+        <div class="chat-input-area">
+            <div style="display: flex; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                <textarea id="chat-input" placeholder="Consultar normativa, redactar acta..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; color: #1e293b;"></textarea>
+                <button id="send-btn" style="background:var(--accent); color:white; border:none; width: 32px; height: 32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
+            <p style="font-size: 10px; color: #94a3b8; margin: 8px 0 0 5px;">Presiona Enter para enviar</p>
         </div>
     </div>
 
     <!-- Lienzo Canvas (Dashboard Operativo) -->
-    <div class="canvas-container">
+    <div class="canvas-container" id="canvas-container">
         <div id="canvas-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #94a3b8; text-align: center;">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-            <h3 style="margin-top: 20px;">Lienzo Operativo UTP</h3>
-            <p>Realiza una consulta para poblar este tablero con sustento legal, rutas y checklists.</p>
+            <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <span style="font-size: 40px;">📂</span>
+                <h3 style="margin: 15px 0 10px; color: #1e293b;">Lienzo Operativo UTP</h3>
+                <p style="max-width: 280px; font-size: 14px;">Realiza una consulta para poblar este tablero con sustento legal, rutas y checklists.</p>
+            </div>
         </div>
 
         <div id="canvas-content" class="canvas-grid" style="display: none;">
@@ -62,29 +71,31 @@
                     <span>⚖️</span>
                     <h3>Sustento Normativo</h3>
                 </div>
-                <div class="card-body" id="canvas-section-a"></div>
+                <div id="canvas-section-a" class="card-body"></div>
             </div>
 
             <!-- C. Checklist -->
             <div class="canvas-card">
                 <div class="card-header">
                     <span>✅</span>
-                    <h3>Checklist de Monitoreo</h3>
+                    <h3>Checklist Monitoreo</h3>
                 </div>
-                <div class="card-body" id="canvas-section-c"></div>
+                <div id="canvas-section-c" class="card-body"></div>
             </div>
 
             <!-- B. Ruta de Acciones -->
             <div class="canvas-card full-width">
-                <div class="card-header">
-                    <span>🚀</span>
-                    <h3>Ruta de Acción Operativa</h3>
+                <div class="card-header" style="justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>🚀</span>
+                        <h3>Ruta de Acción Operativa</h3>
+                    </div>
                 </div>
-                <div class="card-body" id="canvas-section-b"></div>
+                <div id="canvas-section-b" class="card-body"></div>
                 
                 <div class="canvas-actions">
                     <a href="#" id="btn-add-calendar" class="btn-canvas btn-calendar">
-                        <span>📅</span> Agendar en Calendario
+                        <span>📅</span> Vincular a Calendario
                     </a>
                     <a href="#" id="btn-add-cycle" class="btn-canvas btn-cycle">
                         <span>📈</span> Iniciar Ciclo de Mejora
@@ -99,6 +110,8 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    const wrapper = document.getElementById('main-wrapper');
+    const toggleBtn = document.getElementById('toggle-canvas');
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
@@ -119,47 +132,53 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // --- Lógica del Canvas ---
+    // --- Toggle Canvas ---
+    toggleBtn.addEventListener('click', () => {
+        wrapper.classList.toggle('canvas-collapsed');
+    });
 
+    // --- Lógica del Canvas ---
     function updateCanvas(text) {
         if (!text) return;
+        
+        // Marcadores A/B/C
+        const regexA = /A\.\s+SUSTENTO/i;
+        const regexB = /B\.\s+RUTA/i;
+        const regexC = /C\.\s+CHECKLIST/i;
 
-        // Intentar parsear las secciones A, B y C
-        // Usamos regex para encontrar los marcadores. 
-        // Formatos esperados: "A. SUSTENTO", "B. RUTA", "C. CHECKLIST"
-        const partA = text.split(/B\.\s+RUTA/i)[0].replace(/A\.\s+SUSTENTO/i, '').trim();
-        const remainBC = text.split(/B\.\s+RUTA/i)[1] || '';
-        const partB = remainBC.split(/C\.\s+CHECKLIST/i)[0].trim();
-        const partC = remainBC.split(/C\.\s+CHECKLIST/i)[1] || '';
-
-        if (partA || partB || partC) {
+        if (text.match(regexA) || text.match(regexB) || text.match(regexC)) {
             canvasEmpty.style.display = 'none';
             canvasContent.style.display = 'grid';
+
+            const parts = text.split(regexB);
+            const partA = parts[0].replace(regexA, '').trim();
+            const remainBC = parts[1] || '';
+            const partsBC = remainBC.split(regexC);
+            const partB = partsBC[0].trim();
+            const partC = partsBC[1] || '';
 
             sectionA.innerHTML = marked.parse(partA);
             sectionB.innerHTML = marked.parse(partB);
             
-            // Transformar checklist plano en items interactivos si es posible
             const checklistHtml = marked.parse(partC);
             sectionC.innerHTML = checklistHtml.replace(/<li>/g, '<li class="checklist-item"><input type="checkbox"> ');
 
-            // Actualizar botones de integración con datos inteligentes
-            const titleMatch = partB.match(/\|\s*([^|]+)\s*\|/); // Intentar sacar primer item de tabla
-            const cleanTitle = titleMatch ? titleMatch[1].trim() : 'Acción Sugerida por IA';
+            // Título para botones
+            const titleMatch = partB.match(/\|\s*([^|]+)\s*\|/);
+            const cleanTitle = titleMatch ? titleMatch[1].trim() : 'Acción Sugerida IA';
             
             btnCalendar.href = `{% url 'calendar_red:evento_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent('Acción derivada de asesoría IA UTP Temuco.')}`;
             btnCycle.href = `{% url 'improvement_cycle:meta_crear' %}?title=${encodeURIComponent(cleanTitle)}&description=${encodeURIComponent(partA.substring(0, 100) + '...')}`;
         }
     }
 
-    // Carga inicial si hay una respuesta previa
+    // Carga inicial persistente
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
     if (initialResponse && initialResponse !== 'None') {
         updateCanvas(initialResponse);
     }
 
     // --- Lógica de Chat ---
-
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
@@ -174,10 +193,7 @@
         try {
             const response = await fetch(`/ia/${assistantSlug}/chat/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
                 body: new URLSearchParams({ 'message': text })
             });
 
@@ -186,7 +202,7 @@
 
             if (data.status === 'success') {
                 appendMessage('assistant', data.response);
-                updateCanvas(data.response); // Actualizar Dashboard
+                updateCanvas(data.response);
             } else {
                 appendMessage('assistant', 'Error en la respuesta.');
             }
@@ -209,19 +225,16 @@
         const div = document.createElement('div');
         div.className = 'message-row ai';
         div.id = id;
-        div.innerHTML = `<div class="message-content">IA está pensando...</div>`;
+        div.innerHTML = `<div class="message-content">IA pensando...</div>`;
         chatMessages.appendChild(div);
     }
 
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    // Renderizar Markdown inicial en el chat sidebar
+    // Renderizar Markdown inicial
     document.querySelectorAll('.chat-messages .message-content').forEach(div => {
         div.innerHTML = marked.parse(div.innerText);
     });
