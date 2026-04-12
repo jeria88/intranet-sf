@@ -64,37 +64,55 @@ def get_openai_embedding(text):
 def get_relevant_chunks(assistant, query, top_n=10):
     """
     Busca fragmentos relevantes usando similitud coseno en embeddings pre-calculados.
-    Evita la carga de modelos en RAM, usando puramente la base de datos y Python.
     """
     from .models import AIKnowledgeChunk
+    import json
 
     # 1. Convertir la consulta en embedding
     query_embedding = get_openai_embedding(query)
     
-    chunks = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True)
-    if not chunks.exists() or not query_embedding:
-        # Fallback si no hay embeddings cargados: retornar los primeros
-        qs = AIKnowledgeChunk.objects.filter(assistant=assistant)
-        return "\n\n---\n\n".join([f"[Fuente: {c.document_name}]\n{c.content}" for c in qs[:5]])
+    debug_info = []
+    
+    if not query_embedding:
+        debug_info.append("Fallo al generar query_embedding (OPENAI API KEY incorrecta o limite de cuota al consultar).")
 
-    # 2. Calcular similitud coseno en memoria de Python (~1200 items es casi instantáneo)
+    chunks = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True)
+    chunks_count = chunks.count()
+    
+    if chunks_count == 0:
+        debug_info.append("La base de datos tiene 0 chunks con embeddings. setup_utp_temuco.py falló al vectorizar.")
+
+    if debug_info:
+        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\n\nDile al usuario textualmente estos errores:\n{' - '.join(debug_info)}"
+
+    # 2. Calcular similitud coseno
     scored_chunks = []
+    malformed_embeddings = 0
     for chunk in chunks:
         if not chunk.embedding: continue
-        sim = cosine_similarity(query_embedding, chunk.embedding)
+        
+        emb = chunk.embedding
+        if isinstance(emb, str):
+            try:
+                emb = json.loads(emb)
+            except:
+                malformed_embeddings += 1
+                continue
+                
+        sim = cosine_similarity(query_embedding, emb)
         if sim > 0.1: # Threshold básico
             scored_chunks.append({
                 'score': sim,
                 'chunk': chunk
             })
 
+    if not scored_chunks:
+        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: No se encontraron chunks con score > 0.1. Chunks evaluados: {chunks_count}. Chunks malformados: {malformed_embeddings}. Longitud query: {len(query_embedding)}."
+
     # 3. Ordenar por score
     scored_chunks.sort(key=lambda x: x['score'], reverse=True)
     top_items = scored_chunks[:top_n]
     
-    if not top_items:
-        return "\n\n---\n\n".join([c.content for c in chunks[:5]])
-
     # 4. Expansión por vecindad
     expanded_ids = set()
     final_chunks = []
