@@ -30,41 +30,48 @@ def process_knowledge_base_file(knowledge_base_obj):
     # Actualizar el contexto del asistente asociado
     knowledge_base_obj.assistant.update_context_text()
 
-def get_relevant_chunks(full_text, query, chunk_size=1500, top_n=10):
+def get_relevant_chunks(assistant, query, top_n=10):
     """
-    Divide el texto en fragmentos y retorna los N más relevantes basado en 
-    coincidencia de palabras clave (Buscador RAG ligero).
+    Busca los fragmentos más relevantes en la base de datos para un asistente específico
+    utilizando una búsqueda por palabras clave simplificada.
     """
-    if not full_text:
+    from .models import AIKnowledgeChunk
+    
+    # Obtener todos los chunks asociados al asistente
+    chunks_queryset = AIKnowledgeChunk.objects.filter(assistant=assistant)
+    
+    if not chunks_queryset.exists():
         return ""
     
-    # Limpieza básica de la consulta
+    # Limpieza básica de la consulta y obtención de palabras clave
     keywords = [w.lower() for w in query.split() if len(w) > 3]
-    if not keywords:
-        # Si no hay palabras clave largas, devolvemos el inicio del texto
-        return full_text[:chunk_size * top_n]
-
-    # Dividir el texto en fragmentos con solapamiento
-    chunks = []
-    for i in range(0, len(full_text), chunk_size - 200):
-        chunks.append(full_text[i:i + chunk_size])
     
-    # Puntuar fragmentos
+    if not keywords:
+        # Si no hay palabras clave largas, devolvemos los primeros 5 chunks por defecto
+        default_chunks = chunks_queryset.all()[:5]
+        return "\n\n---\n\n".join([c.content for c in default_chunks])
+
+    # Puntuar fragmentos en memoria (Buscador RAG ligero)
     chunk_scores = []
-    for chunk in chunks:
+    for chunk in chunks_queryset:
         score = 0
-        chunk_lower = chunk.lower()
+        content_lower = chunk.content.lower()
+        
+        # Las palabras clave en el contenido suman puntos
         for kw in keywords:
-            if kw in chunk_lower:
+            if kw in content_lower:
                 score += 1
-        chunk_scores.append((score, chunk))
+                
+        if score > 0:
+            chunk_scores.append((score, chunk.content))
     
     # Ordenar por puntaje (descendente) y tomar los mejores
     ranked_chunks = sorted(chunk_scores, key=lambda x: x[0], reverse=True)
-    best_chunks = [c[1] for c in ranked_chunks[:top_n] if c[0] > 0]
+    best_chunks = [c[1] for c in ranked_chunks[:top_n]]
     
-    # Si no hubo matches, devolver los primeros fragmentos por precaución
+    # Si no hubo matches, devolver los primeros fragmentos para dar algo de contexto básico
     if not best_chunks:
-        return full_text[:chunk_size * top_n]
+        fallback_chunks = chunks_queryset.all()[:3]
+        return "\n\n---\n\n".join([c.content for c in fallback_chunks])
         
     return "\n\n---\n\n".join(best_chunks)

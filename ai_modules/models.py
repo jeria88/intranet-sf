@@ -116,3 +116,20 @@ class AIChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.role}): {self.content[:50]}..."
+
+
+class AIKnowledgeChunk(models.Model):
+    assistant = models.ForeignKey(
+        AIAssistant, on_delete=models.CASCADE, related_name='chunks'
+    )
+    content = models.TextField(verbose_name='Contenido del fragmento')
+    metadata = models.JSONField(default=dict, verbose_name='Metadatos (Establecimiento, Rol, Doc)')
+    chunk_id = models.CharField(max_length=100, unique=True, verbose_name='ID Único del fragmento')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Fragmento de Conocimiento'
+        verbose_name_plural = 'Fragmentos de Conocimiento'
+
+    def __str__(self):
+        return f"Chunk {self.chunk_id} - {self.assistant.slug}"

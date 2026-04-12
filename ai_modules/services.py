@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 from .utils import get_relevant_chunks
 
-def call_deepseek_ai(system_instruction, context_text, messages_history, user_query):
+def call_deepseek_ai(assistant, messages_history, user_query):
     """
     Realiza una llamada a la API de DeepSeek inyectando el contexto (RAG) 
     y el historial de la conversación.
@@ -13,10 +13,11 @@ def call_deepseek_ai(system_instruction, context_text, messages_history, user_qu
     if not api_key:
         return "Error: DEEPSEEK_API_KEY no configurado."
 
-    # RAG: Filtramos solo los fragmentos relevantes para ahorrar tokens y ganar precisión
-    relevant_context = get_relevant_chunks(context_text, user_query)
+    # RAG: Filtramos solo los fragmentos relevantes directamente desde la BD del asistente
+    relevant_context = get_relevant_chunks(assistant, user_query)
 
     # Combinamos la instrucción de sistema con el contexto filtrado
+    system_instruction = assistant.system_instruction or "Eres un asistente servicial."
     full_system_prompt = (
         f"{system_instruction}\n\n"
         "### REGLAS CRÍTICAS:\n"

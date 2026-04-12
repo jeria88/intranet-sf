@@ -78,9 +78,9 @@ def nueva_consulta(request, slug):
                 # El historial para una consulta única es solo la pregunta actual
                 history = [{"role": "user", "content": query.question}]
                 suggestion = call_deepseek_ai(
-                    assistant.system_instruction,
-                    assistant.context_text,
-                    history
+                    assistant,
+                    history,
+                    query.question
                 )
                 query.ai_suggestion = suggestion
                 query.save(update_fields=['ai_suggestion'])
@@ -192,8 +192,7 @@ def ai_chat(request, slug):
         
         # 3. Llamar a la IA
         ai_response = call_deepseek_ai(
-            assistant.system_instruction,
-            assistant.context_text,
+            assistant,
             history,
             user_message
         )
