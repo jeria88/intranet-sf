@@ -169,46 +169,55 @@ def ai_chat(request, slug):
         return render(request, 'ai_modules/no_access.html')
 
     if request.method == 'POST':
-        user_message = request.POST.get('message', '').strip()
-        if not user_message:
-            return JsonResponse({'error': 'Mensaje vacío'}, status=400)
-        
-        # 1. Guardar mensaje del usuario
-        AIChatMessage.objects.create(
-            user=request.user,
-            assistant=assistant,
-            role='user',
-            content=user_message
-        )
-        
-        # 2. Obtener historial reciente para el contexto
-        history_objs = AIChatMessage.objects.filter(
-            user=request.user, assistant=assistant
-        ).order_by('timestamp')
-        
-        history = []
-        for h in history_objs:
-            history.append({'role': h.role, 'content': h.content})
-        
-        # 3. Llamar a la IA
-        ai_response = call_deepseek_ai(
-            assistant,
-            history,
-            user_message
-        )
-        
-        # 4. Guardar respuesta de la IA
-        AIChatMessage.objects.create(
-            user=request.user,
-            assistant=assistant,
-            role='assistant',
-            content=ai_response
-        )
-        
-        return JsonResponse({
-            'response': ai_response,
-            'status': 'success'
-        })
+        import traceback
+        try:
+            user_message = request.POST.get('message', '').strip()
+            if not user_message:
+                return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+            
+            # 1. Guardar mensaje del usuario
+            AIChatMessage.objects.create(
+                user=request.user,
+                assistant=assistant,
+                role='user',
+                content=user_message
+            )
+            
+            # 2. Obtener historial reciente para el contexto
+            history_objs = AIChatMessage.objects.filter(
+                user=request.user, assistant=assistant
+            ).order_by('timestamp')
+            
+            history = []
+            for h in history_objs:
+                history.append({'role': h.role, 'content': h.content})
+            
+            # 3. Llamar a la IA
+            ai_response = call_deepseek_ai(
+                assistant,
+                history,
+                user_message
+            )
+            
+            # 4. Guardar respuesta de la IA
+            AIChatMessage.objects.create(
+                user=request.user,
+                assistant=assistant,
+                role='assistant',
+                content=ai_response
+            )
+            
+            return JsonResponse({
+                'response': ai_response,
+                'status': 'success'
+            })
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            print(f"Error CRITICO en ai_chat: {error_trace}")
+            return JsonResponse({
+                'response': f'ERROR INTERNO: {str(e)}\n\nDetalle:\n{error_trace}',
+                'status': 'success'
+            })
 
     # Para GET: Cargar historial y renderizar template
     messages = AIChatMessage.objects.filter(
