@@ -46,12 +46,13 @@ def cosine_similarity(v1, v2):
 
 def get_openai_embedding(text):
     import openai
-    openai.api_key = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
-    if not openai.api_key:
+    api_key_val = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+    if not api_key_val:
         print("Falta configurar OPENAI_API_KEY en .env")
         return None
     try:
-        response = openai.embeddings.create(
+        client = openai.OpenAI(api_key=api_key_val)
+        response = client.embeddings.create(
             input=[text],
             model="text-embedding-3-small"
         )

@@ -58,10 +58,12 @@ class Command(BaseCommand):
         
         # Necesitamos openai para esta fase inicial (una sola vez)
         import openai
-        openai.api_key = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
-        if not openai.api_key:
+        api_key_val = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+        if not api_key_val:
             self.stdout.write(self.style.ERROR('OPENAI_API_KEY no encontrada. No se pueden generar embeddings.'))
             return
+            
+        client = openai.OpenAI(api_key=api_key_val)
 
         assistant.chunks.all().delete()
 
@@ -91,7 +93,7 @@ class Command(BaseCommand):
             if len(texts_batch) == batch_size or i == len(data) - 1:
                 self.stdout.write(f'Generando embeddings {i+1-len(texts_batch)} al {i+1}...')
                 try:
-                    response = openai.embeddings.create(
+                    response = client.embeddings.create(
                         input=texts_batch,
                         model="text-embedding-3-small"
                     )
