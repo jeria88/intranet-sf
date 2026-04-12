@@ -203,12 +203,14 @@
         padding: 0;
         background: white !important;
     }
-    .canvas-actions, #toggle-canvas { display: none !important; }
+    .print-only-header, .print-only-footer { display: block !important; visibility: visible !important; }
+    .canvas-actions, #toggle-canvas, #canvas-empty-state { display: none !important; }
     .canvas-card {
         break-inside: avoid;
         box-shadow: none !important;
         border: 1px solid #eee !important;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        padding: 20px !important;
     }
 }
 
