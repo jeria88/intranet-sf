@@ -54,30 +54,57 @@ class Command(BaseCommand):
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        self.stdout.write(f'Iniciando ingesta de {len(data)} fragmentos...')
+        self.stdout.write(f'Iniciando ingesta y generación de embeddings para {len(data)} fragmentos...')
         
-        # Limpiar chunks previos para evitar duplicados si se re-ejecuta
+        # Necesitamos openai para esta fase inicial (una sola vez)
+        import openai
+        openai.api_key = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+        if not openai.api_key:
+            self.stdout.write(self.style.ERROR('OPENAI_API_KEY no encontrada. No se pueden generar embeddings.'))
+            return
+
         assistant.chunks.all().delete()
 
-        chunks_to_create = []
-        doc_counters = {} # Para llevar el índice por documento
+        doc_counters = {}
+        chunks_batch = []
+        texts_batch = []
+        batch_size = 100 # OpenAI soporta varios inputs a la vez
 
-        for item in data:
+        for i, item in enumerate(data):
             doc_name = item['metadatos'].get('fuente_archivo', 'Desconocido')
             if doc_name not in doc_counters:
                 doc_counters[doc_name] = 0
             
-            chunks_to_create.append(AIKnowledgeChunk(
+            chunk = AIKnowledgeChunk(
                 assistant=assistant,
                 content=item['texto_contenido'],
                 metadata=item['metadatos'],
                 chunk_id=item['metadatos']['chunk_id'],
                 document_name=doc_name,
                 index=doc_counters[doc_name]
-            ))
+            )
+            chunks_batch.append(chunk)
+            texts_batch.append(item['texto_contenido'])
             doc_counters[doc_name] += 1
 
-        # Creación masiva para eficiencia
-        AIKnowledgeChunk.objects.bulk_create(chunks_to_create)
+            # Procesar en lotes
+            if len(texts_batch) == batch_size or i == len(data) - 1:
+                self.stdout.write(f'Generando embeddings {i+1-len(texts_batch)} al {i+1}...')
+                try:
+                    response = openai.embeddings.create(
+                        input=texts_batch,
+                        model="text-embedding-3-small"
+                    )
+                    for j, emb_data in enumerate(response.data):
+                        chunks_batch[j].embedding = emb_data.embedding
+                    
+                    # Guardar masivamente en BD
+                    AIKnowledgeChunk.objects.bulk_create(chunks_batch)
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f'Error en embeddings: {e}'))
+                
+                # Resetear lote
+                chunks_batch = []
+                texts_batch = []
         
-        self.stdout.write(self.style.SUCCESS(f'Ingesta completada. {len(chunks_to_create)} registros creados.'))
+        self.stdout.write(self.style.SUCCESS(f'Ingesta vectorizada completada. {len(data)} registros creados.'))

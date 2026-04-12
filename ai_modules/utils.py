@@ -1,6 +1,7 @@
 import os
 from pypdf import PdfReader
 from django.conf import settings
+import math
 
 def extract_text_from_pdf(file_path):
     """Extrae el texto de un archivo PDF usando pypdf."""
@@ -27,102 +28,80 @@ def process_knowledge_base_file(knowledge_base_obj):
     knowledge_base_obj.is_processed = True
     knowledge_base_obj.save(update_fields=['extracted_text', 'is_processed'])
     
-    # Actualizar el contexto del asistente asociado
     knowledge_base_obj.assistant.update_context_text()
 
 
-# ── Motor de Embeddings TF-IDF ──────────────────────────────────────────
-# Cache en memoria: se construye una vez por worker de Gunicorn
-_tfidf_cache = {}
+# ── Motor de Embeddings API (Cero consumo RAM) ──────────────────────────
 
-def _build_tfidf_index(assistant):
-    """
-    Construye un índice TF-IDF para todos los chunks de un asistente.
-    Se cachea en memoria del worker para consultas subsiguientes.
-    """
-    from sklearn.feature_extraction.text import TfidfVectorizer
+def cosine_similarity(v1, v2):
+    """Calcula similitud coseno en Python puro."""
+    if not v1 or not v2 or len(v1) != len(v2):
+        return 0.0
+    dot_product = sum(a * b for a, b in zip(v1, v2))
+    norm_v1 = math.sqrt(sum(a * a for a in v1))
+    norm_v2 = math.sqrt(sum(b * b for b in v2))
+    if norm_v1 == 0 or norm_v2 == 0:
+        return 0.0
+    return dot_product / (norm_v1 * norm_v2)
 
-    from .models import AIKnowledgeChunk
-
-    chunks = list(
-        AIKnowledgeChunk.objects.filter(assistant=assistant)
-        .order_by('document_name', 'index')
-    )
-
-    if not chunks:
+def get_openai_embedding(text):
+    import openai
+    openai.api_key = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+    if not openai.api_key:
+        print("Falta configurar OPENAI_API_KEY en .env")
         return None
-
-    texts = [c.content for c in chunks]
-
-    # Stopwords en español para que el vectorizador ignore ruido
-    spanish_stops = [
-        'de', 'la', 'que', 'el', 'en', 'los', 'del', 'las', 'por',
-        'con', 'una', 'para', 'son', 'como', 'más', 'pero', 'sus',
-        'le', 'ya', 'este', 'esta', 'estos', 'estas', 'ese', 'esa',
-        'ser', 'al', 'un', 'se', 'lo', 'no', 'si', 'su', 'hay',
-        'también', 'fue', 'han', 'está', 'muy', 'tiene', 'puede',
-        'donde', 'sobre', 'todo', 'entre', 'cuando', 'cada', 'desde',
-        'sin', 'hasta', 'otro', 'otra', 'otros', 'otras',
-    ]
-
-    vectorizer = TfidfVectorizer(
-        max_features=8000,
-        stop_words=spanish_stops,
-        ngram_range=(1, 2),   # Captura bigramas como "reglamento evaluación"
-        sublinear_tf=True,     # Suaviza frecuencias altas
-    )
-    tfidf_matrix = vectorizer.fit_transform(texts)
-
-    index = {
-        'vectorizer': vectorizer,
-        'matrix': tfidf_matrix,
-        'chunks': chunks,
-    }
-    _tfidf_cache[assistant.pk] = index
-    print(f"TF-IDF index built: {len(chunks)} chunks, {tfidf_matrix.shape[1]} features")
-    return index
-
-
-def _get_tfidf_index(assistant):
-    """Obtiene el índice desde cache o lo construye."""
-    if assistant.pk in _tfidf_cache:
-        return _tfidf_cache[assistant.pk]
-    return _build_tfidf_index(assistant)
-
+    try:
+        response = openai.embeddings.create(
+            input=[text],
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"Error generando embedding: {e}")
+        return None
 
 def get_relevant_chunks(assistant, query, top_n=10):
     """
-    Busca fragmentos relevantes usando similitud coseno sobre embeddings TF-IDF.
-    Mucho más rápido y preciso que búsqueda por keywords.
+    Busca fragmentos relevantes usando similitud coseno en embeddings pre-calculados.
+    Evita la carga de modelos en RAM, usando puramente la base de datos y Python.
     """
-    from sklearn.metrics.pairwise import cosine_similarity
     from .models import AIKnowledgeChunk
 
-    index = _get_tfidf_index(assistant)
-    if not index:
-        return ""
+    # 1. Convertir la consulta en embedding
+    query_embedding = get_openai_embedding(query)
+    
+    chunks = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True)
+    if not chunks.exists() or not query_embedding:
+        # Fallback si no hay embeddings cargados: retornar los primeros
+        qs = AIKnowledgeChunk.objects.filter(assistant=assistant)
+        return "\n\n---\n\n".join([f"[Fuente: {c.document_name}]\n{c.content}" for c in qs[:5]])
 
-    # Vectorizar la consulta del usuario
-    query_vec = index['vectorizer'].transform([query])
+    # 2. Calcular similitud coseno en memoria de Python (~1200 items es casi instantáneo)
+    scored_chunks = []
+    for chunk in chunks:
+        if not chunk.embedding: continue
+        sim = cosine_similarity(query_embedding, chunk.embedding)
+        if sim > 0.1: # Threshold básico
+            scored_chunks.append({
+                'score': sim,
+                'chunk': chunk
+            })
 
-    # Calcular similitud coseno contra todos los chunks (~50ms para 1200 chunks)
-    similarities = cosine_similarity(query_vec, index['matrix']).flatten()
+    # 3. Ordenar por score
+    scored_chunks.sort(key=lambda x: x['score'], reverse=True)
+    top_items = scored_chunks[:top_n]
+    
+    if not top_items:
+        return "\n\n---\n\n".join([c.content for c in chunks[:5]])
 
-    # Obtener los top_n índices más similares
-    top_indices = similarities.argsort()[-top_n:][::-1]
-    top_chunks = [index['chunks'][i] for i in top_indices if similarities[i] > 0.01]
-
-    if not top_chunks:
-        # Fallback: devolver primeros chunks
-        return "\n\n---\n\n".join([c.content for c in index['chunks'][:5]])
-
-    # Expansión por vecindad: traer el chunk anterior y posterior
+    # 4. Expansión por vecindad
     expanded_ids = set()
     final_chunks = []
 
-    for chunk in top_chunks:
-        doc = chunk.document_name
-        idx = chunk.index
+    for item in top_items:
+        c = item['chunk']
+        doc = c.document_name
+        idx = c.index
 
         neighbors = AIKnowledgeChunk.objects.filter(
             assistant=assistant,
@@ -135,9 +114,9 @@ def get_relevant_chunks(assistant, query, top_n=10):
                 expanded_ids.add(n.chunk_id)
                 final_chunks.append(n)
 
-    # Ordenar por documento e índice para mantener coherencia narrativa
+    # Ordenar por documento e índice
     final_chunks.sort(key=lambda c: (c.document_name or '', c.index or 0))
 
     return "\n\n---\n\n".join(
-        [f"[Fuente: {c.document_name}]\n{c.content}" for c in final_chunks]
+        [f"[Fuente: {c.document_name} - Sec: {c.index}]\n{c.content}" for c in final_chunks]
     )

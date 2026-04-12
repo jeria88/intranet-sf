@@ -127,6 +127,7 @@ class AIKnowledgeChunk(models.Model):
     chunk_id = models.CharField(max_length=100, unique=True, verbose_name='ID Único del fragmento')
     document_name = models.CharField(max_length=255, null=True, blank=True, verbose_name='Nombre del documento fuente')
     index = models.IntegerField(default=0, verbose_name='Índice de secuencia en el documento')
+    embedding = models.JSONField(null=True, blank=True, verbose_name='Vector Embedding (OpenAI)')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
