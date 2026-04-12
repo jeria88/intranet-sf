@@ -1,5 +1,6 @@
 import json
 import os
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from ai_modules.models import AIAssistant, AIKnowledgeChunk
 
@@ -7,7 +8,7 @@ class Command(BaseCommand):
     help = 'Configura el asistente UTP Temuco e ingesta su base de conocimientos JSON'
 
     def handle(self, *args, **options):
-        json_path = '/home/nikka/Intranet/intranet_railway/ai_modules/knowledge_base/utp_temuco.json'
+        json_path = os.path.join(settings.BASE_DIR, 'ai_modules', 'knowledge_base', 'utp_temuco.json')
         assistant_slug = 'utp-temuco'
 
         # 1. Obtener o crear el asistente
