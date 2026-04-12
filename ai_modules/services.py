@@ -19,26 +19,25 @@ def call_deepseek_ai(assistant, messages_history, user_query):
     }
 
     # 1. Fase 2: Expansión Legal de la Consulta
-    legal_keywords_prompt = (
-        "Actúa como un experto legal en educación chilena. Dado el siguiente caso de un usuario, "
-        "devuelve una lista de 5 a 10 términos técnicos, artículos o conceptos normativos que deberían "
-        "buscarse en un reglamento de evaluación o RICE para resolverlo.\n\n"
-        f"CASO: {user_query}\n\n"
-        "RESPONDE SOLO CON LOS TÉRMINOS SEPARADOS POR COMAS."
-    )
-    
+    print(f"DEBUG: Iniciando expansión legal para: {user_query[:50]}...")
+    search_query = user_query
     try:
         kw_response = requests.post(
             f"{base_url}/chat/completions", 
             json={"model": "deepseek-chat", "messages": [{"role": "user", "content": legal_keywords_prompt}], "stream": False},
-            headers=headers, timeout=10
+            headers=headers, timeout=5 # Timeout corto para no penalizar latencia
         )
-        expanded_query = kw_response.json()['choices'][0]['message']['content']
-        search_query = f"{user_query} {expanded_query}"
-    except:
-        search_query = user_query
+        if kw_response.status_code == 200:
+            expanded_query = kw_response.json()['choices'][0]['message']['content']
+            search_query = f"{user_query} {expanded_query}"
+            print("DEBUG: Expansión legal exitosa.")
+        else:
+            print(f"DEBUG: Fallo expansión legal (Status {kw_response.status_code}).")
+    except Exception as e:
+        print(f"DEBUG: Error o Timeout en expansión legal: {e}")
 
     # 2. RAG: Recuperación con Vecindad usando la consulta expandida
+    print("DEBUG: Recuperando fragmentos de la BD...")
     relevant_context = get_relevant_chunks(assistant, search_query)
 
     # 3. Construcción del Prompt Maestro de 6 Puntos
@@ -60,22 +59,19 @@ def call_deepseek_ai(assistant, messages_history, user_query):
     for msg in messages_history:
         messages.append({"role": msg['role'], "content": msg['content']})
     
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
     payload = {
         "model": "deepseek-chat",
         "messages": messages,
         "stream": False
     }
     
+    print("DEBUG: Llamando a DeepSeek principal...")
     try:
-        response = requests.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=30)
+        response = requests.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=60)
         response.raise_for_status()
+        print("DEBUG: Respuesta IA recibida con éxito.")
         data = response.json()
         return data['choices'][0]['message']['content']
     except Exception as e:
-        print(f"Error calling DeepSeek: {e}")
+        print(f"DEBUG: Error en llamada principal: {e}")
         return f"Lo siento, hubo un error al procesar tu consulta con la IA. ({str(e)})"

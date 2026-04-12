@@ -30,7 +30,7 @@ def process_knowledge_base_file(knowledge_base_obj):
     # Actualizar el contexto del asistente asociado
     knowledge_base_obj.assistant.update_context_text()
 
-def get_relevant_chunks(assistant, query, top_n=15):
+def get_relevant_chunks(assistant, query, top_n=8):
     """
     Busca los fragmentos más relevantes y expande el contexto incluyendo
     fragmentos vecinos del mismo documento. (Fase 2: Inteligencia Normativa)
