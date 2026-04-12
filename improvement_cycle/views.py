@@ -70,6 +70,8 @@ def meta_crear(request):
         'establishments': User.ESTABLISHMENT_CHOICES,
         'roles': User.ROLE_CHOICES,
         'ee_initial': ee_initial,
+        'initial_title': request.GET.get('title', ''),
+        'initial_description': request.GET.get('description', ''),
     })
 
 

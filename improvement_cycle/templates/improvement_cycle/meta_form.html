@@ -41,14 +41,14 @@
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Título de
                     la Meta *</label>
-                <input type="text" name="title" required
+                <input type="text" name="title" required value="{{ initial_title|default:'' }}"
                     style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
             </div>
             <div style="margin-bottom:16px;">
                 <label
                     style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Descripción</label>
                 <textarea name="description" rows="3"
-                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ initial_description|default:'' }}</textarea>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
                 <div>

@@ -104,4 +104,6 @@ def evento_crear(request):
         'roles': User.ROLE_CHOICES,
         'establishments': User.ESTABLISHMENT_CHOICES,
         'event_types': CalendarEvent.EVENT_TYPE_CHOICES,
+        'initial_title': request.GET.get('title', ''),
+        'initial_description': request.GET.get('description', ''),
     })

@@ -17,14 +17,14 @@
             
             <div style="margin-bottom:28px;">
                 <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Título del Evento *</label>
-                <input type="text" name="title" required placeholder="Ej: Plazo entrega PME, Reunión de Directores..."
+                <input type="text" name="title" required value="{{ initial_title|default:'' }}" placeholder="Ej: Plazo entrega PME, Reunión de Directores..."
                     style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe;">
             </div>
 
             <div style="margin-bottom:28px;">
                 <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Descripción (Opcional)</label>
                 <textarea name="description" rows="4" placeholder="Detalles, enlaces o instrucciones relevantes..."
-                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; resize: vertical;"></textarea>
+                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; resize: vertical;">{{ initial_description|default:'' }}</textarea>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
