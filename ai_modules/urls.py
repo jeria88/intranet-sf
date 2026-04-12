@@ -12,4 +12,5 @@ urlpatterns = [
     path('<slug:slug>/', views.ai_detail, name='ai_detail'),
     path('<slug:slug>/consultar/', views.nueva_consulta, name='nueva_consulta'),
     path('<slug:slug>/chat/', views.ai_chat, name='ai_chat'),
+    path('notebooklm/instrucciones/', views.notebooklm_instruction, name='notebooklm_instruction'),
 ]

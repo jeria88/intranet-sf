@@ -11,33 +11,42 @@ from django.http import JsonResponse
 
 @login_required
 def ai_list(request):
-    """Muestra el catálogo de asistentes si es staff/Red, o redirige según rol."""
-    # Admins y Equipo Red ven todos los asistentes oficiales
+    """Redirige automáticamente según el rol y establecimiento del usuario."""
+    # 1. Admins y Equipo Red ven la lista completa
     if request.user.is_staff or request.user.is_red_team:
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
-    # Usuarios regulares son redirigidos directamente a su asistente asignado
-    # Prioridad 1: Rol + Establecimiento (ej: UTP Temuco)
+    # 2. UTP Temuco va directo al chat de DeepSeek
+    if request.user.role == 'UTP' and request.user.establishment == 'TEMUCO':
+        assistant = AIAssistant.objects.filter(slug='utp-temuco', is_active=True).first()
+        if assistant:
+            return redirect('ai_modules:ai_chat', slug=assistant.slug)
+
+    # 3. Resto de perfiles van a la vista de NotebookLM
+    return redirect('ai_modules:notebooklm_instruction')
+
+
+@login_required
+def notebooklm_instruction(request):
+    """Vista de instrucciones para NotebookLM (usuarios no-UTP Temuco)."""
+    # Buscamos el asistente que corresponde al rol del usuario para sacar su notebook_url
     assistant = AIAssistant.objects.filter(
-        profile_role=request.user.role, 
+        profile_role=request.user.role,
         establishment=request.user.establishment,
         is_active=True
     ).first()
     
-    # Prioridad 2: Solo Rol (Asistente genérico)
     if not assistant:
+        # Fallback a asistente por rol genérico
         assistant = AIAssistant.objects.filter(
-            profile_role=request.user.role, 
-            establishment='', # Genéricos tienen establishment vacío
+            profile_role=request.user.role,
             is_active=True
         ).first()
-    
-    if assistant:
-        return redirect('ai_modules:ai_detail', slug=assistant.slug)
-    
-    # Si no tiene un asistente asignado, mostramos página de no acceso
-    return render(request, 'ai_modules/no_access.html')
+
+    return render(request, 'ai_modules/notebooklm_instruction.html', {
+        'assistant': assistant
+    })
 
 @login_required
 def ai_detail(request, slug):
@@ -171,12 +180,6 @@ def ai_chat(request, slug):
     if request.method == 'POST':
         import traceback
         try:
-            # Opción para limpiar historial
-            action = request.POST.get('action')
-            if action == 'clear_history':
-                AIChatMessage.objects.filter(user=request.user, assistant=assistant).delete()
-                return JsonResponse({'status': 'success'})
-
             user_message = request.POST.get('message', '').strip()
             if not user_message:
                 return JsonResponse({'error': 'Mensaje vacío'}, status=400)

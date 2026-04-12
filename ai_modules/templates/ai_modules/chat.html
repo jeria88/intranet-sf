@@ -191,7 +191,7 @@
 
 {% block content %}
 <div class="chat-container">
-    <div class="chat-header" style="justify-content: space-between;">
+    <div class="chat-header">
         <div style="display: flex; align-items: center; gap: 15px;">
             <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
             <div>
@@ -199,7 +199,7 @@
                 <span style="font-size: 11px; color: #28a745;">● En línea — Soporte RAG</span>
             </div>
         </div>
-        <button id="clear-chat-btn" style="background: none; border: 1px solid #dc3545; color: #dc3545; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px;">Limpiar Chat</button>
+        <a href="{% url 'portal:index' %}" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(0,0,0,0.1); color: var(--contrast-2); border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 12px; text-decoration: none;">Volver al Portal</a>
     </div>
 
     <div class="chat-messages" id="chat-messages">
@@ -234,6 +234,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
@@ -258,27 +259,8 @@
         }
     });
 
-    // Limpiar Chat
-    document.getElementById('clear-chat-btn').addEventListener('click', async function() {
-        if(confirm('¿Estás seguro de que quieres limpiar todo el historial de este chat? Esto evitará que la IA mezcle preguntas anteriores con las nuevas.')) {
-            try {
-                const response = await fetch(`/ia/${assistantSlug}/chat/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: new URLSearchParams({ 'action': 'clear_history' })
-                });
-                const data = await response.json();
-                if(data.status === 'success') {
-                    location.reload();
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-    });
+    // Limpiar Chat eliminado por requerimiento de usuario
+
 
     // Manejar envío
     async function sendMessage() {
@@ -338,13 +320,19 @@
     }
 
     function appendMessage(role, content) {
-        const row = document.createElement('div');
-        row.className = `message-row ${role}`;
-        row.innerHTML = `
+        const messageRow = document.createElement('div');
+        messageRow.className = `message-row ${role}`;
+        messageRow.innerHTML = `
             <div class="avatar-chat ${role}">${role === 'user' ? 'U' : 'AI'}</div>
-            <div class="message-content">${content}</div>
+            <div class="message-content"></div>
         `;
-        chatMessages.appendChild(row);
+        const contentDiv = messageRow.querySelector('.message-content');
+        if (role === 'ai' || role === 'assistant') {
+            contentDiv.innerHTML = marked.parse(content);
+        } else {
+            contentDiv.textContent = content;
+        }
+        chatMessages.appendChild(messageRow);
     }
 
     function appendLoading(id) {
@@ -370,6 +358,10 @@
             e.preventDefault();
             sendMessage();
         }
+    });
+    // Renderizar mensajes existentes al cargar
+    document.querySelectorAll('.message-row.ai .message-content, .message-row.assistant .message-content').forEach(div => {
+        div.innerHTML = marked.parse(div.innerText);
     });
 </script>
 {% endblock %}
