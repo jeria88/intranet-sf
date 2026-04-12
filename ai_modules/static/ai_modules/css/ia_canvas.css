@@ -2,12 +2,12 @@
     --bg-main: #fcfcfc;
     --sidebar-bg: #ffffff;
     --accent: #1e73be;
-    --text-dark: #202e3b;
-    --text-base: #4a5568;
-    --border-soft: #edf2f7;
+    --text-dark: #1e293b;
+    --text-base: #334155;
+    --border-soft: #e2e8f0;
 }
 
-/* Master Layout: Ahora es una sola columna */
+/* Master Layout: Full-Width Chat */
 .chat-main-layout {
     display: block;
     width: 100%;
@@ -18,7 +18,6 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
-/* Sidebar de Chat (Ahora al 100%) */
 .chat-sidebar {
     width: 100%;
     height: 100%;
@@ -33,7 +32,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #fff;
 }
 
 .chat-messages {
@@ -43,7 +41,7 @@
     background: #ffffff;
 }
 
-/* Markdown Harmony */
+/* Markdown Harmony (Pantalla) */
 .message-content {
     line-height: 1.6;
     color: var(--text-base);
@@ -51,9 +49,7 @@
     max-width: 900px;
     margin: 0 auto;
 }
-
 .message-content p { margin-bottom: 15px; }
-.message-content ul, .message-content ol { margin-bottom: 15px; padding-left: 20px; }
 .message-content table {
     width: 100%;
     border-collapse: collapse;
@@ -73,7 +69,7 @@
 .btn-header-pdf {
     background: var(--text-dark);
     color: white;
-    padding: 8px 16px;
+    padding: 10px 20px;
     border-radius: 8px;
     font-size: 13px;
     font-weight: 700;
@@ -83,34 +79,91 @@
     align-items: center;
     gap: 8px;
     transition: all 0.2s;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
+.btn-header-pdf:hover { background: #000; transform: translateY(-1px); }
 
-.btn-header-pdf:hover {
-    background: #000;
-    transform: translateY(-1px);
-}
-
-/* Modo Impresión PDF (Mantiene el diseño de reporte) */
+/* MODO IMPRESIÓN CORPORATIVO (REPORTE UTP) */
 @media print {
-    @page { size: portrait; margin: 20mm; }
-    html, body { background: white !important; }
-    .chat-sidebar, .site-header, .main-navigation, footer { display: none !important; }
+    @page { size: portrait; margin: 15mm; }
     
-    .canvas-container {
+    html, body { 
+        background: white !important; 
+        color: black !important;
+        font-family: 'Inter', 'Segoe UI', sans-serif !important;
+    }
+    
+    .chat-sidebar, .site-header, .main-navigation, footer { display: none !important; }
+
+    #canvas-container {
         display: block !important;
         position: static !important;
         width: 100% !important;
+        height: auto !important;
         padding: 0 !important;
+        margin: 0 !important;
         background: white !important;
+        visibility: visible !important;
     }
-    .print-only-header, .print-only-footer { display: block !important; }
-    .canvas-grid { display: block !important; }
+
+    .print-only-header, .print-only-footer, #canvas-content { 
+        display: block !important; 
+        visibility: visible !important; 
+    }
+
+    /* Asegurar que el contenido del grid se vea */
+    .canvas-grid {
+        display: block !important;
+        width: 100% !important;
+    }
+
     .canvas-card {
         display: block !important;
+        visibility: visible !important;
         break-inside: avoid;
-        margin-bottom: 30px !important;
-        border: 1px solid #ddd !important;
+        margin-bottom: 35px !important;
+        border: 1px solid #ccc !important;
+        padding: 0 !important; /* Reset padding for professional header */
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Cabecera de cada tarjeta en el PDF */
+    .card-header {
+        background: #334155 !important;
+        padding: 10px 15px !important;
+        border-bottom: 1px solid #334155 !important;
+    }
+    
+    .card-header h3 {
+        color: white !important;
+        margin: 0 !important;
+        font-size: 13px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .card-body {
         padding: 20px !important;
+        font-size: 12px !important;
+        line-height: 1.6 !important;
+    }
+
+    /* Tablas en PDF: Estilo Profesional */
+    .card-body table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 10px 0 !important;
+    }
+    .card-body th {
+        background: #f1f5f9 !important;
+        border: 1px solid #999 !important;
+        padding: 8px !important;
+        font-weight: 700 !important;
+        -webkit-print-color-adjust: exact;
+    }
+    .card-body td {
+        border: 1px solid #ccc !important;
+        padding: 8px !important;
     }
 }
