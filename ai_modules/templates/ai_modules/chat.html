@@ -29,8 +29,11 @@
             {% endif %}
 
             {% for msg in chat_messages %}
-            <div class="message-row {{ msg.role }}">
-                <div class="message-content" data-raw="{{ msg.content|escapejs }}">{{ msg.content }}</div>
+            <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}">
+                <div class="message-content">
+                    <span class="raw-message" style="display:none;">{{ msg.content }}</span>
+                    <div class="rendered-message"></div>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -189,7 +192,8 @@
 
     function appendMessage(role, content) {
         const div = document.createElement('div');
-        div.className = `message-row ${role}`;
+        const roleClass = (role === 'assistant' || role === 'ai') ? 'ai' : 'user';
+        div.className = `message-row ${roleClass}`;
         div.innerHTML = `<div class="message-content">${marked.parse(content)}</div>`;
         chatMessages.appendChild(div);
     }
@@ -207,13 +211,12 @@
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    // Renderizar Markdown inicial desde data-raw para consistencia
+    // Renderizar Markdown inicial desde el contenido oculto para evitar errores de codificación
     document.querySelectorAll('.chat-messages .message-content').forEach(div => {
-        const raw = div.getAttribute('data-raw');
-        if (raw) {
-            div.innerHTML = marked.parse(raw);
-        } else {
-            div.innerHTML = marked.parse(div.innerText);
+        const rawSpan = div.querySelector('.raw-message');
+        const renderedDiv = div.querySelector('.rendered-message');
+        if (rawSpan && renderedDiv) {
+            renderedDiv.innerHTML = marked.parse(rawSpan.textContent);
         }
     });
 
