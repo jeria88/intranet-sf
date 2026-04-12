@@ -193,41 +193,24 @@
 
 /* MODO IMPRESIÓN */
 @media print {
-    @page { size: portrait; margin: 15mm; }
-    
     body * { visibility: hidden; }
-    
-    .site-header, .main-navigation, footer, #toggle-canvas, .chat-sidebar { display: none !important; }
-
     #canvas-container, #canvas-container * { visibility: visible; }
-    
     #canvas-container {
-        display: block !important;
-        position: static !important;
-        width: 100% !important;
-        height: auto !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
         background: white !important;
-        overflow: visible !important;
     }
-    
     .print-only-header, .print-only-footer { display: block !important; visibility: visible !important; }
-    .canvas-actions, #canvas-empty-state { display: none !important; }
-    
-    .canvas-grid {
-        display: block !important;
-        width: 100% !important;
-    }
-    
+    .canvas-actions, #toggle-canvas, #canvas-empty-state { display: none !important; }
     .canvas-card {
-        display: block !important;
         break-inside: avoid;
         box-shadow: none !important;
-        border: 1px solid #ddd !important;
-        margin-bottom: 25px !important;
+        border: 1px solid #eee !important;
+        margin-bottom: 25px;
         padding: 20px !important;
-        width: 100% !important;
     }
 }
 
