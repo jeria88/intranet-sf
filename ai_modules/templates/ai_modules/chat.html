@@ -85,20 +85,13 @@
             </div>
         </div>
 
-        <!-- Bloque de Firmas -->
-        <div class="print-signature-block" style="display: none; margin-top: 60px; display: flex; justify-content: space-between;">
-            <div style="width: 200px; text-align: center; border-top: 1px solid #000; padding-top: 10px; font-size: 11px;">
-                <p style="font-weight: 700;">Firma Encargado UTP</p>
-                <p>{{ assistant.establishment }}</p>
-            </div>
-            <div style="width: 200px; text-align: center; border-top: 1px solid #000; padding-top: 10px; font-size: 11px;">
-                <p style="font-weight: 700;">Firma Dirección</p>
-                <p>Timbre Institucional</p>
-            </div>
+        <!-- Descargo de Responsabilidad (Solo PDF) -->
+        <div class="print-disclaimer" style="display: none; margin-top: 50px; padding: 15px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.5; color: #475569; text-align: justify;">
+            <p><strong>DESCARGO DE RESPONSABILIDAD:</strong> El presente reporte técnico ha sido generado asistido por inteligencia artificial sobre la base de la normativa institucional de {{ assistant.establishment }}. Este documento constituye una propuesta técnica de carácter sugerido y no vinculante, la cual debe ser obligatoriamente revisada, validada y ajustada por el profesional experto a cargo antes de su implementación operativa. El sistema IA no asume responsabilidad por las decisiones administrativas, pedagógicas o legales adoptadas a partir del contenido de este material.</p>
         </div>
 
-        <div class="print-only-footer" style="display: none; margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 10px; color: #777;">
-            <p>Documento técnico de apoyo a la gestión pedagógica. Basado en el Reglamento de Evaluación Interno.</p>
+        <div class="print-only-footer" style="display: none; margin-top: 25px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #777;">
+            <p>© 2026 Red Educacional Hermanas Franciscanas — Registro de Gestión Técnica Permanente</p>
         </div>
     </div>
 </div>
@@ -148,8 +141,8 @@
 
             document.getElementById('print-date').innerText = new Date().toLocaleDateString('es-CL');
             
-            // Mostrar elementos de firma en el DOM de impresión
-            document.querySelector('.print-signature-block').style.display = 'flex';
+            // Mostrar disclaimer en el DOM de impresión
+            document.querySelector('.print-disclaimer').style.display = 'block';
         }
     }
 
