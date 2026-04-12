@@ -92,16 +92,26 @@
         font-family: 'Inter', 'Segoe UI', sans-serif !important;
     }
     
+    /* Reset de altura para que el PDF fluya en varias páginas */
+    .chat-main-layout, #main-wrapper {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
     .chat-sidebar, .site-header, .main-navigation, footer { display: none !important; }
 
     #canvas-container {
         display: block !important;
-        position: static !important;
+        position: relative !important;
         width: 100% !important;
         height: auto !important;
         padding: 0 !important;
         margin: 0 !important;
         background: white !important;
+        overflow: visible !important;
         visibility: visible !important;
     }
 
