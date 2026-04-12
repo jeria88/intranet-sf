@@ -275,15 +275,20 @@
         scrollToBottom();
 
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos
+
             const response = await fetch(`/ia/${assistantSlug}/chat/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: new URLSearchParams({ 'message': text })
+                body: new URLSearchParams({ 'message': text }),
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
             const data = await response.json();
             
             // Eliminar indicador de carga
@@ -292,13 +297,17 @@
             if (data.status === 'success') {
                 appendMessage('assistant', data.response);
             } else {
-                appendMessage('assistant', 'Hubo un error al procesar tu mensaje.');
+                appendMessage('assistant', 'Hubo un error al procesar tu mensaje. Intenta de nuevo.');
             }
             scrollToBottom();
         } catch (error) {
             console.error('Error:', error);
             document.getElementById(loadingId).remove();
-            appendMessage('assistant', 'Error de conexión con el servidor.');
+            if (error.name === 'AbortError') {
+                appendMessage('assistant', 'La consulta está tomando demasiado tiempo. Por favor intenta con una pregunta más corta.');
+            } else {
+                appendMessage('assistant', 'Error de conexión con el servidor. Por favor, intenta de nuevo en unos segundos.');
+            }
             scrollToBottom();
         }
     }
