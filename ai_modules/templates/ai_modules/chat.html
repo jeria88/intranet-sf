@@ -73,9 +73,17 @@
             <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 36px; height: auto;">
             <h2 style="font-size: 14px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
         </div>
-        <button id="btn-main-print" style="display: none; background: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="window.print()">
-            📥 Descargar Reporte PDF
-        </button>
+        <div class="chat-actions" style="display: flex; gap: 10px;">
+            <a href="{% url 'ai_modules:case_repository' %}" style="background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none;">
+                📁 Ver Repositorio
+            </a>
+            <button id="btn-save-case" style="display: none; background: #fff; color: #1e293b; border: 1.5px solid #1e293b; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                💾 Guardar Caso
+            </button>
+            <button id="btn-main-print" style="display: none; background: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="window.print()">
+                📥 Descargar PDF
+            </button>
+        </div>
     </div>
 
     <!-- Mensajes -->
@@ -151,6 +159,7 @@
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
     const printBtn = document.getElementById('btn-main-print');
+    const saveCaseBtn = document.getElementById('btn-save-case');
     const assistantSlug = '{{ assistant.slug }}';
 
     function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
@@ -174,8 +183,37 @@
             document.getElementById('print-b').innerHTML = marked.parse(partB);
             document.getElementById('print-c').innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
             document.getElementById('print-date').innerText = new Date().toLocaleDateString('es-CL');
+            saveCaseBtn.style.display = 'block';
         }
     }
+
+    saveCaseBtn.addEventListener('click', async () => {
+        const title = prompt("Asigne un título a este caso:", "Nuevo Caso Normativo");
+        if (!title) return;
+
+        const data = new URLSearchParams({
+            'assistant_slug': assistantSlug,
+            'title': title,
+            'sustento': document.getElementById('print-a').innerText,
+            'ruta': document.getElementById('print-b').innerText,
+            'checklist': document.getElementById('print-c').innerText,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        });
+
+        try {
+            const r = await fetch('{% url "ai_modules:save_as_case" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            });
+            const d = await r.json();
+            if (d.status === 'success') {
+                alert("Caso guardado exitosamente en el repositorio.");
+                saveCaseBtn.innerHTML = "✅ Guardado";
+                saveCaseBtn.disabled = true;
+            }
+        } catch (e) { alert("Error al guardar el caso."); }
+    });
 
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
     if (initialResponse && initialResponse !== 'None') { updateReport(initialResponse); }

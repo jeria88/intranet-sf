@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-from .models import AIAssistant, AIQuery, AIChatMessage
+from .models import AIAssistant, AIQuery, AIChatMessage, AICase
 from notifications.models import Notification
 from .forms import AIQueryForm
 from .services import call_deepseek_ai
@@ -241,3 +241,76 @@ def ai_chat(request, slug):
         'chat_messages': messages,
         'last_ai_response': last_ai_response.content if last_ai_response else None
     })
+
+@login_required
+def case_repository(request):
+    """Listado de casos guardados."""
+    cases = AICase.objects.all().select_related('assistant', 'user')
+    # Si no es staff, filtrar solo los suyos (o por establecimiento si prefieres)
+    if not request.user.is_staff:
+        cases = cases.filter(user=request.user)
+    
+    return render(request, 'ai_modules/repository.html', {
+        'cases': cases
+    })
+
+
+@login_required
+def save_as_case(request):
+    """AJAX: Guarda contenido como un caso."""
+    if request.method == 'POST':
+        assistant_slug = request.POST.get('assistant_slug')
+        title = request.POST.get('title', 'Caso sin título')
+        sustento = request.POST.get('sustento', '')
+        ruta = request.POST.get('ruta', '')
+        checklist = request.POST.get('checklist', '')
+        
+        assistant = get_object_or_404(AIAssistant, slug=assistant_slug)
+        
+        case = AICase.objects.create(
+            user=request.user,
+            assistant=assistant,
+            title=title,
+            sustento=sustento,
+            ruta=ruta,
+            checklist=checklist
+        )
+        
+        return JsonResponse({'status': 'success', 'case_id': case.id})
+    return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def toggle_case_status(request, pk):
+    """Cambia el estado del caso."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return JsonResponse({'status': 'error'}, status=403)
+        
+    case.status = 'cerrado' if case.status == 'abierto' else 'abierto'
+    case.save()
+    return JsonResponse({'status': 'success', 'new_status': case.get_status_display()})
+
+
+@login_required
+def generate_case_defense(request, pk):
+    """Genera redacción de descargos para fiscalizadores externos."""
+    case = get_object_or_404(AICase, pk=pk)
+    
+    prompt = f"""
+    Actúa como un experto en normativa educacional chilena. 
+    Basado en el siguiente sustento normativo:
+    {case.sustento}
+    
+    Redacta un documento formal de DESCARGOS para ser presentado ante fiscalizadores externos (como la Superintendencia de Educación).
+    El tono debe ser técnico, respetuoso y fundamentado legalmente.
+    Resalta los puntos clave que demuestran el cumplimiento del establecimiento.
+    """
+    
+    # Usamos el historial vacío para esta petición puntual
+    defense_text = call_deepseek_ai(case.assistant, [], prompt)
+    
+    case.descargos = defense_text
+    case.save(update_fields=['descargos'])
+    
+    return JsonResponse({'status': 'success', 'defense': defense_text})

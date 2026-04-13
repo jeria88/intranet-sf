@@ -136,3 +136,32 @@ class AIKnowledgeChunk(models.Model):
 
     def __str__(self):
         return f"Chunk {self.chunk_id} - {self.assistant.slug}"
+
+class AICase(models.Model):
+    STATUS_CHOICES = [
+        ('abierto', 'Abierto (En Proceso)'),
+        ('cerrado', 'Cerrado (Resuelto)'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_cases')
+    assistant = models.ForeignKey(AIAssistant, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255, verbose_name='Título del Caso')
+    
+    # Contenido del Análisis (Secciones A, B, C)
+    sustento = models.TextField(verbose_name='Sustento Normativo (Sección A)')
+    ruta = models.TextField(verbose_name='Hoja de Ruta (Sección B)')
+    checklist = models.TextField(verbose_name='Checklist (Sección C)')
+    
+    # Resultado de Defensa
+    descargos = models.TextField(blank=True, verbose_name='Redacción de Descargos')
+    
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='abierto')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Caso Normativo'
+        verbose_name_plural = 'Repositorio de Casos'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.title} - {self.user.username}"
