@@ -36,22 +36,25 @@
     #send-btn:hover { background: #165a94 !important; transform: translateY(-1.5px) !important; box-shadow: 0 6px 15px rgba(30,115,190,0.4) !important; }
     #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; margin-left: 8px !important; }
 
-    /* Aplicación Full-Screen con Scroll Interno */
-    html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
+    /* Aplicación Full-Screen con Scroll Interno y Márgenes Laterales */
+    html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; }
     .container { 
-        max-width: 100% !important; 
+        max-width: 94% !important; 
+        width: 94% !important;
         height: calc(100vh - 120px) !important; 
         padding: 0 !important; 
-        margin: 0 !important; 
+        margin: 0 3% !important; 
         display: flex !important; 
         flex-direction: column !important; 
         overflow: hidden !important; 
+        background: #fff;
+        box-shadow: 0 0 40px rgba(0,0,0,0.05);
     }
     body { padding-top: 0 !important; display: flex; flex-direction: column; }
     .site-header, .main-navigation { flex-shrink: 0 !important; z-index: 1000 !important; }
 
     /* Layout Split View Aplicación */
-    .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100vw; }
+    .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100%; }
     .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; overflow: hidden; }
     .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; border-left: 1px solid #e2e8f0; box-shadow: -10px 0 30px rgba(0,0,0,0.05); overflow: hidden; }
     .editor-column.active { display: flex; }

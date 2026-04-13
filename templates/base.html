@@ -292,40 +292,19 @@
                     <li><a href="{% url 'meetings:recording_list' %}">Repositorio Grabaciones</a></li>
                     <li><a href="{% url 'library:document_list' %}">Biblioteca Digital</a></li>
 
-                    <!-- Evidencia Red Dropdown -->
-                    <li class="has-dropdown">
-                        <a href="{% url 'evidencia:formularios' %}"
-                            style="display:flex;align-items:center;gap:4px;">Evidencia Red <span
-                                style="font-size:10px;">&#9660;</span></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="{% url 'evidencia:formularios' %}">Formularios de Evaluación</a></li>
-                            <li class="dropdown-divider"></li>
-                            <li class="has-submenu">
-                                <a href="{% url 'evidencia:reuniones' %}"
-                                    style="display:flex;justify-content:space-between;">Reuniones
-                                    <span>&#9658;</span></a>
-                                <ul class="sub-dropdown">
-                                    <li><a href="{% url 'evidencia:reunion_presencial' %}">Primera Reunión
-                                            Presencial</a></li>
-                                    <li><a href="{% url 'evidencia:reunion_virtual' %}">Primera Reunión Virtual</a></li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </li>
-
                     {% if user.is_authenticated %}
                     <li style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
-                        <a href="{% url 'users:profile' %}" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                        <a href="{% url 'users:profile' %}" style="display: flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 15px;">
                             {% if user.profile_picture %}
-                            <img src="{{ user.profile_picture.url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--base);">
+                            <img src="{{ user.profile_picture.url }}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--base);">
                             {% else %}
-                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;">{{ user.username|first|upper }}</div>
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">{{ user.username|first|upper }}</div>
                             {% endif %}
-                            <span style="font-size: 14px; color: var(--contrast-2);">
-                                {{ user.get_full_name|default:user.username }} ({{ user.establishment }})
+                            <span style="font-size: 13px; color: var(--contrast-2); font-weight: 600;">
+                                {{ user.username }}
                             </span>
                         </a>
-                        <a href="{% url 'users:logout' %}" style="color: #dc3545; font-size: 14px; text-decoration: none; font-weight: 600;">Cerrar Sesión</a>
+                        <a href="{% url 'users:logout' %}" style="color: #dc3545; font-size: 13px; text-decoration: none; font-weight: 700; padding-right: 20px;">Salir</a>
                     </li>
                     {% else %}
                     <li style="margin-left: auto;"><a href="{% url 'users:login' %}"
