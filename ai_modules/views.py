@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
-from .models import AIAssistant, AIQuery, AIChatMessage, AICase
+from .models import AIAssistant, AIQuery, AIChatMessage, AICase, CaseObservation
 from notifications.models import Notification
 from .forms import AIQueryForm
 from .services import call_deepseek_ai
@@ -245,8 +245,8 @@ def ai_chat(request, slug):
 @login_required
 def case_repository(request):
     """Listado de casos guardados."""
-    cases = AICase.objects.all().select_related('assistant', 'user')
-    # Si no es staff, filtrar solo los suyos (o por establecimiento si prefieres)
+    cases = AICase.objects.all().select_related('assistant', 'user').prefetch_related('obs_log__user')
+    # Si no es staff, filtrar solo los suyos
     if not request.user.is_staff:
         cases = cases.filter(user=request.user)
     
@@ -326,13 +326,35 @@ def update_case(request, pk):
         
     if request.method == 'POST':
         case.title = request.POST.get('title', case.title)
-        case.sustento = request.POST.get('sustento', case.sustento)
-        case.ruta = request.POST.get('ruta', case.ruta)
-        case.checklist = request.POST.get('checklist', case.checklist)
-        case.observations = request.POST.get('observations', case.observations)
+        case.status = request.POST.get('status', case.status)
         case.save()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def add_case_observation(request, pk):
+    """AJAX: Añade una observación al log."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return JsonResponse({'status': 'error'}, status=403)
+        
+    content = request.POST.get('content', '').strip()
+    if content:
+        obs = CaseObservation.objects.create(
+            case=case,
+            user=request.user,
+            content=content
+        )
+        return JsonResponse({
+            'status': 'success',
+            'obs': {
+                'user': obs.user.get_full_name() or obs.user.username,
+                'content': obs.content,
+                'created_at': obs.created_at.strftime('%d/%m/%Y %H:%M')
+            }
+        })
+    return JsonResponse({'status': 'error', 'message': 'Contenido vacío'}, status=400)
 
 
 @login_required

@@ -48,21 +48,27 @@
     .status-cerrado { background: #f1f5f9; color: #475569; }
 
     .btn-action {
-        padding: 8px 14px;
+        padding: 9px 16px;
         border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
+        font-size: 13px;
+        font-weight: 700;
         cursor: pointer;
-        border: 1px solid var(--border);
+        border: 2px solid var(--primary);
         background: #fff;
+        color: var(--primary);
         transition: all 0.2s;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        text-decoration: none;
     }
-    .btn-action:hover { background: #f8fafc; border-color: var(--accent); }
-    .btn-defense { background: var(--primary); color: white; border: none; }
-    .btn-defense:hover { background: #000; }
+    .btn-action:hover { background: var(--primary); color: #fff; }
+    
+    .btn-defense { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-defense:hover { background: #000; border-color: #000; }
+
+    .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-accent:hover { background: #155a9a; border-color: #155a9a; }
 
     /* Modal de Defensa */
     .modal {
@@ -124,23 +130,20 @@
             </div>
             
             <div style="text-align: center;">
-                <span id="status-{{ case.pk }}" class="status-badge status-{{ case.status }}" onclick="toggleStatus({{ case.pk }})" style="cursor:pointer;">
+                <span id="status-{{ case.pk }}" class="status-badge status-{{ case.status }}">
                     {{ case.get_status_display }}
                 </span>
             </div>
 
-            <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}', '{{ case.observations|escapejs }}')">
-                    ✏️ Editar
+            <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+                <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}', '{{ case.status }}')">
+                    ✏️ Gestionar
                 </button>
-                <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action" style="text-decoration:none;">
-                    📄 Reporte
+                <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action btn-accent">
+                    📄 Reporte PDF
                 </a>
                 <button class="btn-action" onclick="showDefense({{ case.pk }}, '{{ case.descargos|escapejs }}')">
-                    ⚖️ Descargos
-                </button>
-                <button class="btn-action btn-defense" onclick="generateDefense({{ case.pk }})">
-                    ✨ Redactar
+                    ⚖️ Defensa IA
                 </button>
             </div>
         </div>
@@ -171,11 +174,10 @@
     </div>
 </div>
 
-<!-- Modal para editar casos (CRUD) -->
 <div id="modal-case" class="modal" style="backdrop-filter: blur(5px);">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="margin:0; font-size:18px;">Edición de Caso Normativo</h3>
+            <h3 style="margin:0; font-size:18px;">Gestión y Seguimiento de Caso</h3>
             <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
         </div>
         <div class="modal-body">
@@ -184,26 +186,46 @@
                 <label>Título del Caso</label>
                 <input type="text" id="edit-title" class="form-control">
             </div>
-            <div class="form-group">
-                <label>1. Sustento Normativo (Consulta Original)</label>
-                <div id="render-sustento" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label>1. Sustento Normativo</label>
+                    <div id="render-sustento" style="font-size: 13px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; max-height: 250px; overflow-y: auto;"></div>
+                </div>
+                <div class="form-group">
+                    <label>2. Hoja de Ruta</label>
+                    <div id="render-ruta" style="font-size: 13px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569; max-height: 250px; overflow-y: auto;"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>2. Hoja de Ruta</label>
-                <div id="render-ruta" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
-            </div>
+
             <div class="form-group">
                 <label>3. Checklist</label>
-                <div id="render-checklist" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
+                <div id="render-checklist" style="font-size: 13px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
             </div>
+
+            <div class="form-group" style="background: #fffbeb; padding: 15px; border-radius: 12px; border: 1px solid #fef3c7;">
+                <label style="color: #92400e;">📍 Cambiar Estado del Caso</label>
+                <select id="edit-status" class="form-control" style="font-weight: 700; border-color: #fcd34d;">
+                    <option value="abierto">Abierto (En Proceso)</option>
+                    <option value="cerrado">Cerrado (Resuelto)</option>
+                </select>
+            </div>
+
             <div class="form-group">
-                <label>📍 Observaciones / seguimiento manual</label>
-                <textarea id="edit-observations" class="form-control" rows="5" style="border-color: #cbd5e0;"></textarea>
+                <label>📝 Historial de Observaciones (Trazabilidad)</label>
+                <div id="obs-history" style="background: #f1f5f9; padding: 15px; border-radius: 10px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #e2e8f0;"></div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-obs-content" class="form-control" placeholder="Añadir hito de seguimiento...">
+                    <button onclick="addNewObservation()" class="btn-action btn-defense" style="white-space: nowrap;">
+                        ➕ Añadir Nota
+                    </button>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button onclick="closeModal()" class="btn-action">Cancelar</button>
-            <button id="btn-update-case" onclick="updateCaseLogic()" class="btn-action btn-defense" style="padding:10px 25px;">💾 Guardar Cambios</button>
+            <button onclick="closeModal()" class="btn-action">Cerrar</button>
+            <button id="btn-update-case" onclick="updateCaseLogic()" class="btn-action btn-accent" style="padding:10px 25px;">💾 Guardar Cambios</button>
+            <button class="btn-action btn-defense" onclick="generateDefenseFromModal()">✨ Redactar Descargos (IA)</button>
         </div>
     </div>
 </div>
@@ -218,17 +240,93 @@
         document.getElementById('modal-case').style.display = 'none';
     }
 
-    function openEditModal(pk, title, sustento, ruta, checklist, observations) {
+    // Mapeo de observaciones para carga rápida
+    const caseObsMap = {
+        {% for case in cases %}
+        '{{ case.pk }}': [
+            {% for obs in case.obs_log.all %}
+            { u: '{{ obs.user.get_full_name|default:obs.user.username }}', c: '{{ obs.content|escapejs }}', d: '{{ obs.created_at|date:"d/m/Y H:i" }}' },
+            {% endfor %}
+        ],
+        {% endfor %}
+    };
+
+    function openEditModal(pk, title, sustento, ruta, checklist, status) {
         document.getElementById('edit-case-pk').value = pk;
         document.getElementById('edit-title').value = title;
+        document.getElementById('edit-status').value = status;
         
-        // Renderizado Markdown para visualización (Lectura)
+        // Renderizado Markdown
         document.getElementById('render-sustento').innerHTML = marked.parse(sustento);
         document.getElementById('render-ruta').innerHTML = marked.parse(ruta);
         document.getElementById('render-checklist').innerHTML = marked.parse(checklist).replace(/<li>/g, '<li>[ ] ');
         
-        document.getElementById('edit-observations').value = observations || '';
+        // Cargar Historial
+        const historyDiv = document.getElementById('obs-history');
+        historyDiv.innerHTML = '';
+        const obsList = caseObsMap[pk] || [];
+        if (obsList.length === 0) {
+            historyDiv.innerHTML = '<p style="color:#64748b; font-size:12px; font-style:italic;">No hay observaciones registradas aún.</p>';
+        } else {
+            obsList.forEach(o => {
+                historyDiv.innerHTML += `
+                    <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #e2e8f0;">
+                        <div style="font-size:11px; font-weight:800; color:var(--accent);">${o.u} • ${o.d}</div>
+                        <div style="font-size:13px; color:#1e293b;">${o.c}</div>
+                    </div>
+                `;
+            });
+        }
+        
         document.getElementById('modal-case').style.display = 'block';
+    }
+
+    async function addNewObservation() {
+        const pk = document.getElementById('edit-case-pk').value;
+        const input = document.getElementById('new-obs-content');
+        const content = input.value.trim();
+        if (!content) return;
+
+        const data = new URLSearchParams({
+            'content': content,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        });
+
+        try {
+            const r = await fetch(`/ia/casos/${pk}/observacion/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            });
+            const d = await r.json();
+            if (d.status === 'success') {
+                input.value = '';
+                // Actualizar mapa local y UI
+                if (!caseObsMap[pk]) caseObsMap[pk] = [];
+                caseObsMap[pk].unshift({ u: d.obs.user, c: d.obs.content, d: d.obs.created_at });
+                // Refrescar lista en el modal
+                openEditModal(pk, document.getElementById('edit-title').value, '', '', '', document.getElementById('edit-status').value);
+                // Note: La re-llamada a openEditModal volverá a renderizar lo que esté en memoria.
+                // Para evitar re-parsear Markdown, podríamos ser más selectivos, pero esto es funcional.
+                // Sin embargo, sustento/ruta/checklist se perderían si no los pasamos.
+                // Mejor simplemente añadir al DOM:
+                const historyDiv = document.getElementById('obs-history');
+                const newHtml = `
+                    <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #e2e8f0;">
+                        <div style="font-size:11px; font-weight:800; color:var(--accent);">${d.obs.user} • ${d.obs.created_at}</div>
+                        <div style="font-size:13px; color:#1e293b;">${d.obs.content}</div>
+                    </div>
+                `;
+                if (obsList.length === 0) historyDiv.innerHTML = newHtml;
+                else historyDiv.innerHTML = newHtml + historyDiv.innerHTML;
+            }
+        } catch (e) { }
+    }
+
+    // Proxy para el botón de redactar dentro del modal
+    function generateDefenseFromModal() {
+        const pk = document.getElementById('edit-case-pk').value;
+        generateDefense(pk);
     }
 
     async function updateCaseLogic() {
@@ -240,7 +338,7 @@
 
         const data = new URLSearchParams({
             'title': document.getElementById('edit-title').value,
-            'observations': document.getElementById('edit-observations').value,
+            'status': document.getElementById('edit-status').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 

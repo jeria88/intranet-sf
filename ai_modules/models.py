@@ -168,3 +168,16 @@ class AICase(models.Model):
 
     def __str__(self):
         return f"[{self.get_status_display()}] {self.title} - {self.user.username}"
+
+class CaseObservation(models.Model):
+    """Log cronológico de observaciones para un caso."""
+    case = models.ForeignKey(AICase, on_delete=models.CASCADE, related_name='obs_log')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    content = models.TextField(verbose_name='Comentario')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Obs {self.created_at:%d/%m/%Y} - {self.case.title}"
