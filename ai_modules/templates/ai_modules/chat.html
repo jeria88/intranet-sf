@@ -36,22 +36,24 @@
     #send-btn:hover { background: #165a94 !important; transform: translateY(-1.5px) !important; box-shadow: 0 6px 15px rgba(30,115,190,0.4) !important; }
     #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; margin-left: 8px !important; }
 
-    /* Aplicación Full-Screen con Scroll Interno y Márgenes Laterales */
+    /* Modo Enfoque: Ocultar Elementos Globales */
+    .site-header, .main-navigation, #anci-seal, #anci-modal { display: none !important; }
+
+    /* Aplicación Full-Screen con Scroll Interno y Márgenes Laterales (5%) */
     html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; }
     .container { 
-        max-width: 94% !important; 
-        width: 94% !important;
-        height: calc(100vh - 120px) !important; 
+        max-width: 90% !important; 
+        width: 90% !important;
+        height: 100vh !important; 
         padding: 0 !important; 
-        margin: 0 3% !important; 
+        margin: 0 5% !important; 
         display: flex !important; 
         flex-direction: column !important; 
         overflow: hidden !important; 
         background: #fff;
-        box-shadow: 0 0 40px rgba(0,0,0,0.05);
+        box-shadow: 0 0 40px rgba(0,0,0,0.1);
     }
     body { padding-top: 0 !important; display: flex; flex-direction: column; }
-    .site-header, .main-navigation { flex-shrink: 0 !important; z-index: 1000 !important; }
 
     /* Layout Split View Aplicación */
     .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100%; }
@@ -65,7 +67,7 @@
 
     /* Cabeceras y Pies de Columna Fijos */
     .chat-header, .editor-header { flex-shrink: 0 !important; border-bottom: 1px solid #e2e8f0; background: #fff; z-index: 10; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
-    .chat-input-area { flex-shrink: 0 !important; padding: 20px; background: white; border-top: 1px solid #f1f5f9; z-index: 10; }
+    .chat-input-area { flex-shrink: 0 !important; padding: 20px; background: white; border-top: 1px solid #f1f5f9; z-index: 10; display: flex; flex-direction: column; gap: 15px; }
     .editor-footer { flex-shrink: 0 !important; padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
 
     /* Estilo de Mensajes */
@@ -157,14 +159,7 @@
                 <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
                 <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
             </div>
-            <div class="chat-actions" style="display: flex; gap: 10px;">
-                <a href="{% url 'ai_modules:case_repository' %}" style="background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; padding: 7px 14px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-                    📁 Repositorio
-                </a>
-                <button id="btn-toggle-editor" style="background: #1e73be; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    ➕ Nuevo Caso
-                </button>
-            </div>
+            <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
         </div>
 
         <div id="chat-messages">
@@ -191,6 +186,14 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
                     </svg>
+                </button>
+            </div>
+            <div id="chat-controls" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
+                <a href="{% url 'ai_modules:case_repository' %}" style="color: #64748b; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                    📁 Ir al Repositorio
+                </a>
+                <button onclick="toggleEditor()" style="color: #1e73be; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #1e73be; background: #fff; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                    ➕ Editar Caso Manualmente
                 </button>
             </div>
         </div>
@@ -395,9 +398,44 @@
             if (d.status === 'success') {
                 appendMsg('assistant', d.response);
                 updateReport(d.response);
+                autoSaveCase(text, d.response);
             }
             scrollToBottom();
         } catch (e) { if(document.getElementById(tid)) document.getElementById(tid).remove(); }
+    }
+
+    async function autoSaveCase(userMsg, aiMsg) {
+        const sections = extractSections(aiMsg);
+        if (!sections) return;
+
+        const statusLabel = document.getElementById('auto-save-status');
+        statusLabel.innerText = "⌛ Resguardando...";
+
+        const title = userMsg.length > 50 ? userMsg.substring(0, 47) + "..." : userMsg;
+        
+        const data = new URLSearchParams({
+            'assistant_slug': assistantSlug,
+            'title': title,
+            'sustento': sections.a,
+            'ruta': sections.b,
+            'checklist': sections.c,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        });
+
+        try {
+            const r = await fetch('{% url "ai_modules:save_as_case" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            });
+            const d = await r.json();
+            if (d.status === 'success') {
+                statusLabel.innerText = "✓ Resguardado automáticamente";
+                setTimeout(() => { statusLabel.innerText = ""; }, 3000);
+            }
+        } catch (e) {
+            statusLabel.innerText = "⚠ Fallo al resguardar";
+        }
     }
 
     function appendMsg(role, content) {
