@@ -275,7 +275,7 @@
             descargos: '{{ case.descargos|escapejs }}',
             obs: [
                 {% for obs in case.obs_log.all %}
-                { u: '{{ obs.user.get_full_name|default:obs.user.username }}', c: '{{ obs.content|escapejs }}', d: '{{ obs.created_at|date:"d/m/Y H:i" }}' },
+                { u: '{% if obs.user %}{{ obs.user.get_full_name|default:obs.user.username }}{% else %}Sistema{% endif %}', c: '{{ obs.content|escapejs }}', d: '{{ obs.created_at|date:"d/m/Y H:i" }}' },
                 {% endfor %}
             ]
         },
