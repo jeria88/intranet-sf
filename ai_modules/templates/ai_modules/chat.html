@@ -157,7 +157,7 @@
         <div class="chat-header">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
-                <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
+                <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para UTP</h2>
             </div>
             <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
         </div>
@@ -179,7 +179,7 @@
         </div>
 
         <div class="chat-input-area">
-            <div style="margin: 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 5px 15px;">
+            <div style="width: 100%; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 5px 15px; box-sizing: border-box;">
                 <textarea id="chat-input" placeholder="Consulte aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; padding: 8px 0;"></textarea>
                 <button id="send-btn">
                     <span>Enviar</span>
@@ -188,13 +188,13 @@
                     </svg>
                 </button>
             </div>
-            <div id="chat-controls" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
-                <a href="{% url 'ai_modules:case_repository' %}" style="color: #64748b; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                    📁 Ir al Repositorio
+            <div id="chat-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; width: 100%;">
+                <a href="/" style="color: #64748b; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                    ⬅️ Volver al Dashboard
                 </a>
-                <button onclick="toggleEditor()" style="color: #1e73be; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #1e73be; background: #fff; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                    ➕ Editar Caso Manualmente
-                </button>
+                <a href="{% url 'ai_modules:case_repository' %}" style="color: #1e73be; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #1e73be; background: #fff; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                    📁 Ir al Repositorio de Casos
+                </a>
             </div>
         </div>
     </div>
