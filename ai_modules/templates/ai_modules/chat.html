@@ -38,11 +38,24 @@
     #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; }
 
     /* Estilo de Mensajes */
-    .message-row.user { align-self: flex-end !important; margin-left: 20% !important; }
-    .message-row.ai { align-self: flex-start !important; margin-right: 20% !important; }
-    .bubble { padding: 12px 18px !important; border-radius: 18px !important; font-size: 14.5px !important; line-height: 1.5 !important; }
-    .user .bubble { background: #e0f2fe !important; color: #0369a1 !important; border-bottom-right-radius: 4px !important; }
-    .ai .bubble { background: #fff !important; color: #334155 !important; border: 1px solid #e2e8f0 !important; border-bottom-left-radius: 4px !important; }
+    .ai .bubble { background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; position: relative; }
+    
+    .btn-msg-transform {
+        margin-top: 10px;
+        background: #f8fafc;
+        color: #1e73be;
+        border: 1px solid #e2e8f0;
+        padding: 6px 12px;
+        border-radius: 15px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s;
+    }
+    .btn-msg-transform:hover { background: #e0f2fe; border-color: #1e73be; }
 
     /* Contenedor de Reporte (Oculto en Pantalla) */
     #print-container { display: none; }
@@ -140,6 +153,11 @@
             <div class="bubble">
                 <span class="raw-data" style="display:none;">{{ msg.content }}</span>
                 <div class="render-target"></div>
+                {% if msg.role == 'assistant' %}
+                <button class="btn-msg-transform action-transform" title="Guardar este mensaje como caso">
+                    ✨ Transformar en Caso
+                </button>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -239,13 +257,8 @@
     const saveCaseBtn = document.getElementById('btn-save-case');
     const assistantSlug = '{{ assistant.slug }}';
     
-    // Almacén de Markdown Crudo para evitar pérdida de formato al guardar
-    let rawSections = { a: '', b: '', c: '' };
-
-    function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
-
-    function updateReport(text) {
-        if (!text) return;
+    function extractSections(text) {
+        if (!text) return null;
         const regexA = /A\.\s+SUSTENTO/i;
         const regexB = /B\.\s+RUTA/i;
         const regexC = /C\.\s+CHECKLIST/i;
@@ -257,18 +270,34 @@
             const partsBC = remainBC.split(regexC);
             const partB = (partsBC[0] || '').trim();
             const partC = (partsBC[1] || '').trim();
+            return { a: partA, b: partB, c: partC };
+        }
+        return null;
+    }
 
-            rawSections.a = partA;
-            rawSections.b = partB;
-            rawSections.c = partC;
+    function openSaveModalForText(text) {
+        const sections = extractSections(text);
+        if (!sections) {
+            alert("Este mensaje no contiene una estructura de caso (Sustento, Ruta, Checklist).");
+            return;
+        }
+        document.getElementById('modal-sustento').value = sections.a;
+        document.getElementById('modal-ruta').value = sections.b;
+        document.getElementById('modal-checklist').value = sections.c;
+        document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
+        document.getElementById('modal-case').style.display = 'flex';
+    }
 
-            // Actualizar contenedores de impresión ocultos por si se necesitan
+    function updateReport(text) {
+        const sections = extractSections(text);
+        if (sections) {
+            rawSections = sections;
             const pa = document.getElementById('print-a');
             const pb = document.getElementById('print-b');
             const pc = document.getElementById('print-c');
-            if (pa) pa.innerHTML = marked.parse(partA);
-            if (pb) pb.innerHTML = marked.parse(partB);
-            if (pc) pc.innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
+            if (pa) pa.innerHTML = marked.parse(sections.a);
+            if (pb) pb.innerHTML = marked.parse(sections.b);
+            if (pc) pc.innerHTML = marked.parse(sections.c).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
             
             const pd = document.getElementById('print-date');
             if (pd) pd.innerText = new Date().toLocaleDateString('es-CL');
@@ -282,13 +311,7 @@
     }
 
     saveCaseBtn.addEventListener('click', () => {
-        // Pre-poblar el modal con la info del reporte actual (Versión Renderizada para vista previa)
-        document.getElementById('modal-sustento').value = rawSections.a;
-        document.getElementById('modal-ruta').value = rawSections.b;
-        document.getElementById('modal-checklist').value = rawSections.c;
-        document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
-        
-        document.getElementById('modal-case').style.display = 'flex';
+        openSaveModalForText(rawSections.a ? `A. SUSTENTO\n${rawSections.a}\nB. RUTA\n${rawSections.b}\nC. CHECKLIST\n${rawSections.c}` : '');
     });
 
     document.getElementById('btn-confirm-save').addEventListener('click', async () => {
@@ -358,7 +381,13 @@
         const div = document.createElement('div');
         div.className = `message-row ${role === 'assistant' ? 'ai' : 'user'}`;
         div.style.maxWidth = '85%';
-        div.innerHTML = `<div class="bubble">${marked.parse(content)}</div>`;
+        
+        let transformBtn = '';
+        if (role === 'assistant' && extractSections(content)) {
+            transformBtn = `<button class="btn-msg-transform" style="display:flex;" onclick="openSaveModalForText(\`${content.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`)">✨ Transformar en Caso</button>`;
+        }
+        
+        div.innerHTML = `<div class="bubble">${marked.parse(content)}${transformBtn}</div>`;
         chatMessages.appendChild(div);
     }
 
@@ -373,9 +402,16 @@
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-    document.querySelectorAll('.message-row .render-target').forEach(div => {
-        const raw = div.previousElementSibling.textContent;
-        div.innerHTML = marked.parse(raw);
+    document.querySelectorAll('.message-row.ai .bubble').forEach(bubble => {
+        const raw = bubble.querySelector('.raw-data').textContent;
+        const renderTarget = bubble.querySelector('.render-target');
+        renderTarget.innerHTML = marked.parse(raw);
+        
+        const btn = bubble.querySelector('.btn-msg-transform');
+        if (btn && extractSections(raw)) {
+            btn.style.display = 'flex';
+            btn.onclick = () => openSaveModalForText(raw);
+        }
     });
 </script>
 {% endblock %}
