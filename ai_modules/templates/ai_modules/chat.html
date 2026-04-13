@@ -39,6 +39,9 @@
     /* Modo Enfoque: Ocultar Elementos Globales */
     .site-header, .main-navigation, #anci-seal, #anci-modal { display: none !important; }
 
+    /* Variables de UX Dinámicas */
+    :root { --chat-font-size: 15px; }
+
     /* Aplicación Full-Screen con Scroll Interno y Márgenes Laterales (5%) */
     html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; }
     .container { 
@@ -62,7 +65,16 @@
     .editor-column.active { display: flex; }
 
     /* Áreas de Scroll Independiente */
-    #chat-messages { flex: 1 !important; overflow-y: auto !important; display: flex !important; flex-direction: column !important; padding: 30px !important; gap: 20px !important; background: #fff; }
+    #chat-messages { 
+        flex: 1 !important; 
+        overflow-y: auto !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        padding: 30px !important; 
+        gap: 20px !important; 
+        background: #fff; 
+        font-size: var(--chat-font-size) !important;
+    }
     .editor-body { flex: 1 !important; overflow-y: auto !important; padding: 30px !important; }
 
     /* Cabeceras y Pies de Columna Fijos */
@@ -159,7 +171,15 @@
                 <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
                 <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para UTP</h2>
             </div>
-            <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
+                <div class="font-controls" style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                    <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-right: 5px;">Zoom</span>
+                    <button onclick="changeFontSize(-1)" style="background:none; border:none; color:#1e293b; font-weight:800; cursor:pointer; padding: 0 5px;">A-</button>
+                    <button onclick="resetFontSize()" style="background:none; border:none; color:#1e73be; font-weight:800; cursor:pointer; padding: 0 5px; font-size: 12px;">A</button>
+                    <button onclick="changeFontSize(1)" style="background:none; border:none; color:#1e293b; font-weight:800; cursor:pointer; padding: 0 5px;">A+</button>
+                </div>
+            </div>
         </div>
 
         <div id="chat-messages">
@@ -464,5 +484,20 @@
             }
         }
     });
+    // Lógica de Tamaño de Fuente
+    let currentFontSize = parseInt(localStorage.getItem('chatFontSize')) || 15;
+    document.documentElement.style.setProperty('--chat-font-size', currentFontSize + 'px');
+
+    function changeFontSize(delta) {
+        currentFontSize = Math.min(Math.max(currentFontSize + delta, 12), 24);
+        document.documentElement.style.setProperty('--chat-font-size', currentFontSize + 'px');
+        localStorage.setItem('chatFontSize', currentFontSize);
+    }
+
+    function resetFontSize() {
+        currentFontSize = 15;
+        document.documentElement.style.setProperty('--chat-font-size', '15px');
+        localStorage.removeItem('chatFontSize');
+    }
 </script>
 {% endblock %}
