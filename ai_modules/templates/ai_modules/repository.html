@@ -106,6 +106,11 @@
     .form-control:focus { outline: none; border-color: #1e73be; box-shadow: 0 0 0 3px rgba(30,115,190,0.1); }
 
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    /* Estilos Barra de Progreso */
+    .progress-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 10px; margin: 20px 0; overflow: hidden; }
+    .progress-bar { width: 0%; height: 100%; background: #1e73be; transition: width 0.4s ease; border-radius: 10px; }
+    #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; }
 </style>
 {% endblock %}
 
@@ -136,13 +141,13 @@
             </div>
 
             <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-                <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}', '{{ case.status }}')">
+                <button class="btn-action" onclick="openEditFromCard({{ case.pk }})">
                     ✏️ Gestionar
                 </button>
                 <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action btn-accent">
                     📄 Reporte PDF
                 </a>
-                <button class="btn-action" onclick="showDefense({{ case.pk }}, '{{ case.descargos|escapejs }}')">
+                <button class="btn-action" onclick="showDefense({{ case.pk }})">
                     ⚖️ Defensa IA
                 </button>
             </div>
@@ -224,11 +229,27 @@
                 </div>
             </div>
         </div>
-        <div class="modal-footer">
-            <button onclick="closeModal()" class="btn-action">Cerrar</button>
-            <button id="btn-update-case" onclick="updateCaseLogic()" class="btn-action btn-accent" style="padding:10px 25px;">💾 Guardar Cambios</button>
-            <button class="btn-action btn-defense" onclick="generateDefenseFromModal()">✨ Redactar Descargos (IA)</button>
+        <div class="modal-footer" style="justify-content: space-between;">
+            <button onclick="confirmDeleteCase()" class="btn-action" style="border-color: #dc2626; color: #dc2626; background: #fef2f2;">🗑️ Eliminar Caso</button>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="closeModal()" class="btn-action">Cerrar</button>
+                <button id="btn-update-case" onclick="updateCaseLogic()" class="btn-action btn-accent" style="padding:10px 25px;">💾 Guardar Cambios</button>
+            </div>
+            <button id="btn-modal-defense" class="btn-action btn-defense" onclick="generateDefenseFromModal()">✨ Redactar Descargos (IA)</button>
         </div>
+    </div>
+</div>
+
+<!-- Modal de Carga 0-100% -->
+<div id="loading-overlay">
+    <div style="background: white; padding: 40px; border-radius: 20px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="font-size: 40px; margin-bottom: 20px;">🤖</div>
+        <h3 style="margin: 0; font-size: 18px; color: #1e293b;">Redactando Descargos Institucionales</h3>
+        <p style="color: #64748b; font-size: 14px; margin-top: 10px;">La IA está fundamentando su reporte técnico...</p>
+        <div class="progress-container">
+            <div id="defense-progress" class="progress-bar"></div>
+        </div>
+        <div id="progress-text" style="font-weight: 800; color: #1e73be; font-size: 20px;">0%</div>
     </div>
 </div>
 
@@ -242,18 +263,31 @@
         document.getElementById('modal-case').style.display = 'none';
     }
 
-    // Mapeo de observaciones para carga rápida
-    const caseObsMap = {
+    // Mapa de datos completo en memoria para sincronización fluida
+    const caseDataMap = {
         {% for case in cases %}
-        '{{ case.pk }}': [
-            {% for obs in case.obs_log.all %}
-            { u: '{{ obs.user.get_full_name|default:obs.user.username }}', c: '{{ obs.content|escapejs }}', d: '{{ obs.created_at|date:"d/m/Y H:i" }}' },
-            {% endfor %}
-        ],
+        '{{ case.pk }}': {
+            title: '{{ case.title|escapejs }}',
+            sustento: '{{ case.sustento|escapejs }}',
+            ruta: '{{ case.ruta|escapejs }}',
+            checklist: '{{ case.checklist|escapejs }}',
+            status: '{{ case.status }}',
+            descargos: '{{ case.descargos|escapejs }}',
+            obs: [
+                {% for obs in case.obs_log.all %}
+                { u: '{{ obs.user.get_full_name|default:obs.user.username }}', c: '{{ obs.content|escapejs }}', d: '{{ obs.created_at|date:"d/m/Y H:i" }}' },
+                {% endfor %}
+            ]
+        },
         {% endfor %}
     };
 
-    function openEditModal(pk, title, sustento, ruta, checklist, status) {
+    function openEditFromCard(pk) {
+        const c = caseDataMap[pk];
+        if (c) openEditModal(pk, c.title, c.sustento, c.ruta, c.checklist, c.status, c.descargos);
+    }
+
+    function openEditModal(pk, title, sustento, ruta, checklist, status, descargos) {
         document.getElementById('edit-case-pk').value = pk;
         document.getElementById('edit-title').value = title;
         document.getElementById('edit-status').value = status;
@@ -263,10 +297,22 @@
         document.getElementById('render-ruta').innerHTML = marked.parse(ruta);
         document.getElementById('render-checklist').innerHTML = marked.parse(checklist).replace(/<li>/g, '<li>[ ] ');
         
+        // Configurar Botón de Defensa según estado
+        const defBtn = document.getElementById('btn-modal-defense');
+        if (descargos && descargos !== 'None' && descargos.trim() !== '') {
+            defBtn.innerHTML = "🔍 Revisar Redacción de Descargos";
+            defBtn.classList.remove('btn-defense');
+            defBtn.classList.add('btn-accent');
+        } else {
+            defBtn.innerHTML = "✨ Redactar Descargos (IA)";
+            defBtn.classList.remove('btn-accent');
+            defBtn.classList.add('btn-defense');
+        }
+
         // Cargar Historial
         const historyDiv = document.getElementById('obs-history');
         historyDiv.innerHTML = '';
-        const obsList = caseObsMap[pk] || [];
+        const obsList = caseDataMap[pk]?.obs || [];
         if (obsList.length === 0) {
             historyDiv.innerHTML = '<p style="color:#64748b; font-size:12px; font-style:italic;">No hay observaciones registradas aún.</p>';
         } else {
@@ -304,14 +350,9 @@
             if (d.status === 'success') {
                 input.value = '';
                 // Actualizar mapa local y UI
-                if (!caseObsMap[pk]) caseObsMap[pk] = [];
-                caseObsMap[pk].unshift({ u: d.obs.user, c: d.obs.content, d: d.obs.created_at });
-                // Refrescar lista en el modal
-                openEditModal(pk, document.getElementById('edit-title').value, '', '', '', document.getElementById('edit-status').value);
-                // Note: La re-llamada a openEditModal volverá a renderizar lo que esté en memoria.
-                // Para evitar re-parsear Markdown, podríamos ser más selectivos, pero esto es funcional.
-                // Sin embargo, sustento/ruta/checklist se perderían si no los pasamos.
-                // Mejor simplemente añadir al DOM:
+                if (!caseDataMap[pk]) caseDataMap[pk] = { obs: [] };
+                caseDataMap[pk].obs.unshift({ u: d.obs.user, c: d.obs.content, d: d.obs.created_at });
+                
                 const historyDiv = document.getElementById('obs-history');
                 const newHtml = `
                     <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #e2e8f0;">
@@ -319,7 +360,7 @@
                         <div style="font-size:13px; color:#1e293b;">${d.obs.content}</div>
                     </div>
                 `;
-                if (obsList.length === 0) historyDiv.innerHTML = newHtml;
+                if (caseDataMap[pk].obs.length === 1) historyDiv.innerHTML = newHtml;
                 else historyDiv.innerHTML = newHtml + historyDiv.innerHTML;
             }
         } catch (e) { }
@@ -329,6 +370,22 @@
     function generateDefenseFromModal() {
         const pk = document.getElementById('edit-case-pk').value;
         generateDefense(pk);
+    }
+
+    async function confirmDeleteCase() {
+        const pk = document.getElementById('edit-case-pk').value;
+        if (!confirm("¿Está seguro de eliminar este caso? Podrá seguir siendo consultado por administración para trazabilidad, pero desaparecerá de su vista personal.")) return;
+        
+        try {
+            const r = await fetch(`/ia/casos/${pk}/eliminar/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            });
+            const d = await r.json();
+            if (d.status === 'success') {
+                location.reload();
+            }
+        } catch (e) { alert("Error al eliminar el caso."); }
     }
 
     async function updateCaseLogic() {
@@ -358,9 +415,17 @@
         finally { btn.innerHTML = "💾 Guardar Cambios"; btn.disabled = false; }
     }
 
-    function showDefense(pk, text) {
+    function showDefense(pk) {
+        const c = caseDataMap[pk];
+        const text = c ? c.descargos : '';
+        
         if (!text || text === 'None' || text === '') {
-            alert("Aún no se han generado los descargos para este caso. Presiona 'Redactar'.");
+            if (c) {
+                openEditFromCard(pk);
+                alert("Aún no se han generado los descargos. Presiona 'Redactar' en el panel de gestión.");
+            } else {
+                alert("Error al cargar datos del caso.");
+            }
             return;
         }
         // Renderizado Markdown para visualización profesional
@@ -375,22 +440,57 @@
     }
 
     async function generateDefense(pk) {
-        if (!confirm("Se utilizará la IA para redactar los descargos formales basados en este caso. ¿Deseas continuar?")) return;
+        const overlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('defense-progress');
+        const progressText = document.getElementById('progress-text');
         
-        try {
-            const btn = event.target;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = "⌛ Redactando...";
-            btn.disabled = true;
+        if (!confirm("Se utilizará la IA para redactar los descargos formales. Este proceso puede tardar un minuto. ¿Deseas continuar?")) return;
+        
+        overlay.style.display = 'flex';
+        let progress = 0;
+        
+        // Simulación de progreso inicial
+        const interval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.random() * 5;
+                if (progress > 90) progress = 90;
+                progressBar.style.width = progress + '%';
+                progressText.innerText = Math.round(progress) + '%';
+            }
+        }, 1500);
 
+        try {
             const r = await fetch(`/ia/casos/${pk}/generar-descargos/`);
             const d = await r.json();
             
+            clearInterval(interval);
             if (d.status === 'success') {
-                alert("Descargos redactados con éxito.");
-                location.reload();
+                progress = 100;
+                progressBar.style.width = '100%';
+                progressText.innerText = '100%';
+                
+                // Actualizar mapa de memoria
+                if (caseDataMap[pk]) caseDataMap[pk].descargos = d.defense;
+                
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    // Actualizar UI del modal actual
+                    const defBtn = document.getElementById('btn-modal-defense');
+                    defBtn.innerHTML = "🔍 Revisar Redacción de Descargos";
+                    defBtn.classList.remove('btn-defense');
+                    defBtn.classList.add('btn-accent');
+                    
+                    alert("Descargos redactados y guardados con éxito.");
+                }, 800);
+            } else {
+                overlay.style.display = 'none';
+                alert("Error de IA: " + d.message);
             }
-        } catch (e) { alert("Error al generar la defensa."); }
+        } catch (e) { 
+            clearInterval(interval);
+            overlay.style.display = 'none';
+            alert("Error de conexión al generar la defensa."); 
+        }
     }
 
     async function toggleStatus(pk) {
