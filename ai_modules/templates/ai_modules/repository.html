@@ -147,9 +147,6 @@
                 <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action btn-accent">
                     📄 Reporte PDF
                 </a>
-                <button class="btn-action" onclick="showDefense({{ case.pk }})">
-                    ⚖️ Defensa IA
-                </button>
             </div>
         </div>
         {% empty %}
@@ -369,7 +366,13 @@
     // Proxy para el botón de redactar dentro del modal
     function generateDefenseFromModal() {
         const pk = document.getElementById('edit-case-pk').value;
-        generateDefense(pk);
+        const c = caseDataMap[pk];
+        // Si ya existen descargos, abrimos el visor directamente en lugar de generar
+        if (c && c.descargos && c.descargos !== 'None' && c.descargos.trim() !== '') {
+            showDefense(pk);
+        } else {
+            generateDefense(pk);
+        }
     }
 
     async function confirmDeleteCase() {
@@ -488,7 +491,9 @@
                     defBtn.classList.remove('btn-defense');
                     defBtn.classList.add('btn-accent');
                     
-                    alert("Descargos redactados y guardados con éxito.");
+                    if (confirm("Redacción completada con éxito. ¿Deseas ver el resultado ahora?")) {
+                        showDefense(pk);
+                    }
                 }, 800);
             } else {
                 overlay.style.display = 'none';
