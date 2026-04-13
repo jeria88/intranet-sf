@@ -36,20 +36,36 @@
     #send-btn:hover { background: #165a94 !important; transform: translateY(-1.5px) !important; box-shadow: 0 6px 15px rgba(30,115,190,0.4) !important; }
     #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; margin-left: 8px !important; }
 
-    /* Forzar Ancho Completo en Base Template */
-    .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-    body { padding-top: 0 !important; }
-    .site-header, .main-navigation { max-width: 100% !important; margin: 0 !important; width: 100% !important; }
-    .inside-header, .inside-navigation { max-width: 100% !important; padding: 0 40px !important; }
+    /* Aplicación Full-Screen con Scroll Interno */
+    html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
+    .container { 
+        max-width: 100% !important; 
+        height: calc(100vh - 120px) !important; 
+        padding: 0 !important; 
+        margin: 0 !important; 
+        display: flex !important; 
+        flex-direction: column !important; 
+        overflow: hidden !important; 
+    }
+    body { padding-top: 0 !important; display: flex; flex-direction: column; }
+    .site-header, .main-navigation { flex-shrink: 0 !important; z-index: 1000 !important; }
 
-    /* Layout Split View Mejorado */
-    .split-container { display: flex; height: calc(100vh - 120px); overflow: hidden; background: #f8fafc; gap: 0; width: 100vw; }
-    .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; }
-    .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; border-left: 1px solid #e2e8f0; box-shadow: -10px 0 30px rgba(0,0,0,0.05); }
+    /* Layout Split View Aplicación */
+    .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100vw; }
+    .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; overflow: hidden; }
+    .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; border-left: 1px solid #e2e8f0; box-shadow: -10px 0 30px rgba(0,0,0,0.05); overflow: hidden; }
     .editor-column.active { display: flex; }
 
-    /* Estilo de Mensajes con Alineación Forzada */
-    #chat-messages { display: flex !important; flex-direction: column !important; padding: 30px !important; gap: 20px !important; }
+    /* Áreas de Scroll Independiente */
+    #chat-messages { flex: 1 !important; overflow-y: auto !important; display: flex !important; flex-direction: column !important; padding: 30px !important; gap: 20px !important; background: #fff; }
+    .editor-body { flex: 1 !important; overflow-y: auto !important; padding: 30px !important; }
+
+    /* Cabeceras y Pies de Columna Fijos */
+    .chat-header, .editor-header { flex-shrink: 0 !important; border-bottom: 1px solid #e2e8f0; background: #fff; z-index: 10; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+    .chat-input-area { flex-shrink: 0 !important; padding: 20px; background: white; border-top: 1px solid #f1f5f9; z-index: 10; }
+    .editor-footer { flex-shrink: 0 !important; padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
+
+    /* Estilo de Mensajes */
     .message-row { display: flex !important; width: 100% !important; margin-bottom: 5px !important; }
     .message-row.user { justify-content: flex-end !important; }
     .message-row.ai { justify-content: flex-start !important; }
@@ -148,13 +164,12 @@
             </div>
         </div>
 
-        <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #fff;">
+        <div id="chat-messages">
             {% if not chat_messages %}
             <div class="message-row ai">
                 <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?</div>
             </div>
             {% endif %}
-
             {% for msg in chat_messages %}
             <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}">
                 <div class="bubble">
@@ -165,7 +180,7 @@
             {% endfor %}
         </div>
 
-        <div style="padding: 20px; background: white; border-top: 1px solid #f1f5f9;">
+        <div class="chat-input-area">
             <div style="margin: 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 5px 15px;">
                 <textarea id="chat-input" placeholder="Consulte aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; padding: 8px 0;"></textarea>
                 <button id="send-btn">
