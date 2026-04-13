@@ -8,21 +8,22 @@
 {% block content %}
 <div id="main-wrapper" class="chat-main-layout">
     <div class="chat-sidebar">
+        <!-- Cabecera de Chat Minimalista -->
         <div class="chat-header">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}" style="width: 34px; height: 34px; border-radius: 8px;">
-                <h2 style="font-size: 15px; margin: 0; font-weight: 800; color: var(--text-dark);">{{ assistant.name }}</h2>
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 28px; height: auto;">
+                <h2 style="font-size: 14px; margin: 0; font-weight: 700; color: var(--text-dark);">Asesoría Técnico Pedagógica</h2>
             </div>
             
             <button id="btn-main-print" class="btn-header-pdf" style="display: none;" onclick="window.print()">
-                <span>📄</span> Descargar Reporte PDF
+                <span>📄</span> Reporte PDF
             </button>
         </div>
 
         <div class="chat-messages" id="chat-messages">
             {% if not chat_messages %}
             <div class="message-row ai">
-                <div class="message-content">¡Buen día! Soy tu **{{ assistant.name }}**. ¿En qué situación normativa puedo asesorarte hoy?</div>
+                <div class="message-content">Bienvenido. He analizado la normativa institucional para apoyarte en tu gestión. ¿Qué situación deseas revisar?</div>
             </div>
             {% endif %}
 
@@ -36,55 +37,56 @@
             {% endfor %}
         </div>
 
-        <div class="chat-input-area" style="padding: 20px; background: white; border-top: 1px solid #edf2f7;">
-            <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px;">
-                <textarea id="chat-input" placeholder="Escribir consulta..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:15px; color: var(--text-base);"></textarea>
-                <button id="send-btn" style="background:var(--accent); color:white; border:none; width: 40px; height: 40px; border-radius:10px; cursor:pointer;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2z"></path></svg>
+        <div class="chat-input-area" style="padding: 15px 25px; background: white; border-top: 1px solid #f1f5f9;">
+            <div style="max-width: 850px; margin: 0 auto; display: flex; align-items: center; gap: 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 25px; padding: 6px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <textarea id="chat-input" placeholder="Escribir consulta..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; color: var(--text-base); padding-top: 8px;"></textarea>
+                <button id="send-btn" title="Enviar Consulta">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2z"></path></svg>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Contenedor 'Off-Screen' para el PDF (Asegura Calidad y Flujo) -->
+    <!-- Contenedor para Reporte PDF (Invisible en UI, Única fuente para Print) -->
     <div class="canvas-container" id="canvas-container">
+        <!-- Encabezado de Reporte Formal (Sin ANCI) -->
         <div class="print-only-header" style="display: none; border-bottom: 2px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 70px; height: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 75px; height: auto;">
                     <div>
-                        <h1 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Minuta de Asesoría Normativa</h1>
+                        <h1 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Informe de Asesoría Técnica</h1>
                         <p style="margin: 2px 0 0; color: #475569; font-weight: 700;">{{ assistant.establishment }}</p>
                     </div>
                 </div>
-                <div style="text-align: right; font-size: 11px; font-weight: 600;">
+                <div style="text-align: right; font-size: 10px; font-weight: 600; color: #64748b;">
                     <p style="margin: 0;">Fecha: <span id="print-date"></span></p>
-                    <p style="margin: 2px 0 0;">Red Educacional SFA</p>
+                    <p style="margin: 2px 0 0;">Red Educacional Hermanas Franciscanas</p>
                 </div>
             </div>
         </div>
 
         <div id="canvas-content" class="canvas-grid">
             <div class="canvas-card">
-                <div class="card-header"><h3>1. Sustento Teórico y Normativo</h3></div>
+                <div class="card-header"><h3>1. Análisis Normativo Institucional</h3></div>
                 <div id="canvas-section-a" class="card-body"></div>
             </div>
             <div class="canvas-card">
-                <div class="card-header"><h3>2. Hoja de Ruta Operativa</h3></div>
+                <div class="card-header"><h3>2. Ruta de Acción Sugerida</h3></div>
                 <div id="canvas-section-b" class="card-body"></div>
             </div>
             <div class="canvas-card">
-                <div class="card-header"><h3>3. Checklist de Monitoreo</h3></div>
+                <div class="card-header"><h3>3. Protocolo de Seguimiento</h3></div>
                 <div id="canvas-section-c" class="card-body"></div>
             </div>
         </div>
 
-        <div class="print-disclaimer" style="display: none; margin-top: 50px; padding: 15px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.5; color: #4a5568; text-align: justify;">
-            <p><strong>DESCARGO DE RESPONSABILIDAD:</strong> Este reporte técnico es una propuesta sugerida basada en la normativa institucional. Debe ser obligatoriamente revisada y validada por el profesional experto a cargo del establecimiento antes de su ejecución.</p>
+        <div class="print-disclaimer" style="display: none; margin-top: 60px; padding: 20px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.6; color: #4a5568; text-align: justify;">
+            <p><strong>RECOMENDACIÓN TÉCNICA:</strong> Este documento ha sido generado mediante un motor de análisis institucional. Su contenido es de carácter orientativo y debe ser revisado y validado formalmente por el equipo directivo del establecimiento antes de cualquier resolución definitiva.</p>
         </div>
 
-        <div class="print-only-footer" style="display: none; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #999;">
-            <p>© 2026 Red Educacional Hermanas Franciscanas — Soporte Técnico de Gestión</p>
+        <div class="print-only-footer" style="display: none; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #999;">
+            <p>Soporte de Gestión Técnico Pedagógica — © 2026 Red Educacional SFA</p>
         </div>
     </div>
 </div>
@@ -153,7 +155,7 @@
                 updateReportData(data.response);
             }
             scrollToBottom();
-        } catch (error) { document.getElementById(loadingId).remove(); }
+        } catch (error) { if(document.getElementById(loadingId)) document.getElementById(loadingId).remove(); }
     }
 
     function appendMessage(role, content) {
@@ -168,7 +170,7 @@
         const div = document.createElement('div');
         div.className = 'message-row ai';
         div.id = id;
-        div.innerHTML = `<div class="message-content">IA analizando...</div>`;
+        div.innerHTML = `<div class="message-content">Analizando normativa...</div>`;
         chatMessages.appendChild(div);
     }
 

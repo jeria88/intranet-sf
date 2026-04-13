@@ -1,24 +1,22 @@
 :root {
-    --bg-main: #fcfcfc;
+    --bg-main: #f8fafc;
     --sidebar-bg: #ffffff;
     --accent: #1e73be;
-    --text-dark: #1e293b;
+    --text-dark: #0f172a;
     --text-base: #334155;
-    --border-soft: #e2e8f0;
+    --border-soft: #f1f5f9;
     --bubble-user: #e0f2fe;
-    --bubble-ai: #f8fafc;
+    --bubble-ai: #ffffff;
 }
 
-/* Master Layout: Full-Width Chat */
+/* Master Layout */
 .chat-main-layout {
     display: block;
     width: 100%;
     height: calc(100vh - 140px);
-    background: #fdfdfd;
-    border-radius: 12px;
+    background: var(--bg-main);
+    border-radius: 16px;
     overflow: hidden;
-    position: relative;
-    z-index: 10;
 }
 
 .chat-sidebar {
@@ -29,18 +27,28 @@
     flex-direction: column;
 }
 
+.chat-header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 30px;
+    padding: 24px;
+    background: #fdfdfd;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 16px;
 }
 
-/* Burbujas */
+/* Burbujas Minimalistas */
 .message-row {
-    max-width: 85%;
+    max-width: 80%;
     display: flex;
     flex-direction: column;
 }
@@ -48,11 +56,11 @@
 .message-row.ai { align-self: flex-start; }
 
 .message-content {
-    padding: 12px 18px;
-    border-radius: 16px;
+    padding: 10px 16px;
+    border-radius: 14px;
     line-height: 1.5;
-    font-size: 14.5px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 .message-row.user .message-content {
@@ -68,35 +76,54 @@
     border-bottom-left-radius: 2px;
 }
 
-/* Botón de Envío: Icono Corregido */
+/* Tablas y Listas Limpias */
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+}
+.message-content th { background: #f8fafc; padding: 8px; text-align: left; }
+.message-content td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+
+/* Botón de Envío: Circular y Elegante */
 #send-btn {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: var(--accent) !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(30, 115, 190, 0.2);
+}
+
+#send-btn:hover {
+    transform: scale(1.05);
+    background: #165a94 !important;
 }
 
 #send-btn svg {
-    width: 20px !important;
-    height: 20px !important;
-    color: white !important;
-    stroke: white !important;
-    stroke-width: 2.5 !important;
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 2 !important;
 }
 
-/* Arquitectura 'Off-Screen' para el Canvas (Asegura renderizado de estilos) */
+/* Contenedor de Reporte (Invisible para pantalla, Visible para Print) */
 .canvas-container {
+    height: 0;
+    overflow: hidden;
     position: absolute;
-    left: -10000px;
-    top: 0;
-    width: 1000px; /* Tamaño consistente para renderizado */
-    background: white;
+    top: -1000px;
 }
 
-/* MODO IMPRESIÓN PREMIUM */
+/* MODO IMPRESIÓN: ELIMINAR TODO LO WEB, DEJAR SOLO EL DOCUMENTO */
 @media print {
-    @page { size: portrait; margin: 15mm; }
+    @page { size: portrait; margin: 20mm; }
     
-    html, body, #main-wrapper {
+    html, body {
         height: auto !important;
         overflow: visible !important;
         background: white !important;
@@ -105,36 +132,27 @@
     .chat-main-layout, .chat-sidebar, .site-header, .main-navigation, footer { display: none !important; }
 
     .canvas-container {
+        display: block !important;
         position: static !important;
-        display: block !important;
-        width: 100% !important;
         height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
         overflow: visible !important;
-    }
-
-    .print-only-header, .print-only-footer, #canvas-content { 
-        display: block !important; 
-    }
-
-    .canvas-grid {
-        display: block !important;
         width: 100% !important;
+        visibility: visible !important;
     }
+
+    .print-only-header, .print-only-footer, #canvas-content { display: block !important; }
 
     .canvas-card {
         display: block !important;
-        border: 1px solid #ccc !important;
-        margin-bottom: 30px !important;
-        padding: 0 !important;
         break-inside: avoid;
+        margin-bottom: 30px !important;
+        border: 1px solid #ddd !important;
+        padding: 0 !important;
     }
 
     .card-header {
-        background: #1e293b !important; /* Header Oscuro Corporativo */
-        padding: 10px 15px !important;
-        border-bottom: 1px solid #1e293b !important;
+        background: #1e293b !important;
+        padding: 8px 15px !important;
         -webkit-print-color-adjust: exact;
     }
 
@@ -143,29 +161,7 @@
         margin: 0 !important;
         font-size: 13px !important;
         text-transform: uppercase !important;
-        letter-spacing: 1px !important;
     }
 
-    .card-body {
-        padding: 20px !important;
-        font-size: 12px !important;
-        line-height: 1.6 !important;
-    }
-
-    .card-body table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        margin: 10px 0 !important;
-    }
-    .card-body th {
-        background: #f1f5f9 !important;
-        border: 1px solid #999 !important;
-        padding: 8px !important;
-        text-align: left !important;
-        -webkit-print-color-adjust: exact;
-    }
-    .card-body td {
-        border: 1px solid #ccc !important;
-        padding: 8px !important;
-    }
+    .card-body { padding: 20px !important; font-size: 12px !important; line-height: 1.5 !important; }
 }
