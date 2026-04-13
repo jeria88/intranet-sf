@@ -2,92 +2,145 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'ai_modules/css/ia_canvas.css' %}">
+<link rel="stylesheet" href="{% static 'ai_modules/css/ia_canvas.css' %}?v={% now 'U' %}">
+<style>
+    /* Estilos Blindados para evitar Caché */
+    #main-wrapper { background: #f8fafc !important; }
+    
+    .chat-header {
+        background: #fff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 10px 20px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    /* Botón de Envío Circular/Píldora */
+    #send-btn {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 50% !important;
+        background: #1e73be !important;
+        border: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: transform 0.2s !important;
+        box-shadow: 0 4px 6px rgba(30,115,190,0.2) !important;
+    }
+    #send-btn:hover { transform: scale(1.05) !important; background: #165a94 !important; }
+    #send-btn svg { width: 22px !important; height: 22px !important; stroke: white !important; fill: none !important; }
+
+    /* Estilo de Mensajes */
+    .message-row.user { align-self: flex-end !important; margin-left: 20% !important; }
+    .message-row.ai { align-self: flex-start !important; margin-right: 20% !important; }
+    .bubble { padding: 12px 18px !important; border-radius: 18px !important; font-size: 14.5px !important; line-height: 1.5 !important; }
+    .user .bubble { background: #e0f2fe !important; color: #0369a1 !important; border-bottom-right-radius: 4px !important; }
+    .ai .bubble { background: #fff !important; color: #334155 !important; border: 1px solid #e2e8f0 !important; border-bottom-left-radius: 4px !important; }
+
+    /* Contenedor de Reporte (Oculto en Pantalla) */
+    #print-container { display: none; }
+
+    @media print {
+        @page { size: portrait; margin: 20mm; }
+        body * { visibility: hidden; }
+        #print-container, #print-container * { visibility: visible; }
+        #print-container {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: white !important;
+        }
+        .print-card { border: 1px solid #ccc; margin-bottom: 30px; break-inside: avoid; }
+        .print-card-header { background: #1e293b !important; color: white !important; padding: 8px 15px; -webkit-print-color-adjust: exact; }
+        .print-card-body { padding: 20px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th { background: #f1f5f9 !important; border: 1px solid #999; padding: 8px; -webkit-print-color-adjust: exact; }
+        td { border: 1px solid #ccc; padding: 8px; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div id="main-wrapper" class="chat-main-layout">
-    <div class="chat-sidebar">
-        <!-- Cabecera de Chat Minimalista -->
-        <div class="chat-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 28px; height: auto;">
-                <h2 style="font-size: 14px; margin: 0; font-weight: 700; color: var(--text-dark);">Asesoría Técnico Pedagógica</h2>
+<div id="main-wrapper" class="chat-main-layout" style="display: flex; flex-direction: column; height: calc(100vh - 140px); overflow: hidden; border-radius: 16px; background: #fff;">
+    <!-- Cabecera Limpia -->
+    <div class="chat-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 36px; height: auto;">
+            <h2 style="font-size: 14px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
+        </div>
+        <button id="btn-main-print" style="display: none; background: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="window.print()">
+            📥 Descargar Reporte PDF
+        </button>
+    </div>
+
+    <!-- Mensajes -->
+    <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; background: #fcfcfc;">
+        {% if not chat_messages %}
+        <div class="message-row ai">
+            <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?</div>
+        </div>
+        {% endif %}
+
+        {% for msg in chat_messages %}
+        <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}" style="max-width: 85%;">
+            <div class="bubble">
+                <span class="raw-data" style="display:none;">{{ msg.content }}</span>
+                <div class="render-target"></div>
             </div>
-            
-            <button id="btn-main-print" class="btn-header-pdf" style="display: none;" onclick="window.print()">
-                <span>📄</span> Reporte PDF
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Input -->
+    <div style="padding: 20px; background: white; border-top: 1px solid #f1f5f9;">
+        <div style="max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 6px 15px;">
+            <textarea id="chat-input" placeholder="Describa su consulta aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14.5px; padding: 10px 0;"></textarea>
+            <button id="send-btn">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
             </button>
         </div>
+    </div>
+</div>
 
-        <div class="chat-messages" id="chat-messages">
-            {% if not chat_messages %}
-            <div class="message-row ai">
-                <div class="message-content">Bienvenido. He analizado la normativa institucional para apoyarte en tu gestión. ¿Qué situación deseas revisar?</div>
+<!-- CONTENEDOR DE IMPRESIÓN (INVISIBLE EN PANTALLA) -->
+<div id="print-container">
+    <div style="border-bottom: 3px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 80px; height: auto;">
+            <div>
+                <h1 style="margin: 0; font-size: 20px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Informe de Gestión Técnico Pedagógica</h1>
+                <p style="margin: 5px 0 0; color: #475569; font-weight: 700;">{{ assistant.establishment }}</p>
             </div>
-            {% endif %}
-
-            {% for msg in chat_messages %}
-            <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}">
-                <div class="message-content">
-                    <span class="raw-message" style="display:none;">{{ msg.content }}</span>
-                    <div class="rendered-message"></div>
-                </div>
-            </div>
-            {% endfor %}
         </div>
-
-        <div class="chat-input-area" style="padding: 15px 25px; background: white; border-top: 1px solid #f1f5f9;">
-            <div style="max-width: 850px; margin: 0 auto; display: flex; align-items: center; gap: 15px; background: #fff; border: 1px solid #e2e8f0; border-radius: 25px; padding: 6px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                <textarea id="chat-input" placeholder="Escribir consulta..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; color: var(--text-base); padding-top: 8px;"></textarea>
-                <button id="send-btn" title="Enviar Consulta">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2z"></path></svg>
-                </button>
-            </div>
+        <div style="text-align: right; font-size: 11px;">
+            <p style="margin: 0; font-weight: 700;">Fecha: <span id="print-date"></span></p>
+            <p style="margin: 2px 0 0;">Red Educacional Hermanas Franciscanas</p>
         </div>
     </div>
 
-    <!-- Contenedor para Reporte PDF (Invisible en UI, Única fuente para Print) -->
-    <div class="canvas-container" id="canvas-container">
-        <!-- Encabezado de Reporte Formal (Sin ANCI) -->
-        <div class="print-only-header" style="display: none; border-bottom: 2px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 75px; height: auto;">
-                    <div>
-                        <h1 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 800; text-transform: uppercase;">Informe de Asesoría Técnica</h1>
-                        <p style="margin: 2px 0 0; color: #475569; font-weight: 700;">{{ assistant.establishment }}</p>
-                    </div>
-                </div>
-                <div style="text-align: right; font-size: 10px; font-weight: 600; color: #64748b;">
-                    <p style="margin: 0;">Fecha: <span id="print-date"></span></p>
-                    <p style="margin: 2px 0 0;">Red Educacional Hermanas Franciscanas</p>
-                </div>
-            </div>
-        </div>
+    <div class="print-card">
+        <div class="print-card-header">Sustento Normativo e Institucional</div>
+        <div id="print-a" class="print-card-body"></div>
+    </div>
+    <div class="print-card">
+        <div class="print-card-header">Ruta de Acción y Procedimientos</div>
+        <div id="print-b" class="print-card-body"></div>
+    </div>
+    <div class="print-card">
+        <div class="print-card-header">Checklist de Monitoreo</div>
+        <div id="print-c" class="print-card-body"></div>
+    </div>
 
-        <div id="canvas-content" class="canvas-grid">
-            <div class="canvas-card">
-                <div class="card-header"><h3>1. Análisis Normativo Institucional</h3></div>
-                <div id="canvas-section-a" class="card-body"></div>
-            </div>
-            <div class="canvas-card">
-                <div class="card-header"><h3>2. Ruta de Acción Sugerida</h3></div>
-                <div id="canvas-section-b" class="card-body"></div>
-            </div>
-            <div class="canvas-card">
-                <div class="card-header"><h3>3. Protocolo de Seguimiento</h3></div>
-                <div id="canvas-section-c" class="card-body"></div>
-            </div>
-        </div>
-
-        <div class="print-disclaimer" style="display: none; margin-top: 60px; padding: 20px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; line-height: 1.6; color: #4a5568; text-align: justify;">
-            <p><strong>RECOMENDACIÓN TÉCNICA:</strong> Este documento ha sido generado mediante un motor de análisis institucional. Su contenido es de carácter orientativo y debe ser revisado y validado formalmente por el equipo directivo del establecimiento antes de cualquier resolución definitiva.</p>
-        </div>
-
-        <div class="print-only-footer" style="display: none; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #999;">
-            <p>Soporte de Gestión Técnico Pedagógica — © 2026 Red Educacional SFA</p>
-        </div>
+    <div style="margin-top: 50px; padding: 15px; border: 1px solid #cbd5e0; background: #f8fafc; font-size: 10px; text-align: justify; color: #4a5568;">
+        <strong>AVISO LEGAL:</strong> Este reporte es una herramienta de apoyo sugerida. Debe ser validada por el profesional experto a cargo antes de su implementación administrativa.
     </div>
 </div>
 {% endblock %}
@@ -101,20 +154,16 @@
     const printBtn = document.getElementById('btn-main-print');
     const assistantSlug = '{{ assistant.slug }}';
 
-    const sectionA = document.getElementById('canvas-section-a');
-    const sectionB = document.getElementById('canvas-section-b');
-    const sectionC = document.getElementById('canvas-section-c');
-
     function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
 
-    function updateReportData(text) {
+    function updateReport(text) {
         if (!text) return;
         const regexA = /A\.\s+SUSTENTO/i;
         const regexB = /B\.\s+RUTA/i;
         const regexC = /C\.\s+CHECKLIST/i;
 
         if (text.match(regexA) || text.match(regexB) || text.match(regexC)) {
-            printBtn.style.display = 'flex';
+            printBtn.style.display = 'block';
             const parts = text.split(regexB);
             const partA = (parts[0] || '').replace(regexA, '').trim();
             const remainBC = parts[1] || '';
@@ -122,47 +171,46 @@
             const partB = (partsBC[0] || '').trim();
             const partC = (partsBC[1] || '').trim();
 
-            sectionA.innerHTML = marked.parse(partA);
-            sectionB.innerHTML = marked.parse(partB);
-            sectionC.innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style: none; margin-bottom: 5px;">[ ] ');
+            document.getElementById('print-a').innerHTML = marked.parse(partA);
+            document.getElementById('print-b').innerHTML = marked.parse(partB);
+            document.getElementById('print-c').innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
             document.getElementById('print-date').innerText = new Date().toLocaleDateString('es-CL');
-            document.querySelector('.print-disclaimer').style.display = 'block';
         }
     }
 
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
-    if (initialResponse && initialResponse !== 'None') { updateReportData(initialResponse); }
+    if (initialResponse && initialResponse !== 'None') { updateReport(initialResponse); }
 
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
         chatInput.value = '';
-        appendMessage('user', text);
+        appendMsg('user', text);
         scrollToBottom();
-        const loadingId = 'loading-' + Date.now();
-        appendLoading(loadingId);
+        const tid = 'load-' + Date.now();
+        appendLoading(tid);
 
         try {
-            const response = await fetch(`/ia/${assistantSlug}/chat/`, {
+            const r = await fetch(`/ia/${assistantSlug}/chat/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
                 body: new URLSearchParams({ 'message': text })
             });
-            const data = await response.json();
-            document.getElementById(loadingId).remove();
-            if (data.status === 'success') {
-                appendMessage('assistant', data.response);
-                updateReportData(data.response);
+            const d = await r.json();
+            document.getElementById(tid).remove();
+            if (d.status === 'success') {
+                appendMsg('assistant', d.response);
+                updateReport(d.response);
             }
             scrollToBottom();
-        } catch (error) { if(document.getElementById(loadingId)) document.getElementById(loadingId).remove(); }
+        } catch (e) { if(document.getElementById(tid)) document.getElementById(tid).remove(); }
     }
 
-    function appendMessage(role, content) {
+    function appendMsg(role, content) {
         const div = document.createElement('div');
-        const roleClass = (role === 'assistant' || role === 'ai') ? 'ai' : 'user';
-        div.className = `message-row ${roleClass}`;
-        div.innerHTML = `<div class="message-content">${marked.parse(content)}</div>`;
+        div.className = `message-row ${role === 'assistant' ? 'ai' : 'user'}`;
+        div.style.maxWidth = '85%';
+        div.innerHTML = `<div class="bubble">${marked.parse(content)}</div>`;
         chatMessages.appendChild(div);
     }
 
@@ -170,17 +218,16 @@
         const div = document.createElement('div');
         div.className = 'message-row ai';
         div.id = id;
-        div.innerHTML = `<div class="message-content">Analizando normativa...</div>`;
+        div.innerHTML = `<div class="bubble">Procesando consulta...</div>`;
         chatMessages.appendChild(div);
     }
 
     sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    chatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-    document.querySelectorAll('.chat-messages .message-content').forEach(div => {
-        const rawSpan = div.querySelector('.raw-message');
-        const renderedDiv = div.querySelector('.rendered-message');
-        if (rawSpan && renderedDiv) { renderedDiv.innerHTML = marked.parse(rawSpan.textContent); }
+    document.querySelectorAll('.message-row .render-target').forEach(div => {
+        const raw = div.previousElementSibling.textContent;
+        div.innerHTML = marked.parse(raw);
     });
 </script>
 {% endblock %}
