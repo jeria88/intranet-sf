@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sustento de Descargos - {{ case.title }}</title>
+    <style>
+        @page { size: A4 portrait; margin: 2cm; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; line-height: 1.7; margin: 0; padding: 0; background: white; font-size: 14px; }
+        .header { border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { width: 70px; height: auto; }
+        .content { text-align: justify; }
+        h1 { font-size: 18px; text-transform: uppercase; margin-bottom: 5px; }
+        .case-info { font-size: 12px; color: #475569; margin-bottom: 40px; }
+        .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+        .btn-print { position: fixed; top: 20px; right: 20px; background: #1e73be; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir Descargos</button>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="/static/img/logo.png" class="logo" alt="Logo">
+            <div>
+                <h1>Minuta de Descargos Normativos</h1>
+                <p style="margin:0; font-weight:700;">{{ case.assistant.establishment }}</p>
+            </div>
+        </div>
+        <div style="text-align: right; font-size: 11px;">
+            <p>Fecha: {{ case.updated_at|date:"d/m/Y" }}</p>
+            <p>Ref: {{ case.title }}</p>
+        </div>
+    </div>
+
+    <div class="case-info">
+        <strong>RESPONSABLE:</strong> {{ case.user.get_full_name|default:case.user.username }}<br>
+        <strong>ASUNTO:</strong> Presentación formal de descargos ante fiscalización externa.
+    </div>
+
+    <div id="defense-content" class="content"></div>
+
+    <div class="footer">
+        Este documento es una propuesta técnica generada por el Asistente Institucional.<br>
+        Red Educacional SFA — Todos los derechos reservados 2026.
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const raw = `{{ case.descargos|safe|escapejs }}`;
+        document.getElementById('defense-content').innerHTML = marked.parse(raw);
+    </script>
+</body>
+</html>

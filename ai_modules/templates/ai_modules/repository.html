@@ -169,6 +169,9 @@
         </div>
         <div class="modal-footer">
             <button class="btn-action" onclick="closeModal()">Cerrar</button>
+            <a id="btn-print-defense" href="#" target="_blank" class="btn-action btn-accent" style="text-decoration:none; display:none;">
+                📄 Descargar PDF Defensa
+            </a>
             <button class="btn-action btn-defense" onclick="copyDefense()">Copiar Texto</button>
         </div>
     </div>
@@ -360,7 +363,14 @@
             alert("Aún no se han generado los descargos para este caso. Presiona 'Redactar'.");
             return;
         }
-        document.getElementById('defense-text').innerText = text;
+        // Renderizado Markdown para visualización profesional
+        document.getElementById('defense-text').innerHTML = marked.parse(text);
+        
+        // Configurar botón de impresión vertical
+        const printBtn = document.getElementById('btn-print-defense');
+        printBtn.href = `/ia/casos/${pk}/reporte-defensa/`;
+        printBtn.style.display = 'inline-flex';
+        
         document.getElementById('defense-modal').style.display = 'block';
     }
 

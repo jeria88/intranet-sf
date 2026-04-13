@@ -21,5 +21,6 @@ urlpatterns = [
     path('casos/<int:pk>/actualizar/', views.update_case, name='update_case'),
     path('casos/<int:pk>/observacion/', views.add_case_observation, name='add_case_observation'),
     path('casos/<int:pk>/reporte/', views.case_report_print, name='case_report_print'),
+    path('casos/<int:pk>/reporte-defensa/', views.case_defense_print, name='case_defense_print'),
     path('casos/<int:pk>/generar-descargos/', views.generate_case_defense, name='generate_case_defense'),
 ]

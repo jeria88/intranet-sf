@@ -380,3 +380,15 @@ def case_report_print(request, pk):
     return render(request, 'ai_modules/case_report_print.html', {
         'case': case
     })
+
+
+@login_required
+def case_defense_print(request, pk):
+    """Vista optimizada para impresión de la DEFENSA (Descargos)."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return render(request, 'ai_modules/no_access.html')
+    
+    return render(request, 'ai_modules/case_defense_print.html', {
+        'case': case
+    })
