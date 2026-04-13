@@ -333,3 +333,15 @@ def update_case(request, pk):
         case.save()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def case_report_print(request, pk):
+    """Vista optimizada para impresión de un caso guardado."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return render(request, 'ai_modules/no_access.html')
+    
+    return render(request, 'ai_modules/case_report_print.html', {
+        'case': case
+    })

@@ -114,9 +114,6 @@
             <h2 style="font-size: 14px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
         </div>
         <div class="chat-actions" style="display: flex; gap: 10px;">
-            <a href="{% url 'ai_modules:case_repository' %}" style="background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none;">
-                📁 Ver Repositorio
-            </a>
             <button id="btn-save-case" style="display: none; background: #fff; color: #1e293b; border: 1.5px solid #1e293b; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
                 💾 Guardar Caso
             </button>
@@ -237,6 +234,9 @@
     const printBtn = document.getElementById('btn-main-print');
     const saveCaseBtn = document.getElementById('btn-save-case');
     const assistantSlug = '{{ assistant.slug }}';
+    
+    // Almacén de Markdown Crudo para evitar pérdida de formato al guardar
+    let rawSections = { a: '', b: '', c: '' };
 
     function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
 
@@ -255,6 +255,10 @@
             const partB = (partsBC[0] || '').trim();
             const partC = (partsBC[1] || '').trim();
 
+            rawSections.a = partA;
+            rawSections.b = partB;
+            rawSections.c = partC;
+
             document.getElementById('print-a').innerHTML = marked.parse(partA);
             document.getElementById('print-b').innerHTML = marked.parse(partB);
             document.getElementById('print-c').innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
@@ -268,10 +272,10 @@
     }
 
     saveCaseBtn.addEventListener('click', () => {
-        // Pre-poblar el modal con la info del reporte actual
-        document.getElementById('modal-sustento').value = document.getElementById('print-a').innerText;
-        document.getElementById('modal-ruta').value = document.getElementById('print-b').innerText;
-        document.getElementById('modal-checklist').value = document.getElementById('print-c').innerText;
+        // Pre-poblar el modal con la info del reporte actual (Versión Renderizada para vista previa)
+        document.getElementById('modal-sustento').value = rawSections.a;
+        document.getElementById('modal-ruta').value = rawSections.b;
+        document.getElementById('modal-checklist').value = rawSections.c;
         document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
         
         document.getElementById('modal-case').style.display = 'flex';

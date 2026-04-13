@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Informe - {{ case.title }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; line-height: 1.6; margin: 0; padding: 40px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #1e293b; padding-bottom: 20px; margin-bottom: 40px; }
+        .logo { width: 85px; height: auto; }
+        
+        .card { break-inside: avoid; margin-bottom: 35px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .card-header { background: #1e293b !important; color: white !important; padding: 10px 20px; font-weight: 800; text-transform: uppercase; font-size: 14px; -webkit-print-color-adjust: exact; }
+        .card-body { padding: 25px; font-size: 13px; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #f8fafc !important; border: 1px solid #cbd5e0; padding: 10px; text-align: left; -webkit-print-color-adjust: exact; }
+        td { border: 1px solid #e2e8f0; padding: 10px; }
+        
+        .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+        .disclaimer { margin-top: 30px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 11px; text-align: justify; }
+
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px;">
+        <button onclick="window.print()" style="background: #1e73be; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700;">🖨️ Imprimir Reporte</button>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <img src="/static/img/logo.png" class="logo" alt="Logo">
+            <div>
+                <h1 style="margin: 0; font-size: 22px; text-transform: uppercase;">Informe de Gestión Normativa</h1>
+                <p style="margin: 5px 0 0; font-weight: 700; color: #475569;">{{ case.assistant.establishment }} - {{ case.title }}</p>
+            </div>
+        </div>
+        <div style="text-align: right; font-size: 11px;">
+            <p style="margin: 0;">Fecha Reporte: {{ case.created_at|date:"d/m/Y" }}</p>
+            <p style="margin: 2px 0 0;">Responsable: {{ case.user.get_full_name|default:case.user.username }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">1. Análisis y Sustento Técnico</div>
+        <div id="content-a" class="card-body"></div>
+    </div>
+    <div class="card">
+        <div class="card-header">2. Hoja de Ruta Operativa</div>
+        <div id="content-b" class="card-body"></div>
+    </div>
+    <div class="card">
+        <div class="card-header">3. Checklist de Cumplimiento</div>
+        <div id="content-c" class="card-body"></div>
+    </div>
+
+    {% if case.observations %}
+    <div class="card">
+        <div class="card-header">Observaciones y Seguimiento Manual</div>
+        <div class="card-body">{{ case.observations|linebreaks }}</div>
+    </div>
+    {% endif %}
+
+    <div class="disclaimer">
+        <strong>NOTA DE RESPONSIBILIDAD:</strong> Este informe técnico es una herramienta de apoyo institucional. El equipo experto a cargo del establecimiento debe validar su contenido antes de cualquier acción administrativa formal.
+    </div>
+
+    <div class="footer">
+        © 2026 Red Educacional SFA — Generado por Plataforma de Gestión de Convivencia y Normativa
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        document.getElementById('content-a').innerHTML = marked.parse(`{{ case.sustento|safe|escapejs }}`);
+        document.getElementById('content-b').innerHTML = marked.parse(`{{ case.ruta|safe|escapejs }}`);
+        document.getElementById('content-c').innerHTML = marked.parse(`{{ case.checklist|safe|escapejs }}`).replace(/<li>/g, '<li>[ ] ');
+        
+        // Auto-print option after small delay to allow rendering
+        // setTimeout(() => { window.print(); }, 500);
+    </script>
+</body>
+</html>

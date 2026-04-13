@@ -133,6 +133,9 @@
                 <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}', '{{ case.observations|escapejs }}')">
                     ✏️ Editar
                 </button>
+                <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action" style="text-decoration:none;">
+                    📄 Reporte
+                </a>
                 <button class="btn-action" onclick="showDefense({{ case.pk }}, '{{ case.descargos|escapejs }}')">
                     ⚖️ Descargos
                 </button>
@@ -182,20 +185,20 @@
                 <input type="text" id="edit-title" class="form-control">
             </div>
             <div class="form-group">
-                <label>1. Sustento Normativo</label>
-                <textarea id="edit-sustento" class="form-control" rows="5"></textarea>
+                <label>1. Sustento Normativo (Consulta Original)</label>
+                <div id="render-sustento" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
             </div>
             <div class="form-group">
                 <label>2. Hoja de Ruta</label>
-                <textarea id="edit-ruta" class="form-control" rows="5"></textarea>
+                <div id="render-ruta" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
             </div>
             <div class="form-group">
                 <label>3. Checklist</label>
-                <textarea id="edit-checklist" class="form-control" rows="5"></textarea>
+                <div id="render-checklist" style="font-size: 13.5px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; color: #475569;"></div>
             </div>
             <div class="form-group">
                 <label>📍 Observaciones / seguimiento manual</label>
-                <textarea id="edit-observations" class="form-control" rows="3"></textarea>
+                <textarea id="edit-observations" class="form-control" rows="5" style="border-color: #cbd5e0;"></textarea>
             </div>
         </div>
         <div class="modal-footer">
@@ -208,6 +211,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     function closeModal() {
         document.getElementById('defense-modal').style.display = 'none';
@@ -217,9 +221,12 @@
     function openEditModal(pk, title, sustento, ruta, checklist, observations) {
         document.getElementById('edit-case-pk').value = pk;
         document.getElementById('edit-title').value = title;
-        document.getElementById('edit-sustento').value = sustento;
-        document.getElementById('edit-ruta').value = ruta;
-        document.getElementById('edit-checklist').value = checklist;
+        
+        // Renderizado Markdown para visualización (Lectura)
+        document.getElementById('render-sustento').innerHTML = marked.parse(sustento);
+        document.getElementById('render-ruta').innerHTML = marked.parse(ruta);
+        document.getElementById('render-checklist').innerHTML = marked.parse(checklist).replace(/<li>/g, '<li>[ ] ');
+        
         document.getElementById('edit-observations').value = observations || '';
         document.getElementById('modal-case').style.display = 'block';
     }
@@ -233,9 +240,6 @@
 
         const data = new URLSearchParams({
             'title': document.getElementById('edit-title').value,
-            'sustento': document.getElementById('edit-sustento').value,
-            'ruta': document.getElementById('edit-ruta').value,
-            'checklist': document.getElementById('edit-checklist').value,
             'observations': document.getElementById('edit-observations').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
