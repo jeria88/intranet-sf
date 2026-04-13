@@ -147,6 +147,9 @@
                 <a href="{% url 'ai_modules:case_report_print' case.pk %}" target="_blank" class="btn-action btn-accent">
                     📄 Reporte PDF
                 </a>
+                {% if case.descargos %}
+                <button class="btn-action" onclick="showDefense({{ case.pk }})" style="border-color: #f59e0b; color: #f59e0b; background: #fffbeb;">⚖️ Ver Defensa IA</button>
+                {% endif %}
             </div>
         </div>
         {% empty %}
@@ -158,7 +161,7 @@
 </div>
 
 <!-- Modal para visualizar descargos -->
-<div id="defense-modal" class="modal" style="backdrop-filter: blur(5px);">
+<div id="defense-modal" class="modal" style="backdrop-filter: blur(5px); z-index: 2000 !important;">
     <div class="modal-content">
         <div class="modal-header">
             <h3 style="margin:0; font-size:18px;">Redacción de Descargos</h3>
