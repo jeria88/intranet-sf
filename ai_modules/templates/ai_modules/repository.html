@@ -374,18 +374,26 @@
 
     async function confirmDeleteCase() {
         const pk = document.getElementById('edit-case-pk').value;
+        if (!pk) { alert("Error: ID de caso no encontrado."); return; }
+        
         if (!confirm("¿Está seguro de eliminar este caso? Podrá seguir siendo consultado por administración para trazabilidad, pero desaparecerá de su vista personal.")) return;
         
         try {
-            const r = await fetch(`/ia/casos/${pk}/eliminar/`, {
+            const url = "{% url 'ai_modules:soft_delete_case' 0 %}".replace('0', pk);
+            const r = await fetch(url, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': '{{ csrf_token }}' }
             });
             const d = await r.json();
             if (d.status === 'success') {
                 location.reload();
+            } else {
+                alert("Error al eliminar: " + (d.message || "Desconocido"));
             }
-        } catch (e) { alert("Error al eliminar el caso."); }
+        } catch (e) { 
+            console.error("Delete error:", e);
+            alert("Error de conexión al eliminar el caso."); 
+        }
     }
 
     async function updateCaseLogic() {

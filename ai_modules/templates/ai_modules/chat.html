@@ -38,24 +38,21 @@
     #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; }
 
     /* Estilo de Mensajes */
-    .ai .bubble { background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; position: relative; }
-    
-    .btn-msg-transform {
-        margin-top: 10px;
-        background: #f8fafc;
-        color: #1e73be;
-        border: 1px solid #e2e8f0;
-        padding: 6px 12px;
-        border-radius: 15px;
-        font-size: 11px;
-        font-weight: 700;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        gap: 5px;
-        transition: all 0.2s;
-    }
-    .btn-msg-transform:hover { background: #e0f2fe; border-color: #1e73be; }
+    .ai .bubble { background: #fff !important; color: #334155 !important; border: 1px solid #e2e8f0 !important; border-bottom-left-radius: 4px !important; }
+    .user .bubble { background: #e0f2fe !important; color: #0369a1 !important; border-bottom-right-radius: 4px !important; }
+    .bubble { padding: 12px 18px !important; border-radius: 18px !important; font-size: 14.5px !important; line-height: 1.5 !important; }
+
+    /* Layout Split View */
+    .split-container { display: flex; height: calc(100vh - 140px); overflow: hidden; background: #f8fafc; gap: 2px; }
+    .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; transition: all 0.3s ease; }
+    .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; animation: slideInRight 0.4s ease; border-left: 1px solid #e2e8f0; }
+    .editor-column.active { display: flex; }
+
+    .editor-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+    .editor-body { flex: 1; overflow-y: auto; padding: 30px; }
+    .editor-footer { padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
+
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
     /* Contenedor de Reporte (Oculto en Pantalla) */
     #print-container { display: none; }
@@ -123,56 +120,85 @@
 {% endblock %}
 
 {% block content %}
-<div id="main-wrapper" class="chat-main-layout" style="display: flex; flex-direction: column; height: calc(100vh - 140px); overflow: hidden; border-radius: 16px; background: #fff;">
-    <!-- Cabecera Limpia -->
-    <div class="chat-header">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 36px; height: auto;">
-            <h2 style="font-size: 14px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
-        </div>
-        <div class="chat-actions" style="display: flex; gap: 10px;">
-            <a href="{% url 'ai_modules:case_repository' %}" style="background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 5px;">
-                📁 Ver Repositorio
-            </a>
-            <button id="btn-save-case" style="display: none; background: #fff; color: #1e293b; border: 1.5px solid #1e293b; padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                💾 Guardar Caso
-            </button>
-        </div>
-    </div>
-
-    <!-- Mensajes -->
-    <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; background: #fcfcfc;">
-        {% if not chat_messages %}
-        <div class="message-row ai">
-            <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?</div>
-        </div>
-        {% endif %}
-
-        {% for msg in chat_messages %}
-        <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}" style="max-width: 85%;">
-            <div class="bubble">
-                <span class="raw-data" style="display:none;">{{ msg.content }}</span>
-                <div class="render-target"></div>
-                {% if msg.role == 'assistant' %}
-                <button class="btn-msg-transform action-transform" title="Guardar este mensaje como caso">
-                    ✨ Transformar en Caso
+<div class="split-container">
+    <!-- Columna Izquierda: Chat -->
+    <div id="chat-column" class="chat-column">
+        <div class="chat-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
+                <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Manual Técnico Pedagógico</h2>
+            </div>
+            <div class="chat-actions" style="display: flex; gap: 10px;">
+                <a href="{% url 'ai_modules:case_repository' %}" style="background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; padding: 7px 14px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    📁 Repositorio
+                </a>
+                <button id="btn-toggle-editor" style="background: #1e73be; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    ➕ Nuevo Caso
                 </button>
-                {% endif %}
             </div>
         </div>
-        {% endfor %}
+
+        <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; background: #fff;">
+            {% if not chat_messages %}
+            <div class="message-row ai">
+                <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?</div>
+            </div>
+            {% endif %}
+
+            {% for msg in chat_messages %}
+            <div class="message-row {% if msg.role == 'assistant' %}ai{% else %}user{% endif %}" style="max-width: 85%;">
+                <div class="bubble">
+                    <span class="raw-data" style="display:none;">{{ msg.content }}</span>
+                    <div class="render-target"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="padding: 20px; background: white; border-top: 1px solid #f1f5f9;">
+            <div style="margin: 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 5px 15px;">
+                <textarea id="chat-input" placeholder="Consulte aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; padding: 8px 0;"></textarea>
+                <button id="send-btn">
+                    <span>Enviar</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Input -->
-    <div style="padding: 20px; background: white; border-top: 1px solid #f1f5f9;">
-        <div style="max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 6px 15px;">
-            <textarea id="chat-input" placeholder="Describa su consulta aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14.5px; padding: 10px 0;"></textarea>
-            <button id="send-btn">
-                <span>Enviar</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
-                </svg>
-            </button>
+    <!-- Columna Derecha: Editor de Caso (Vista Lateral) -->
+    <div id="editor-column" class="editor-column">
+        <div class="editor-header">
+            <h3 style="margin:0; font-size:16px; font-weight: 800; color: #0f172a;">Gestionar Nuevo Caso</h3>
+            <button onclick="toggleEditor()" style="background:none; border:none; color:#64748b; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <div class="editor-body">
+            <div class="form-group">
+                <label>Título del Caso Normativo</label>
+                <input type="text" id="modal-title" class="form-control" placeholder="Ej: Protocolo de Acción Maltrato Escolar">
+            </div>
+            <div class="form-group">
+                <label>1. Sustento Normativo (Aprobado)</label>
+                <textarea id="modal-sustento" class="form-control" rows="6" style="font-size: 13px; line-height: 1.5;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>2. Hoja de Ruta Operativa</label>
+                <textarea id="modal-ruta" class="form-control" rows="6" style="font-size: 13px; line-height: 1.5;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>3. Checklist de Seguimiento</label>
+                <textarea id="modal-checklist" class="form-control" rows="6" style="font-size: 13px; line-height: 1.5;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>📍 Notas y Trazabilidad Inicial</label>
+                <textarea id="modal-observations" class="form-control" rows="3" placeholder="Añada comentarios adicionales para el historial..."></textarea>
+            </div>
+        </div>
+        <div class="editor-footer">
+            <button onclick="toggleEditor()" style="background:#fff; color:#64748b; border:1px solid #e2e8f0; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px;">Descartar</button>
+            <button id="btn-confirm-save" style="background:#1e73be; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px; box-shadow:0 4px 6px rgba(30,115,190,0.2);">💾 Guardar en Repositorio</button>
         </div>
     </div>
 </div>
@@ -211,41 +237,7 @@
     </div>
 </div>
 
-<!-- Modal Premium de Gestión de Caso -->
-<div id="modal-case" class="modal-overlay">
-    <div class="modal-window">
-        <div class="modal-header">
-            <h3 style="margin:0; font-size:18px;">Gestión de Caso Normativo</h3>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label>Título del Caso</label>
-                <input type="text" id="modal-title" class="form-control" placeholder="Ej: Caso de Convivencia Escolar / Fiscalización">
-            </div>
-            <div class="form-group">
-                <label>1. Sustento Normativo</label>
-                <textarea id="modal-sustento" class="form-control" rows="4"></textarea>
-            </div>
-            <div class="form-group">
-                <label>2. Hoja de Ruta</label>
-                <textarea id="modal-ruta" class="form-control" rows="4"></textarea>
-            </div>
-            <div class="form-group">
-                <label>3. Checklist</label>
-                <textarea id="modal-checklist" class="form-control" rows="4"></textarea>
-            </div>
-            <div class="form-group">
-                <label>📍 Observaciones / seguimiento manual</label>
-                <textarea id="modal-observations" class="form-control" rows="3" placeholder="Añada comentarios sobre gestiones realizadas o notas adicionales..."></textarea>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeModal()" style="background:#fff; color:#64748b; border:1px solid #e2e8f0; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer;">Cancelar</button>
-            <button id="btn-confirm-save" style="background:#1e73be; color:white; border:none; padding:10px 25px; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 4px 6px rgba(30,115,190,0.2);">💾 Guardar en Repositorio</button>
-        </div>
-    </div>
-</div>
+<!-- Editor Panel ya integrado en split-container arriba -->
 {% endblock %}
 
 {% block extra_js %}
@@ -254,9 +246,30 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
-    const saveCaseBtn = document.getElementById('btn-save-case');
+    const toggleEditorBtn = document.getElementById('btn-toggle-editor');
     const assistantSlug = '{{ assistant.slug }}';
     
+    let rawSections = { a: '', b: '', c: '' };
+
+    function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+
+    function toggleEditor() {
+        const col = document.getElementById('editor-column');
+        col.classList.toggle('active');
+        if (col.classList.contains('active') && rawSections.a) {
+            prefillEditor();
+        }
+    }
+
+    function prefillEditor() {
+        document.getElementById('modal-sustento').value = rawSections.a;
+        document.getElementById('modal-ruta').value = rawSections.b;
+        document.getElementById('modal-checklist').value = rawSections.c;
+        if (!document.getElementById('modal-title').value) {
+            document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
+        }
+    }
+
     function extractSections(text) {
         if (!text) return null;
         const regexA = /A\.\s+SUSTENTO/i;
@@ -275,19 +288,6 @@
         return null;
     }
 
-    function openSaveModalForText(text) {
-        const sections = extractSections(text);
-        if (!sections) {
-            alert("Este mensaje no contiene una estructura de caso (Sustento, Ruta, Checklist).");
-            return;
-        }
-        document.getElementById('modal-sustento').value = sections.a;
-        document.getElementById('modal-ruta').value = sections.b;
-        document.getElementById('modal-checklist').value = sections.c;
-        document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
-        document.getElementById('modal-case').style.display = 'flex';
-    }
-
     function updateReport(text) {
         const sections = extractSections(text);
         if (sections) {
@@ -302,17 +302,14 @@
             const pd = document.getElementById('print-date');
             if (pd) pd.innerText = new Date().toLocaleDateString('es-CL');
             
-            saveCaseBtn.style.display = 'block';
+            // Si el editor está abierto, actualizarlo automáticamente con lo último
+            if (document.getElementById('editor-column').classList.contains('active')) {
+                prefillEditor();
+            }
         }
     }
 
-    function closeModal() {
-        document.getElementById('modal-case').style.display = 'none';
-    }
-
-    saveCaseBtn.addEventListener('click', () => {
-        openSaveModalForText(rawSections.a ? `A. SUSTENTO\n${rawSections.a}\nB. RUTA\n${rawSections.b}\nC. CHECKLIST\n${rawSections.c}` : '');
-    });
+    toggleEditorBtn.addEventListener('click', toggleEditor);
 
     document.getElementById('btn-confirm-save').addEventListener('click', async () => {
         const btn = document.getElementById('btn-confirm-save');
@@ -340,10 +337,8 @@
             });
             const d = await r.json();
             if (d.status === 'success') {
-                closeModal();
-                alert("Caso guardado exitosamente en el repositorio.");
-                saveCaseBtn.innerHTML = "✅ Guardado";
-                saveCaseBtn.disabled = true;
+                toggleEditor();
+                alert("Caso guardado exitosamente.");
             }
         } catch (e) { alert("Error al guardar el caso."); }
         finally { btn.innerHTML = "💾 Guardar en Repositorio"; btn.disabled = false; }
@@ -381,13 +376,7 @@
         const div = document.createElement('div');
         div.className = `message-row ${role === 'assistant' ? 'ai' : 'user'}`;
         div.style.maxWidth = '85%';
-        
-        let transformBtn = '';
-        if (role === 'assistant' && extractSections(content)) {
-            transformBtn = `<button class="btn-msg-transform" style="display:flex;" onclick="openSaveModalForText(\`${content.replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`)">✨ Transformar en Caso</button>`;
-        }
-        
-        div.innerHTML = `<div class="bubble">${marked.parse(content)}${transformBtn}</div>`;
+        div.innerHTML = `<div class="bubble">${marked.parse(content)}</div>`;
         chatMessages.appendChild(div);
     }
 
@@ -406,12 +395,6 @@
         const raw = bubble.querySelector('.raw-data').textContent;
         const renderTarget = bubble.querySelector('.render-target');
         renderTarget.innerHTML = marked.parse(raw);
-        
-        const btn = bubble.querySelector('.btn-msg-transform');
-        if (btn && extractSections(raw)) {
-            btn.style.display = 'flex';
-            btn.onclick = () => openSaveModalForText(raw);
-        }
     });
 </script>
 {% endblock %}
