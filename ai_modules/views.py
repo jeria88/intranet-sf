@@ -299,18 +299,31 @@ def generate_case_defense(request, pk):
     """Genera redacción de descargos para fiscalizadores externos."""
     case = get_object_or_404(AICase, pk=pk)
     
-    prompt = f"""
-    Actúa como un experto en normativa educacional chilena. 
-    Basado en el siguiente sustento normativo:
-    {case.sustento}
-    
-    Redacta un documento formal de DESCARGOS para ser presentado ante fiscalizadores externos (como la Superintendencia de Educación).
-    El tono debe ser técnico, respetuoso y fundamentado legalmente.
-    Resalta los puntos clave que demuestran el cumplimiento del establecimiento.
+    # Prompt técnico y formal de nivel experto para descargos legales
+    system_prompt = """
+    Actúa como un experto en Normativa Educacional y Gestión Jurídica-Pedagógica de Chile. 
+    Tu misión es redactar un documento formal de DESCARGOS para ser presentado ante entes fiscalizadores (como la Superintendencia de Educación).
+    No resumas la consulta, redacta la DEFENSA institucional.
+    Usa un lenguaje formal, técnico-normativo y respetuoso.
+    Estructura el documento en: 
+    1. Antecedentes (Basados en el sustento)
+    2. Fundamentación Técnico-Normativa 
+    3. Acciones de Mitigación/Corrección (Basadas en la ruta de acción)
+    4. Conclusión y petitorio de cumplimiento.
+    Evita redundancias y no menciones que eres una IA.
+    """
+
+    user_prompt = f"""
+    Genera los descargos institucionales para el siguiente caso:
+    ---
+    Sustento Normativo: {case.sustento}
+    Ruta de Acción: {case.ruta}
+    ---
+    El documento debe estar listo para ser copiado y pegado en una minuta oficial.
     """
     
-    # Usamos el historial vacío para esta petición puntual
-    defense_text = call_deepseek_ai(case.assistant, [], prompt)
+    # Usamos [] para limpiar historial previo
+    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt)
     
     case.descargos = defense_text
     case.save(update_fields=['descargos'])
