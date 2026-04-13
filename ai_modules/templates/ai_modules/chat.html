@@ -277,7 +277,6 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
-    const toggleEditorBtn = document.getElementById('btn-toggle-editor');
     const assistantSlug = '{{ assistant.slug }}';
     
     let rawSections = { a: '', b: '', c: '' };
@@ -339,8 +338,6 @@
             }
         }
     }
-
-    toggleEditorBtn.addEventListener('click', toggleEditor);
 
     document.getElementById('btn-confirm-save').addEventListener('click', async () => {
         const btn = document.getElementById('btn-confirm-save');
