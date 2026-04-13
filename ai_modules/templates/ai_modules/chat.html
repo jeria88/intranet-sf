@@ -401,10 +401,15 @@
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-    document.querySelectorAll('.message-row.ai .bubble').forEach(bubble => {
-        const raw = bubble.querySelector('.raw-data').textContent;
-        const renderTarget = bubble.querySelector('.render-target');
-        renderTarget.innerHTML = marked.parse(raw);
+    document.querySelectorAll('.message-row .bubble').forEach(bubble => {
+        const rawEl = bubble.querySelector('.raw-data');
+        if (rawEl) {
+            const raw = rawEl.textContent;
+            const renderTarget = bubble.querySelector('.render-target');
+            if (renderTarget) {
+                renderTarget.innerHTML = marked.parse(raw);
+            }
+        }
     });
 </script>
 {% endblock %}
