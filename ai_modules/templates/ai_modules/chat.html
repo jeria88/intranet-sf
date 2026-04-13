@@ -60,8 +60,48 @@
         .print-card-body { padding: 20px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin: 10px 0; }
         th { background: #f1f5f9 !important; border: 1px solid #999; padding: 8px; -webkit-print-color-adjust: exact; }
+        .print-card-body { padding: 20px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th { background: #f1f5f9 !important; border: 1px solid #999; padding: 8px; -webkit-print-color-adjust: exact; }
         td { border: 1px solid #ccc; padding: 8px; }
     }
+
+    /* Modal Premium Estilo Intranet */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        z-index: 10000;
+        align-items: center; justify-content: center;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+    .modal-window {
+        background: white;
+        width: 100%;
+        max-width: 800px;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-header {
+        background: linear-gradient(135deg, #0f172a, #1e3a8a);
+        color: white; padding: 20px 30px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-body { padding: 30px; max-height: 70vh; overflow-y: auto; }
+    .modal-footer { padding: 20px 30px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control { width: 100%; padding: 12px 15px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; color: #1e293b; transition: all 0.2s; box-sizing: border-box; }
+    .form-control:focus { outline: none; border-color: #1e73be; box-shadow: 0 0 0 3px rgba(30,115,190,0.1); }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 </style>
 {% endblock %}
 
@@ -150,6 +190,38 @@
         <strong>AVISO LEGAL:</strong> Este reporte es una herramienta de apoyo sugerida. Debe ser validada por el profesional experto a cargo antes de su implementación administrativa.
     </div>
 </div>
+
+<!-- Modal Premium de Gestión de Caso -->
+<div id="modal-case" class="modal-overlay">
+    <div class="modal-window">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:18px;">Gestión de Caso Normativo</h3>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Título del Caso</label>
+                <input type="text" id="modal-title" class="form-control" placeholder="Ej: Caso de Convivencia Escolar / Fiscalización">
+            </div>
+            <div class="form-group">
+                <label>1. Sustento Normativo</label>
+                <textarea id="modal-sustento" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>2. Hoja de Ruta</label>
+                <textarea id="modal-ruta" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>3. Checklist</label>
+                <textarea id="modal-checklist" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" style="background:#fff; color:#64748b; border:1px solid #e2e8f0; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer;">Cancelar</button>
+            <button id="btn-confirm-save" style="background:#1e73be; color:white; border:none; padding:10px 25px; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 4px 6px rgba(30,115,190,0.2);">💾 Guardar en Repositorio</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -187,16 +259,34 @@
         }
     }
 
-    saveCaseBtn.addEventListener('click', async () => {
-        const title = prompt("Asigne un título a este caso:", "Nuevo Caso Normativo");
-        if (!title) return;
+    function closeModal() {
+        document.getElementById('modal-case').style.display = 'none';
+    }
+
+    saveCaseBtn.addEventListener('click', () => {
+        // Pre-poblar el modal con la info del reporte actual
+        document.getElementById('modal-sustento').value = document.getElementById('print-a').innerText;
+        document.getElementById('modal-ruta').value = document.getElementById('print-b').innerText;
+        document.getElementById('modal-checklist').value = document.getElementById('print-c').innerText;
+        document.getElementById('modal-title').value = "Asesoría " + new Date().toLocaleDateString('es-CL');
+        
+        document.getElementById('modal-case').style.display = 'flex';
+    });
+
+    document.getElementById('btn-confirm-save').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-confirm-save');
+        const title = document.getElementById('modal-title').value.trim();
+        if (!title) { alert("Por favor, asigne un título al caso."); return; }
+
+        btn.innerHTML = "⌛ Guardando...";
+        btn.disabled = true;
 
         const data = new URLSearchParams({
             'assistant_slug': assistantSlug,
             'title': title,
-            'sustento': document.getElementById('print-a').innerText,
-            'ruta': document.getElementById('print-b').innerText,
-            'checklist': document.getElementById('print-c').innerText,
+            'sustento': document.getElementById('modal-sustento').value,
+            'ruta': document.getElementById('modal-ruta').value,
+            'checklist': document.getElementById('modal-checklist').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 
@@ -208,11 +298,13 @@
             });
             const d = await r.json();
             if (d.status === 'success') {
+                closeModal();
                 alert("Caso guardado exitosamente en el repositorio.");
                 saveCaseBtn.innerHTML = "✅ Guardado";
                 saveCaseBtn.disabled = true;
             }
         } catch (e) { alert("Error al guardar el caso."); }
+        finally { btn.innerHTML = "💾 Guardar en Repositorio"; btn.disabled = false; }
     });
 
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;

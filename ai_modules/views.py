@@ -314,3 +314,19 @@ def generate_case_defense(request, pk):
     case.save(update_fields=['descargos'])
     
     return JsonResponse({'status': 'success', 'defense': defense_text})
+
+@login_required
+def update_case(request, pk):
+    """AJAX: Actualiza un caso existente."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return JsonResponse({'status': 'error', 'message': 'No tienes permiso'}, status=403)
+        
+    if request.method == 'POST':
+        case.title = request.POST.get('title', case.title)
+        case.sustento = request.POST.get('sustento', case.sustento)
+        case.ruta = request.POST.get('ruta', case.ruta)
+        case.checklist = request.POST.get('checklist', case.checklist)
+        case.save()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
