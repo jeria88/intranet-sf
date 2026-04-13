@@ -158,6 +158,7 @@ class AICase(models.Model):
     observations = models.TextField(blank=True, verbose_name='Observaciones del Usuario')
     
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='abierto')
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

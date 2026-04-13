@@ -244,11 +244,11 @@ def ai_chat(request, slug):
 
 @login_required
 def case_repository(request):
-    """Listado de casos guardados."""
+    """Listado de casos guardados con filtrado por actividad."""
     cases = AICase.objects.all().select_related('assistant', 'user').prefetch_related('obs_log__user')
-    # Si no es staff, filtrar solo los suyos
+    # Si no es staff, filtrar sus propios casos y solo los ACTIVOS
     if not request.user.is_staff:
-        cases = cases.filter(user=request.user)
+        cases = cases.filter(user=request.user, is_active=True)
     
     return render(request, 'ai_modules/repository.html', {
         'cases': cases
@@ -386,9 +386,27 @@ def case_report_print(request, pk):
 def case_defense_print(request, pk):
     """Vista optimizada para impresión de la DEFENSA (Descargos)."""
     case = get_object_or_404(AICase, pk=pk)
+    # Si el caso está inactivo y el usuario no es staff, denegar acceso
+    if not case.is_active and not request.user.is_staff:
+        return render(request, 'ai_modules/no_access.html')
+        
     if not request.user.is_staff and case.user != request.user:
         return render(request, 'ai_modules/no_access.html')
     
     return render(request, 'ai_modules/case_defense_print.html', {
         'case': case
     })
+
+
+@login_required
+def soft_delete_case(request, pk):
+    """AJAX: Marca un caso como inactivo (Soft Delete)."""
+    case = get_object_or_404(AICase, pk=pk)
+    if not request.user.is_staff and case.user != request.user:
+        return JsonResponse({'status': 'error', 'message': 'No tienes permiso'}, status=403)
+        
+    if request.method == 'POST':
+        case.is_active = False
+        case.save(update_fields=['is_active'])
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
