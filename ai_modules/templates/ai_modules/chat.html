@@ -16,22 +16,24 @@
         align-items: center !important;
     }
 
-    /* Botón de Envío Circular/Píldora */
+    /* Botón de Envío Premium tipo Píldora */
     #send-btn {
-        width: 42px !important;
-        height: 42px !important;
-        border-radius: 50% !important;
         background: #1e73be !important;
+        color: white !important;
         border: none !important;
+        padding: 8px 20px !important;
+        border-radius: 25px !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: center !important;
+        gap: 10px !important;
         cursor: pointer !important;
-        transition: transform 0.2s !important;
-        box-shadow: 0 4px 6px rgba(30,115,190,0.2) !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 10px rgba(30,115,190,0.3) !important;
     }
-    #send-btn:hover { transform: scale(1.05) !important; background: #165a94 !important; }
-    #send-btn svg { width: 22px !important; height: 22px !important; stroke: white !important; fill: none !important; }
+    #send-btn:hover { background: #165a94 !important; transform: translateY(-1px) !important; }
+    #send-btn svg { width: 18px !important; height: 18px !important; stroke: white !important; fill: none !important; }
 
     /* Estilo de Mensajes */
     .message-row.user { align-self: flex-end !important; margin-left: 20% !important; }
@@ -145,8 +147,9 @@
     <div style="padding: 20px; background: white; border-top: 1px solid #f1f5f9;">
         <div style="max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 6px 15px;">
             <textarea id="chat-input" placeholder="Describa su consulta aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14.5px; padding: 10px 0;"></textarea>
-            <button id="send-btn" title="Enviar Consulta">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px; display: block;">
+            <button id="send-btn">
+                <span>Enviar</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
                 </svg>
             </button>
@@ -231,7 +234,6 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
-    const printBtn = document.getElementById('btn-main-print');
     const saveCaseBtn = document.getElementById('btn-save-case');
     const assistantSlug = '{{ assistant.slug }}';
     
@@ -247,7 +249,6 @@
         const regexC = /C\.\s+CHECKLIST/i;
 
         if (text.match(regexA) || text.match(regexB) || text.match(regexC)) {
-            printBtn.style.display = 'block';
             const parts = text.split(regexB);
             const partA = (parts[0] || '').replace(regexA, '').trim();
             const remainBC = parts[1] || '';
@@ -259,10 +260,17 @@
             rawSections.b = partB;
             rawSections.c = partC;
 
-            document.getElementById('print-a').innerHTML = marked.parse(partA);
-            document.getElementById('print-b').innerHTML = marked.parse(partB);
-            document.getElementById('print-c').innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
-            document.getElementById('print-date').innerText = new Date().toLocaleDateString('es-CL');
+            // Actualizar contenedores de impresión ocultos por si se necesitan
+            const pa = document.getElementById('print-a');
+            const pb = document.getElementById('print-b');
+            const pc = document.getElementById('print-c');
+            if (pa) pa.innerHTML = marked.parse(partA);
+            if (pb) pb.innerHTML = marked.parse(partB);
+            if (pc) pc.innerHTML = marked.parse(partC).replace(/<li>/g, '<li style="list-style:none; margin-bottom:5px;">[ ] ');
+            
+            const pd = document.getElementById('print-date');
+            if (pd) pd.innerText = new Date().toLocaleDateString('es-CL');
+            
             saveCaseBtn.style.display = 'block';
         }
     }
