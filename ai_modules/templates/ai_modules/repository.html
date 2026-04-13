@@ -130,7 +130,7 @@
             </div>
 
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}')">
+                <button class="btn-action" onclick="openEditModal({{ case.pk }}, '{{ case.title|escapejs }}', '{{ case.sustento|escapejs }}', '{{ case.ruta|escapejs }}', '{{ case.checklist|escapejs }}', '{{ case.observations|escapejs }}')">
                     ✏️ Editar
                 </button>
                 <button class="btn-action" onclick="showDefense({{ case.pk }}, '{{ case.descargos|escapejs }}')">
@@ -193,6 +193,10 @@
                 <label>3. Checklist</label>
                 <textarea id="edit-checklist" class="form-control" rows="5"></textarea>
             </div>
+            <div class="form-group">
+                <label>📍 Observaciones / seguimiento manual</label>
+                <textarea id="edit-observations" class="form-control" rows="3"></textarea>
+            </div>
         </div>
         <div class="modal-footer">
             <button onclick="closeModal()" class="btn-action">Cancelar</button>
@@ -210,12 +214,13 @@
         document.getElementById('modal-case').style.display = 'none';
     }
 
-    function openEditModal(pk, title, sustento, ruta, checklist) {
+    function openEditModal(pk, title, sustento, ruta, checklist, observations) {
         document.getElementById('edit-case-pk').value = pk;
         document.getElementById('edit-title').value = title;
         document.getElementById('edit-sustento').value = sustento;
         document.getElementById('edit-ruta').value = ruta;
         document.getElementById('edit-checklist').value = checklist;
+        document.getElementById('edit-observations').value = observations || '';
         document.getElementById('modal-case').style.display = 'block';
     }
 
@@ -231,6 +236,7 @@
             'sustento': document.getElementById('edit-sustento').value,
             'ruta': document.getElementById('edit-ruta').value,
             'checklist': document.getElementById('edit-checklist').value,
+            'observations': document.getElementById('edit-observations').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 

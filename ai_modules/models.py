@@ -154,6 +154,9 @@ class AICase(models.Model):
     # Resultado de Defensa
     descargos = models.TextField(blank=True, verbose_name='Redacción de Descargos')
     
+    # Comentarios manuales
+    observations = models.TextField(blank=True, verbose_name='Observaciones del Usuario')
+    
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='abierto')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

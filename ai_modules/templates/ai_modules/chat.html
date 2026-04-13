@@ -215,6 +215,10 @@
                 <label>3. Checklist</label>
                 <textarea id="modal-checklist" class="form-control" rows="4"></textarea>
             </div>
+            <div class="form-group">
+                <label>📍 Observaciones / seguimiento manual</label>
+                <textarea id="modal-observations" class="form-control" rows="3" placeholder="Añada comentarios sobre gestiones realizadas o notas adicionales..."></textarea>
+            </div>
         </div>
         <div class="modal-footer">
             <button onclick="closeModal()" style="background:#fff; color:#64748b; border:1px solid #e2e8f0; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer;">Cancelar</button>
@@ -287,6 +291,7 @@
             'sustento': document.getElementById('modal-sustento').value,
             'ruta': document.getElementById('modal-ruta').value,
             'checklist': document.getElementById('modal-checklist').value,
+            'observations': document.getElementById('modal-observations').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 

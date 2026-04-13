@@ -264,6 +264,7 @@ def save_as_case(request):
         sustento = request.POST.get('sustento', '')
         ruta = request.POST.get('ruta', '')
         checklist = request.POST.get('checklist', '')
+        observations = request.POST.get('observations', '')
         
         assistant = get_object_or_404(AIAssistant, slug=assistant_slug)
         
@@ -273,7 +274,8 @@ def save_as_case(request):
             title=title,
             sustento=sustento,
             ruta=ruta,
-            checklist=checklist
+            checklist=checklist,
+            observations=observations
         )
         
         return JsonResponse({'status': 'success', 'case_id': case.id})
@@ -327,6 +329,7 @@ def update_case(request, pk):
         case.sustento = request.POST.get('sustento', case.sustento)
         case.ruta = request.POST.get('ruta', case.ruta)
         case.checklist = request.POST.get('checklist', case.checklist)
+        case.observations = request.POST.get('observations', case.observations)
         case.save()
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
