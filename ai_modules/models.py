@@ -146,6 +146,9 @@ class AICase(models.Model):
     assistant = models.ForeignKey(AIAssistant, on_delete=models.CASCADE)
     title = models.CharField(max_length=255, verbose_name='Título del Caso')
     
+    # Origen del Caso
+    user_query = models.TextField(blank=True, verbose_name='Consulta Original del Usuario')
+    
     # Contenido del Análisis (Secciones A, B, C)
     sustento = models.TextField(verbose_name='Sustento Normativo (Sección A)')
     ruta = models.TextField(verbose_name='Hoja de Ruta (Sección B)')

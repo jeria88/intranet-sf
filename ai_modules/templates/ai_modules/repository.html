@@ -201,6 +201,11 @@
             </div>
 
             <div class="form-group">
+                <label>📋 Consulta Original del Usuario</label>
+                <div id="render-query" style="font-size: 14px; background: #f1f5f9; padding: 15px; border-radius: 12px; border: 1.5px solid #e2e8f0; color: #475569; font-style: italic; line-height: 1.6; margin-bottom: 10px;"></div>
+            </div>
+
+            <div class="form-group">
                 <label>1. Sustento Normativo (Consulta Original)</label>
                 <div id="render-sustento" style="font-size: 14px; background: #fff; padding: 20px; border-radius: 12px; border: 1.5px solid #e2e8f0; color: #1e293b; max-height: 300px; overflow-y: auto; line-height: 1.6;"></div>
             </div>
@@ -273,6 +278,7 @@
         {% for case in cases %}
         '{{ case.pk }}': {
             title: '{{ case.title|escapejs }}',
+            query: '{{ case.user_query|escapejs }}',
             sustento: '{{ case.sustento|escapejs }}',
             ruta: '{{ case.ruta|escapejs }}',
             checklist: '{{ case.checklist|escapejs }}',
@@ -289,13 +295,14 @@
 
     function openEditFromCard(pk) {
         const c = caseDataMap[pk];
-        if (c) openEditModal(pk, c.title, c.sustento, c.ruta, c.checklist, c.status, c.descargos);
+        if (c) openEditModal(pk, c.title, c.query, c.sustento, c.ruta, c.checklist, c.status, c.descargos);
     }
 
-    function openEditModal(pk, title, sustento, ruta, checklist, status, descargos) {
+    function openEditModal(pk, title, query, sustento, ruta, checklist, status, descargos) {
         document.getElementById('edit-case-pk').value = pk;
         document.getElementById('edit-title').value = title;
         document.getElementById('edit-status').value = status;
+        document.getElementById('render-query').innerText = query || "Sin consulta registrada";
         
         // Renderizado Markdown
         document.getElementById('render-sustento').innerHTML = marked.parse(sustento);
@@ -415,8 +422,13 @@
         btn.disabled = true;
 
         const data = new URLSearchParams({
-            'title': document.getElementById('edit-title').value,
-            'status': document.getElementById('edit-status').value,
+            'assistant_slug': assistantSlug,
+            'title': title,
+            'query': document.getElementById('chat-input').value || "Consulta manual",
+            'sustento': document.getElementById('modal-sustento').value,
+            'ruta': document.getElementById('modal-ruta').value,
+            'checklist': document.getElementById('modal-checklist').value,
+            'observations': document.getElementById('modal-observations').value,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 

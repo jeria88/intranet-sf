@@ -374,6 +374,7 @@
         const data = new URLSearchParams({
             'assistant_slug': assistantSlug,
             'title': title,
+            'query': document.getElementById('chat-input').value || "Consulta manual",
             'sustento': document.getElementById('modal-sustento').value,
             'ruta': document.getElementById('modal-ruta').value,
             'checklist': document.getElementById('modal-checklist').value,
@@ -443,6 +444,7 @@
         const data = new URLSearchParams({
             'assistant_slug': assistantSlug,
             'title': title,
+            'query': userMsg,
             'sustento': sections.a,
             'ruta': sections.b,
             'checklist': sections.c,
