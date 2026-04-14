@@ -332,6 +332,8 @@ def generate_case_defense(request, pk):
     user_prompt = f"""
     Genera los descargos institucionales para el siguiente caso:
     ---
+    Título del Caso: {case.title}
+    Consulta Original (Hechos): {case.user_query}
     Sustento Normativo: {case.sustento}
     Ruta de Acción: {case.ruta}
     ---
