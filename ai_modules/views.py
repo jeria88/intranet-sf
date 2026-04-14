@@ -268,11 +268,16 @@ def save_as_case(request):
         
         assistant = get_object_or_404(AIAssistant, slug=assistant_slug)
         
+        # Priorizar query del POST, si no viene, usar lo que sea que ayude a la trazabilidad
+        user_query = request.POST.get('query', '').strip()
+        if not user_query:
+            user_query = f"Consulta automática generada para el caso: {title}"
+
         case = AICase.objects.create(
             user=request.user,
             assistant=assistant,
             title=title,
-            user_query=request.POST.get('query', ''),
+            user_query=user_query,
             sustento=sustento,
             ruta=ruta,
             checklist=checklist,
@@ -300,21 +305,28 @@ def generate_case_defense(request, pk):
     """Genera redacción de descargos para fiscalizadores externos."""
     case = get_object_or_404(AICase, pk=pk)
     
-    # Prompt técnico y formal de nivel experto para descargos legales
+    import time
+    timestamp = int(time.time())
+    
+    # Prompt técnico y formal con inyección de variabilidad
     system_prompt = f"""
     Actúa como un experto en Normativa Educacional y Gestión Jurídica-Pedagógica de Chile. 
-    Tu misión es redactar un documento formal de DESCARGOS para ser presentado ante entes fiscalizadores (como la Superintendencia de Educación).
-    REFERENCIA ÚNICA DE CASO: {case.pk} (Genera un documento fresco y específico para esta referencia).
+    Tu misión es redactar un documento formal de DESCARGOS para ser presentado ante entes fiscalizadores.
     
-    No resumas la consulta, redacta la DEFENSA institucional de forma creativa y profesional.
-    Evita redundancias verbatim y no uses frases de plantilla que se repitan en otros documentos.
-    Usa un lenguaje formal, técnico-normativo y respetuoso.
-    Estructura el documento en: 
-    1. Antecedentes (Basados en el sustento)
-    2. Fundamentación Técnico-Normativa 
-    3. Acciones de Mitigación/Corrección (Basadas en la ruta de acción)
-    4. Conclusión y petitorio de cumplimiento.
-    Evita redundancias y no menciones que eres una IA.
+    CRITICAL UNIQUE SEED: {case.pk}-{timestamp}
+    ESTILO DE REDACCIÓN: Rotar hacia un tono profundamente técnico y personalizado.
+    
+    INSTRUCCIONES DE VARIABILIDAD:
+    1. PROHIBIDO usar frases de plantilla como "en relación a lo consultado" o "se procede a informar".
+    2. Inicia el documento directamente con los hechos o la base legal.
+    3. Cada oración debe ser construida de forma única para este caso {case.pk}.
+    4. Si has redactado algo similar antes, CAMBIA totalmente los conectores y la estructura de los párrafos.
+    
+    ESTRUCTURA OBLIGATORIA: 
+    1. Antecedentes (Hechos específicos del caso)
+    2. Fundamentación Técnico-Normativa (Citas legales precisas)
+    3. Acciones de Mitigación/Corrección (Pasos realizados)
+    4. Conclusión y petitorio.
     """
 
     user_prompt = f"""
@@ -326,8 +338,8 @@ def generate_case_defense(request, pk):
     El documento debe estar listo para ser copiado y pegado en una minuta oficial.
     """
     
-    # Usamos [] para limpiar historial previo, y temperatura alta para evitar repetición
-    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt, temperature=1.1)
+    # Usamos temperatura máxima recomendada para redacción variada (1.3)
+    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt, temperature=1.3)
     
     case.descargos = defense_text
     case.save(update_fields=['descargos'])
