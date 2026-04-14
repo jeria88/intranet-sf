@@ -300,6 +300,7 @@
     const assistantSlug = '{{ assistant.slug }}';
     
     let rawSections = { a: '', b: '', c: '' };
+    let lastSavedContent = { sustento: '', ruta: '' };
 
     function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
 
@@ -430,6 +431,12 @@
 
         const title = userMsg.length > 50 ? userMsg.substring(0, 47) + "..." : userMsg;
         
+        // Evitar guardar duplicados exactos en la misma sesión
+        if (sections.a === lastSavedContent.sustento && sections.b === lastSavedContent.ruta) {
+            console.log("Omitiendo autoguardado: Contenido idéntico al último caso.");
+            return;
+        }
+
         const data = new URLSearchParams({
             'assistant_slug': assistantSlug,
             'title': title,
@@ -447,6 +454,7 @@
             });
             const d = await r.json();
             if (d.status === 'success') {
+                lastSavedContent = { sustento: sections.a, ruta: sections.b };
                 statusLabel.innerText = "✓ Resguardado automáticamente";
                 setTimeout(() => { statusLabel.innerText = ""; }, 3000);
             }

@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 from .utils import get_relevant_chunks
 
-def call_deepseek_ai(assistant, messages_history, user_query):
+def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
     """
     Realiza una llamada a la API de DeepSeek inyectando el contexto RAG
     y el historial de la conversación.
@@ -45,6 +45,7 @@ def call_deepseek_ai(assistant, messages_history, user_query):
     payload = {
         "model": "deepseek-chat",
         "messages": messages,
+        "temperature": temperature,
         "stream": False
     }
     

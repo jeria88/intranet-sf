@@ -300,10 +300,13 @@ def generate_case_defense(request, pk):
     case = get_object_or_404(AICase, pk=pk)
     
     # Prompt técnico y formal de nivel experto para descargos legales
-    system_prompt = """
+    system_prompt = f"""
     Actúa como un experto en Normativa Educacional y Gestión Jurídica-Pedagógica de Chile. 
     Tu misión es redactar un documento formal de DESCARGOS para ser presentado ante entes fiscalizadores (como la Superintendencia de Educación).
-    No resumas la consulta, redacta la DEFENSA institucional.
+    REFERENCIA ÚNICA DE CASO: {case.pk} (Genera un documento fresco y específico para esta referencia).
+    
+    No resumas la consulta, redacta la DEFENSA institucional de forma creativa y profesional.
+    Evita redundancias verbatim y no uses frases de plantilla que se repitan en otros documentos.
     Usa un lenguaje formal, técnico-normativo y respetuoso.
     Estructura el documento en: 
     1. Antecedentes (Basados en el sustento)
@@ -322,8 +325,8 @@ def generate_case_defense(request, pk):
     El documento debe estar listo para ser copiado y pegado en una minuta oficial.
     """
     
-    # Usamos [] para limpiar historial previo
-    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt)
+    # Usamos [] para limpiar historial previo, y temperatura alta para evitar repetición
+    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt, temperature=1.1)
     
     case.descargos = defense_text
     case.save(update_fields=['descargos'])
