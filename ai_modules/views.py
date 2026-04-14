@@ -272,6 +272,7 @@ def save_as_case(request):
             user=request.user,
             assistant=assistant,
             title=title,
+            user_query=request.POST.get('query', ''),
             sustento=sustento,
             ruta=ruta,
             checklist=checklist,
