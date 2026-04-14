@@ -340,8 +340,14 @@ def generate_case_defense(request, pk):
     El documento debe estar listo para ser copiado y pegado en una minuta oficial.
     """
     
+    # Se debe incluir el user_prompt dentro del messages_history para que la IA lo lea
+    messages_for_ai = [
+        {'role': 'system', 'content': system_prompt},
+        {'role': 'user', 'content': user_prompt}
+    ]
+    
     # Usamos temperatura máxima recomendada para redacción variada (1.3)
-    defense_text = call_deepseek_ai(case.assistant, [{'role': 'system', 'content': system_prompt}], user_prompt, temperature=1.3)
+    defense_text = call_deepseek_ai(case.assistant, messages_for_ai, user_prompt, temperature=1.3)
     
     case.descargos = defense_text
     case.save(update_fields=['descargos'])
