@@ -56,7 +56,7 @@ class Command(BaseCommand):
         )
         assistant.system_instruction = system_instruction
         assistant.save()
-        self.stdout.write(self.style.SUCCESS(f'Prompt del asistente "{assistant.slug}" actualizado.'))
+        self.stdout.write(self.style.SUCCESS(f'Prompt del asistente "{assistant_slug}" actualizado.'))
 
         # 3. Ingesta de Chunks
         if not os.path.exists(json_path):
@@ -67,6 +67,10 @@ class Command(BaseCommand):
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             chunks_data = data.get('chunks', [])
+            # Liberar el contenedor principal
+            del data
+            import gc
+            gc.collect()
 
         total_chunks = len(chunks_data)
         self.stdout.write(f'Fragmentos totales encontrados: {total_chunks}')
@@ -154,6 +158,8 @@ class Command(BaseCommand):
                     yield chunks_batch, texts_batch
                     chunks_batch = []
                     texts_batch = []
+                    import gc
+                    gc.collect()
 
             if texts_batch:
                 yield chunks_batch, texts_batch

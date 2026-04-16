@@ -203,8 +203,11 @@ json_configs = [
 
 for slug, json_file in json_configs:
     assistant = AIAssistant.objects.filter(slug=slug).first()
-    # Si es Representante Temuco, usamos su comando especializado (incluye priorización y optimización)
+    # Si es Representante Temuco, usamos su comando especializado (solo si está vacío para ahorrar RAM en deploy)
     if slug == 'representante-temuco':
+        if assistant and assistant.chunks.count() > 0:
+            print(f"✅ {assistant.name} ya tiene fragmentos. Saltando configuración pesada.")
+            continue
         print(f"🚀 Ejecutando configuración especializada para {assistant.name}...")
         call_command('setup_representante_temuco')
         continue

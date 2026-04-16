@@ -2,6 +2,12 @@ import os
 from pypdf import PdfReader
 from django.conf import settings
 import math
+import numpy as np
+import json
+import gc
+
+# Caché en memoria para evitar recargas constantes en servidores con RAM limitada
+_VECTOR_RESOURCES = {}
 
 def extract_text_from_pdf(file_path):
     """Extrae el texto de un archivo PDF usando pypdf."""
@@ -82,26 +88,50 @@ def get_relevant_chunks(assistant, query, top_n=10):
     if not query_embedding:
         return "!!! ERROR !!!\nFallo al generar embedding de consulta."
 
-    # 2. Intentar cargar desde caché
-    ids, doc_names, indices = [], [], []
-    matrix = None
-    cache_ready = False
+    # 2. Intentar cargar desde caché (Memoria RAM persistente en el proceso)
+    cached = _VECTOR_RESOURCES.get(assistant.slug)
+    db_count_trigger = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True).count()
 
-    if os.path.exists(matrix_path) and os.path.exists(meta_path):
+    if cached and cached['meta']['count'] == db_count_trigger:
+        ids = cached['ids']
+        doc_names = cached['doc_names']
+        indices = cached['indices']
+        matrix = cached['matrix']
+        priority_mask = cached['priority_mask']
+        cache_ready = True
+    elif os.path.exists(matrix_path) and os.path.exists(meta_path):
         try:
             with open(meta_path, 'r') as f:
                 meta = json.load(f)
             
-            # Verificar si el caché es coherente con la base de datos (conteo rápido)
-            db_count = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True).count()
-            if meta['count'] == db_count:
+            if meta['count'] == db_count_trigger:
                 ids = meta['ids']
                 doc_names = meta['doc_names']
                 indices = meta['indices']
-                matrix = np.load(matrix_path)
+                # mmap_mode='r' es CLAVE: Mantiene el archivo en disco y solo carga lo que se usa en el producto punto
+                matrix = np.load(matrix_path, mmap_mode='r')
+                
+                # Pre-calcular el priority_mask una sola vez para ahorrar CPU
+                p_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
+                p_mask = np.zeros(len(doc_names), dtype=bool)
+                for pattern in p_patterns:
+                    p_mask |= np.array([pattern in str(d) for d in doc_names])
+                
+                # Guardar en el singleton del proceso
+                _VECTOR_RESOURCES[assistant.slug] = {
+                    'ids': ids,
+                    'doc_names': doc_names,
+                    'indices': indices,
+                    'matrix': matrix,
+                    'meta': meta,
+                    'priority_mask': p_mask
+                }
+                priority_mask = p_mask
                 cache_ready = True
         except Exception as e:
             print(f"Error cargando caché: {e}")
+            if assistant.slug in _VECTOR_RESOURCES:
+                del _VECTOR_RESOURCES[assistant.slug]
 
     # 3. Si no hay caché o está desactualizado, reconstruir desde BD
     if not cache_ready:
@@ -142,13 +172,32 @@ def get_relevant_chunks(assistant, query, top_n=10):
         # Guardar caché para la próxima vez
         try:
             np.save(matrix_path, matrix)
+            meta_payload = {
+                'count': db_count,
+                'ids': ids,
+                'doc_names': doc_names,
+                'indices': indices
+            }
             with open(meta_path, 'w') as f:
-                json.dump({
-                    'count': db_count,
-                    'ids': ids,
-                    'doc_names': doc_names,
-                    'indices': indices
-                }, f)
+                json.dump(meta_payload, f)
+            
+            # Recargar ahora con mmap para liberar la RAM usada en la reconstrucción
+            matrix = np.load(matrix_path, mmap_mode='r')
+            
+            p_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
+            priority_mask = np.zeros(len(doc_names), dtype=bool)
+            for pattern in p_patterns:
+                priority_mask |= np.array([pattern in str(d) for d in doc_names])
+
+            _VECTOR_RESOURCES[assistant.slug] = {
+                'ids': ids,
+                'doc_names': doc_names,
+                'indices': indices,
+                'matrix': matrix,
+                'meta': meta_payload,
+                'priority_mask': priority_mask
+            }
+            gc.collect() 
         except Exception as e:
             print(f"Advertencia: No se pudo guardar caché en disco: {e}")
 
@@ -156,17 +205,11 @@ def get_relevant_chunks(assistant, query, top_n=10):
     q_vec = np.array(query_embedding, dtype=np.float32)
     similarities = np.dot(matrix, q_vec)
 
-    # 5. Boosting Normativo
-    priority_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
-    account_keywords = ["codigo", "cuenta", "item", "clase", "sep", "pie", "801", "802", "803", "804"]
-    
+    # 5. Boosting Normativo (Optimizado con máscara pre-calculada)
     query_lower = query.lower()
+    account_keywords = ["codigo", "cuenta", "item", "clase", "sep", "pie", "801", "802", "803", "804"]
     is_account_query = any(k in query_lower for k in account_keywords)
     
-    priority_mask = np.zeros(len(doc_names), dtype=bool)
-    for pattern in priority_patterns:
-        priority_mask |= np.array([pattern in str(d) for d in doc_names])
-
     similarities[priority_mask] *= 10.0
     if is_account_query:
         similarities[priority_mask] *= 5.0
