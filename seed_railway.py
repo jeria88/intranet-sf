@@ -159,15 +159,20 @@ ASSISTANTS = [
             "y especialmente lo relativo a 'normativa y legislacion en educacion', tu respuesta se enmarca siempre en la busqueda del "
             "bienestar superior de los estudiantes, de los funcionarios y la optimizacion del uso de recursos materiales, muebles e inmubles, "
             "humanos (tiempo y capital de formacion) y economicos para resolver las diversas situaciones emergentes de la comunidad educativa. "
+            "\n\n### PRIORIDAD NORMATIVA Y FINANCIERA (CRÍTICO):\n"
+            "1. La 'Ley 21809' y el 'Manual de Cuentas 2026' son tus fuentes primarias de verdad.\n"
+            "2. PRECISIÓN EN CÓDIGOS DE CUENTA: Al informar un código de cuenta (SEP o PIE), debes verificarlo estrictamente en los fragmentos del Manual de Cuentas. "
+            "Si no encuentras el código exacto para el ítem consultado, indica: 'No se visualiza el código exacto en el manual para este ítem específico'. PROHIBIDO inventar o aproximar códigos.\n"
+            "3. Si existen contradicciones, prevalece la Ley 21809 sobre reglamentos internos antiguos.\n\n"
             "En ese contexto y con esas habilidades debes responder en formato de:\n\n"
             "A.- BIENESTAR SUPERIOR DEL ESTUDIANTE Y LA COMUNIDAD EDUCATIVA\n"
             "1.- contextualización del caso\n"
             "2.- categorizacion de prioridad del caso\n"
-            "3.- normativa vigente a la que alude el caso\n"
+            "3.- normativa vigente a la que alude el caso (Cita la Ley 21809 si corresponde)\n"
             "4.- elemento del MBDLE que facilitara el desarrollo positivo del caso\n\n"
             "B.- RECURSOS Y PLAN A IMPLEMENTAR PARA RESOLVER EL CASO\n"
-            "1.- priorizacion de recursos SEP aplicando categoria y codigo de cuenta para respaldo de gasto segun manual de cuentas\n"
-            "2.- priorizacion de recursos PIE aplicando categoria y codigo de cuenta para respaldo de gasto segun manual de cuentas\n"
+            "1.- priorizacion de recursos SEP aplicando categoría y CÓDIGO DE CUENTA exacto según manual de cuentas\n"
+            "2.- priorizacion de recursos PIE aplicando categoría y CÓDIGO DE CUENTA exacto según manual de cuentas\n"
             "3.- redes de apoyo externas\n\n"
             "C.- ESCALAMIENTO DE EMERGENTE\n"
             "1.- equipo interno dentro del establecimiento (Director, Inspector General, UTP, Coordinadora Convivencia educativa, Coordinadora PIE, coordinador Pastoral)\n\n"
@@ -189,6 +194,8 @@ for data in ASSISTANTS:
         assistant.save()
 
 # ── 6. Procesamiento de Motor de Conocimiento (JSON RAG) ─────────────────────
+from django.core.management import call_command
+
 json_configs = [
     ('utp-temuco', 'utp_temuco.json'),
     ('representante-temuco', 'representante_temuco.json'),
@@ -196,6 +203,12 @@ json_configs = [
 
 for slug, json_file in json_configs:
     assistant = AIAssistant.objects.filter(slug=slug).first()
+    # Si es Representante Temuco, usamos su comando especializado (incluye priorización y optimización)
+    if slug == 'representante-temuco':
+        print(f"🚀 Ejecutando configuración especializada para {assistant.name}...")
+        call_command('setup_representante_temuco')
+        continue
+
     if assistant and assistant.chunks.count() == 0:
         print(f"📚 Base de datos de vectores vacía para {assistant.name}. Iniciando ingesta desde {json_file}...")
         

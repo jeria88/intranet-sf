@@ -8,3 +8,7 @@ media/
 staticfiles/
 *.log
 .DS_Store
+
+# Documentos de Conocimiento (Sensibles)
+ai_modules/knowledge_base/2.-Ley-21809_01-ABR-2026.pdf
+ai_modules/knowledge_base/3.- Manual-de-cuentas-2026_baja.pdf

@@ -63,13 +63,41 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Archivo JSON no encontrado en: {json_path}'))
             return
 
+        self.stdout.write(f'Cargando JSON desde {json_path}...')
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             chunks_data = data.get('chunks', [])
 
         total_chunks = len(chunks_data)
-        self.stdout.write(f'Iniciando ingesta y generación de embeddings para {total_chunks} fragmentos...')
+        self.stdout.write(f'Fragmentos totales encontrados: {total_chunks}')
         
+        # Obtener IDs existentes para evitar N-consultas en el loop (Optimización para RAM/CPU)
+        existing_ids = set(AIKnowledgeChunk.objects.filter(assistant=assistant).values_list('chunk_id', flat=True))
+        self.stdout.write(f'Fragmentos ya existentes en BD: {len(existing_ids)}')
+
+        # Definir prioridades
+        # 3_-_Manual-de-cuentas-2026_baja.pdf es el nombre en el JSON
+        # Ley 21809 es prioritaria
+        # Página 112 del manual es hiperprioritaria (Códigos de cuenta)
+        
+        def get_priority_level(item):
+            metadata = item.get('legal_metadata', {})
+            doc = metadata.get('source_file', '')
+            pages = metadata.get('page_map', [])
+            
+            # Nivel -1: Hiperprioridad (Códigos de Cuenta en Manual pág 112 aprox)
+            if "Manual-de-cuentas" in doc and any(110 <= p <= 115 for p in pages):
+                return -1
+            
+            # Nivel 0: Alta prioridad (Ley 21809 y Manual de Cuentas general)
+            if doc == "2.-Ley-21809_01-ABR-2026.pdf" or "Manual-de-cuentas" in doc:
+                return 0
+                
+            return 1 # Normal
+
+        self.stdout.write('Ordenando fragmentos por prioridad...')
+        chunks_data.sort(key=get_priority_level)
+
         # Necesitamos openai para esta fase inicial
         import openai
         api_key_val = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
@@ -79,17 +107,17 @@ class Command(BaseCommand):
             
         client = openai.OpenAI(api_key=api_key_val)
 
-        assistant.chunks.all().delete()
+        self.stdout.write('Iniciando procesamiento por lotes (batch_size=50)...')
 
         doc_counters = {}
         chunks_batch = []
         texts_batch = []
-        batch_size = 100 # OpenAI soporta varios inputs a la vez
+        batch_size = 50 
         
-        # Usamos UUID corto para evitar identificadores repetidos en la BD de Chroma u otros si aplican
-        session_id = uuid.uuid4().hex[:8]
+        processed_count = 0
+        skipped_count = 0
 
-        for i, item in enumerate(chunks_data):
+        for item in chunks_data:
             text_content = item.get('text_content', '')
             if not text_content:
                 continue
@@ -99,38 +127,57 @@ class Command(BaseCommand):
             
             if doc_name not in doc_counters:
                 doc_counters[doc_name] = 0
-            
-            chunk = AIKnowledgeChunk(
-                assistant=assistant,
-                content=text_content,
-                metadata=json.dumps(metadata),
-                chunk_id=f"rep_tem_{session_id}_{i}",
-                document_name=doc_name,
-                index=doc_counters[doc_name]
-            )
-            chunks_batch.append(chunk)
-            texts_batch.append(text_content)
+
+            unique_chunk_id = f"rep_tem_{doc_name}_{doc_counters[doc_name]}".replace(" ", "_").replace(".", "_")
             doc_counters[doc_name] += 1
 
+            if unique_chunk_id in existing_ids:
+                skipped_count += 1
+                continue
+
+            # Crear el objeto (pero no guardar embedding todavía)
+            chunk = AIKnowledgeChunk(
+                assistant=assistant,
+                chunk_id=unique_chunk_id,
+                content=text_content,
+                metadata=json.dumps(metadata),
+                document_name=doc_name,
+                index=doc_counters[doc_name] - 1
+            )
+            
+            chunks_batch.append(chunk)
+            texts_batch.append(text_content)
+
             # Procesar en lotes
-            if len(texts_batch) == batch_size or i == total_chunks - 1:
-                self.stdout.write(f'Generando embeddings {i+1-len(texts_batch)} al {i+1} de {total_chunks}...')
-                try:
-                    response = client.embeddings.create(
-                        input=texts_batch,
-                        model="text-embedding-3-small"
-                    )
-                    for j, emb_data in enumerate(response.data):
-                        # Convert list of floats to JSON array string
-                        chunks_batch[j].embedding = json.dumps(emb_data.embedding)
-                    
-                    # Guardar masivamente en BD
-                    AIKnowledgeChunk.objects.bulk_create(chunks_batch)
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f'Error en embeddings: {e}'))
-                
-                # Resetear lote
+            if len(texts_batch) == batch_size:
+                self.process_batch(client, chunks_batch, texts_batch)
+                processed_count += len(chunks_batch)
                 chunks_batch = []
                 texts_batch = []
-        
-        self.stdout.write(self.style.SUCCESS(f'Ingesta vectorizada completada. {total_chunks} fragmentos procesados.'))
+                self.stdout.write(f'Progresando: {processed_count + skipped_count}/{total_chunks}...')
+
+        # Lote final
+        if texts_batch:
+            self.process_batch(client, chunks_batch, texts_batch)
+            processed_count += len(chunks_batch)
+
+        self.stdout.write(self.style.SUCCESS(
+            f'Finalizado: {processed_count} nuevos fragmentos procesados, {skipped_count} saltados (ya existían).'
+        ))
+
+    def process_batch(self, client, chunks_batch, texts_batch):
+        try:
+            response = client.embeddings.create(
+                input=texts_batch,
+                model="text-embedding-3-small"
+            )
+            for j, emb_data in enumerate(response.data):
+                chunks_batch[j].embedding = json.dumps(emb_data.embedding)
+            
+            # Guardar en lote para eficiencia
+            AIKnowledgeChunk.objects.bulk_create(chunks_batch)
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Error en lote: {e}'))
+            # En caso de error, intentar guardar uno a uno o re-intentar si es transitorio
+            # Pero para baja RAM, mejor fallar y dejar que el modo resumable lo retome.
+            raise e
