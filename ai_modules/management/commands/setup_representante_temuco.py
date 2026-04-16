@@ -173,6 +173,12 @@ class Command(BaseCommand):
             f'LOGRO: {processed_count} nuevos fragmentos inyectados, {skipped_count} omitidos.'
         ))
 
+        # Generar caché vectorial inmediatamente para evitar timeouts al primer usuario
+        self.stdout.write('Generando caché vectorial optimizada...')
+        from ai_modules.utils import get_relevant_chunks
+        get_relevant_chunks(assistant, "Caché inicial")
+        self.stdout.write(self.style.SUCCESS('Caché vectorial lista.'))
+
     def process_batch(self, client, chunks_batch, texts_batch):
         """Genera embeddings y guarda en la base de datos."""
         response = client.embeddings.create(

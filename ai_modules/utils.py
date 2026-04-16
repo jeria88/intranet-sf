@@ -61,119 +61,127 @@ def get_openai_embedding(text):
         print(f"Error generando embedding: {e}")
         return None
 
-def get_relevant_chunks(assistant, query, top_n=12):
+def get_relevant_chunks(assistant, query, top_n=10):
     """
-    Busca fragmentos relevantes usando similitud coseno vectorizada con numpy.
-    Optimizado para baja RAM (4GB) y alto volumen de fragmentos (8,000+).
+    Busca fragmentos relevantes usando similitud coseno con sistema de caché binario.
+    Optimizado para evitar timeouts en servidores con recursos limitados (Railway Free).
     """
     from .models import AIKnowledgeChunk
     import json
     import numpy as np
+    import time
+
+    cache_dir = os.path.join(settings.BASE_DIR, 'ai_modules', 'cache')
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    matrix_path = os.path.join(cache_dir, f'vectors_{assistant.slug}.npy')
+    meta_path = os.path.join(cache_dir, f'meta_{assistant.slug}.json')
 
     # 1. Convertir la consulta en embedding
     query_embedding = get_openai_embedding(query)
-    
     if not query_embedding:
-        return "!!! MODO DEPURACIÓN ACTIVADO !!!\n\nDile al usuario: Fallo al generar query_embedding (OPENAI API KEY incorrecta o limite de cuota)."
+        return "!!! ERROR !!!\nFallo al generar embedding de consulta."
 
-    # 2. Obtener datos de la BD de forma eficiente
-    # Nota: .values_list es mucho más ligero que instanciar objetos Django models
-    chunk_data = AIKnowledgeChunk.objects.filter(
-        assistant=assistant
-    ).exclude(
-        embedding__isnull=True
-    ).values_list('id', 'embedding', 'document_name', 'index')
+    # 2. Intentar cargar desde caché
+    ids, doc_names, indices = [], [], []
+    matrix = None
+    cache_ready = False
 
-    if not chunk_data:
-        return "!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: La base de datos tiene 0 chunks con embeddings."
+    if os.path.exists(matrix_path) and os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r') as f:
+                meta = json.load(f)
+            
+            # Verificar si el caché es coherente con la base de datos (conteo rápido)
+            db_count = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True).count()
+            if meta['count'] == db_count:
+                ids = meta['ids']
+                doc_names = meta['doc_names']
+                indices = meta['indices']
+                matrix = np.load(matrix_path)
+                cache_ready = True
+        except Exception as e:
+            print(f"Error cargando caché: {e}")
 
-    # 3. Preparar vectores para cálculo masivo
-    ids, embeddings, doc_names, indices = zip(*chunk_data)
-    
-    # Convertir a matriz numpy de forma eficiente
-    # Si los embeddings ya son listas (JSONField), no necesitamos json.loads
-    try:
+    # 3. Si no hay caché o está desactualizado, reconstruir desde BD
+    if not cache_ready:
+        print(f"Reconstruyendo caché para {assistant.slug}...")
+        chunk_data = AIKnowledgeChunk.objects.filter(
+            assistant=assistant
+        ).exclude(
+            embedding__isnull=True
+        ).values_list('id', 'embedding', 'document_name', 'index')
+
+        if not chunk_data:
+            return "!!! ERROR !!!\nLa base de datos no tiene fragmentos procesados."
+
+        ids, embeddings, doc_names, indices = zip(*chunk_data)
+        
+        # Convertir a matriz numpy
         if isinstance(embeddings[0], str):
-            # Formato antiguo/corrupto: string de JSON
             matrix = np.array([json.loads(e) for e in embeddings], dtype=np.float32)
         else:
-            # Formato correcto: lista de floats
             matrix = np.array(embeddings, dtype=np.float32)
-    except Exception as e:
-        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\nError cargando matriz: {e}"
+        
+        # Guardar caché para la próxima vez
+        np.save(matrix_path, matrix)
+        with open(meta_path, 'w') as f:
+            json.dump({
+                'count': len(ids),
+                'ids': list(ids),
+                'doc_names': list(doc_names),
+                'indices': list(indices)
+            }, f)
 
-    # Vector de consulta
+    # 4. Cálculo de Similitud
     q_vec = np.array(query_embedding, dtype=np.float32)
+    similarities = np.dot(matrix, q_vec)
 
-    # 4. Cálculo de Similitud Coseno Vectorizada
-    # Si los embeddings de OpenAI están normalizados (que lo están), bastaría con el producto punto.
-    dot_product = np.dot(matrix, q_vec)
-    
-    # Para mayor seguridad si no estuvieran normalizados, pero el dot product es la base
-    # matrix_norms = np.linalg.norm(matrix, axis=1)
-    # query_norm = np.linalg.norm(q_vec)
-    # similarities = dot_product / (matrix_norms * query_norm + 1e-9)
-    
-    # Optimizamos asumiendo normalización (estándar de OpenAI)
-    similarities = dot_product
-
-    # 5. Lógica de Boosting (Prioridad Normativa)
-    # Usamos una búsqueda insensible a guiones/espacios para mayor robustez
+    # 5. Boosting Normativo
     priority_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
     account_keywords = ["codigo", "cuenta", "item", "clase", "sep", "pie", "801", "802", "803", "804"]
     
     query_lower = query.lower()
     is_account_query = any(k in query_lower for k in account_keywords)
     
-    # Crear máscara para archivos prioritarios
     priority_mask = np.zeros(len(doc_names), dtype=bool)
     for pattern in priority_patterns:
         priority_mask |= np.array([pattern in str(d) for d in doc_names])
 
-    # Aplicar Boost Base (10x para documentos críticos)
     similarities[priority_mask] *= 10.0
-
-    # Boost de Precisión Quirúrgica: Si la consulta es sobre cuentas, 
-    # darle un extra de 5x a los fragmentos del manual que ya son prioritarios
     if is_account_query:
         similarities[priority_mask] *= 5.0
 
     # 6. Selección de Top N
-    # Obtenemos los índices de los mayores scores
     top_indices = np.argsort(similarities)[::-1][:top_n]
     
     scored_results = []
     for idx in top_indices:
-        if similarities[idx] > 0.12: # Threshold
+        if similarities[idx] > 0.05: # Threshold reducido para mayor flexibilidad
             scored_results.append({
                 'id': ids[idx],
                 'doc': doc_names[idx],
-                'index': indices[idx],
-                'score': similarities[idx]
+                'index': indices[idx]
             })
 
     if not scored_results:
-        return "!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: No se encontraron fragmentos con relevancia suficiente."
+        return "No se encontraron fragmentos relevantes para tu consulta."
 
-    # 7. Expansión por vecindad y Re-obtención de Contenido
-    # Para ahorrar RAM no pedimos el 'content' masivamente arriba, lo pedimos ahora solo para el top
-    final_chunks = []
-    processed_ids = set()
-
+    # 7. Expansión y Contenido (Optimización: Una sola consulta)
+    # Recolectar todos los índices necesarios para minimizar hits a la BD
+    needed_indices = []
     for item in scored_results:
-        # Traer el chunk original y sus vecinos inmediatos para contexto
-        neighbors = AIKnowledgeChunk.objects.filter(
-            assistant=assistant,
-            document_name=item['doc'],
-            index__in=[item['index'] - 1, item['index'], item['index'] + 1]
-        ).order_by('index')
+        needed_indices.extend([item['index']-1, item['index'], item['index']+1])
+    
+    # Traer todos los fragmentos vecinos de una vez
+    relevant_docs = set(item['doc'] for item in scored_results)
+    neighbors = AIKnowledgeChunk.objects.filter(
+        assistant=assistant,
+        document_name__in=relevant_docs,
+        index__in=needed_indices
+    ).order_by('document_name', 'index')
 
-        for n in neighbors:
-            if n.id not in processed_ids:
-                processed_ids.add(n.id)
-                final_chunks.append(n)
-
-    # Orden final para el prompt
+    final_chunks = list(neighbors)
     final_chunks.sort(key=lambda c: (c.document_name or '', c.index or 0))
 
     return "\n\n---\n\n".join(
