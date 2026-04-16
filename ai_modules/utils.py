@@ -105,33 +105,52 @@ def get_relevant_chunks(assistant, query, top_n=10):
 
     # 3. Si no hay caché o está desactualizado, reconstruir desde BD
     if not cache_ready:
-        print(f"Reconstruyendo caché para {assistant.slug}...")
-        chunk_data = AIKnowledgeChunk.objects.filter(
+        import gc
+        print(f"Reconstruyendo caché para {assistant.slug} (Iterativo para bajo RAM)...")
+        
+        queryset = AIKnowledgeChunk.objects.filter(
             assistant=assistant
         ).exclude(
             embedding__isnull=True
-        ).values_list('id', 'embedding', 'document_name', 'index')
+        ).only('id', 'embedding', 'document_name', 'index')
 
-        if not chunk_data:
+        db_count = queryset.count()
+        if db_count == 0:
             return "!!! ERROR !!!\nLa base de datos no tiene fragmentos procesados."
 
-        ids, embeddings, doc_names, indices = zip(*chunk_data)
-        
-        # Convertir a matriz numpy
-        if isinstance(embeddings[0], str):
-            matrix = np.array([json.loads(e) for e in embeddings], dtype=np.float32)
-        else:
-            matrix = np.array(embeddings, dtype=np.float32)
-        
+        # Pre-asignar memoria para la matriz y listas (más eficiente que append dinámico)
+        matrix = np.zeros((db_count, 1536), dtype=np.float32)
+        ids = [None] * db_count
+        doc_names = [None] * db_count
+        indices = [None] * db_count
+
+        # Procesar en bloques para no saturar memoria
+        for i, chunk in enumerate(queryset.iterator(chunk_size=500)):
+            ids[i] = chunk.id
+            doc_names[i] = chunk.document_name
+            indices[i] = chunk.index
+            
+            emb = chunk.embedding
+            if isinstance(emb, str):
+                emb = json.loads(emb)
+            matrix[i] = emb
+            
+            # Limpieza periódica de referencias de Django
+            if i % 1000 == 0:
+                gc.collect()
+
         # Guardar caché para la próxima vez
-        np.save(matrix_path, matrix)
-        with open(meta_path, 'w') as f:
-            json.dump({
-                'count': len(ids),
-                'ids': list(ids),
-                'doc_names': list(doc_names),
-                'indices': list(indices)
-            }, f)
+        try:
+            np.save(matrix_path, matrix)
+            with open(meta_path, 'w') as f:
+                json.dump({
+                    'count': db_count,
+                    'ids': ids,
+                    'doc_names': doc_names,
+                    'indices': indices
+                }, f)
+        except Exception as e:
+            print(f"Advertencia: No se pudo guardar caché en disco: {e}")
 
     # 4. Cálculo de Similitud
     q_vec = np.array(query_embedding, dtype=np.float32)

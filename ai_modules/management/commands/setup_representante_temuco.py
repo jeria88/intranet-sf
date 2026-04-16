@@ -174,7 +174,9 @@ class Command(BaseCommand):
         ))
 
         # Generar caché vectorial inmediatamente para evitar timeouts al primer usuario
-        self.stdout.write('Generando caché vectorial optimizada...')
+        import gc
+        gc.collect()
+        self.stdout.write('Generando caché vectorial optimizada (modo bajo RAM)...')
         from ai_modules.utils import get_relevant_chunks
         get_relevant_chunks(assistant, "Caché inicial")
         self.stdout.write(self.style.SUCCESS('Caché vectorial lista.'))
