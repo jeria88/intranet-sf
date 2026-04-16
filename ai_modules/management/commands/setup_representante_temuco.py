@@ -4,12 +4,13 @@ import uuid
 from django.core.management.base import BaseCommand
 from ai_modules.models import AIAssistant, AIKnowledgeChunk
 from ai_modules.utils import get_openai_embedding
+from django.conf import settings
 
 class Command(BaseCommand):
     help = 'Carga la base de conocimientos para Representante Temuco desde un JSON'
 
     def handle(self, *args, **options):
-        json_path = '/home/nikka/Intranet/intranet_railway/ai_modules/knowledge_base/representante_temuco.json'
+        json_path = os.path.join(settings.BASE_DIR, 'ai_modules', 'knowledge_base', 'representante_temuco.json')
         
         if not os.path.exists(json_path):
             self.stdout.write(self.style.ERROR(f'No se encontró el archivo {json_path}'))
@@ -23,6 +24,7 @@ class Command(BaseCommand):
                 'name': 'Asistente Representante Legal (Temuco)',
                 'profile_role': 'REPRESENTANTE',
                 'establishment': 'TEMUCO',
+                'is_chat_enabled': True,
                 'is_active': True,
                 'system_instruction': (
                     "Eres la representante legal y administradora superior del establecimiento educativo, "

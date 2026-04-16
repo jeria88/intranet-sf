@@ -178,8 +178,8 @@ def ai_chat(request, slug):
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True, is_chat_enabled=True)
     
     # Verificación de seguridad básica (UTP y Admin)
-    # Si el usuario es de Temuco y el asistente es de Temuco, o es Admin
-    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role == 'UTP')
+    # Si el usuario es de Temuco y el asistente es de Temuco (UTP o REPRESENTANTE), o es Admin
+    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role in ['UTP', 'REPRESENTANTE'])
     if not request.user.is_staff and not is_temuco_user:
         return render(request, 'ai_modules/no_access.html')
 
