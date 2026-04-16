@@ -25,7 +25,7 @@ def ai_list(request):
 
     # 3. Representante Temuco va directo al chat de DeepSeek (Focus Mode)
     if (request.user.role == 'REPRESENTANTE' and request.user.establishment == 'TEMUCO') or request.user.username in ['representante.temuco', 'representante.utp']:
-        assistant = AIAssistant.objects.filter(slug='representante.temuco', is_active=True).first()
+        assistant = AIAssistant.objects.filter(slug='representante-temuco', is_active=True).first()
         if assistant:
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
