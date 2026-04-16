@@ -61,9 +61,10 @@ def get_openai_embedding(text):
         print(f"Error generando embedding: {e}")
         return None
 
-def get_relevant_chunks(assistant, query, top_n=10):
+def get_relevant_chunks(assistant, query, top_n=12):
     """
     Busca fragmentos relevantes usando similitud coseno en embeddings pre-calculados.
+    Incluye lógica de boosting para documentos prioritarios.
     """
     from .models import AIKnowledgeChunk
     import json
@@ -85,7 +86,20 @@ def get_relevant_chunks(assistant, query, top_n=10):
     if debug_info:
         return f"!!! MODO DEPURACIÓN ACTIVADO !!!\n\nDile al usuario textualmente estos errores:\n{' - '.join(debug_info)}"
 
-    # 2. Calcular similitud coseno
+    # 2. Lógica de Priorización (Boosting)
+    priority_files = [
+        "2.-Ley-21809_01-ABR-2026.pdf",
+        "3_-_Manual-de-cuentas-2026_baja.pdf"
+    ]
+    # Palabras clave que disparan el boost - Ampliadas para cubrir códigos y rendición
+    priority_keywords = [
+        "ley 21809", "manual de cuentas", "codigo", "item", "gasto", "rendicion", 
+        "sep", "pie", "recurso", "gasto sep", "gasto pie", "rendición de cuentas",
+        "asignacion", "financiamiento", "presupuesto"
+    ]
+    query_lower = query.lower()
+    is_priority_query = any(k in query_lower for k in priority_keywords) or assistant.slug == "representante-temuco"
+
     scored_chunks = []
     malformed_embeddings = 0
     for chunk in chunks:
@@ -99,8 +113,14 @@ def get_relevant_chunks(assistant, query, top_n=10):
                 malformed_embeddings += 1
                 continue
                 
+        # Similitud base
         sim = cosine_similarity(query_embedding, emb)
-        if sim > 0.1: # Threshold básico
+        
+        # Aplicar Boost si corresponde (Agresivo para Manual de Cuentas y Ley 21809)
+        if is_priority_query and chunk.document_name in priority_files:
+            sim *= 10.0 # Decuplicar relevancia para documentos críticos y asegurar que floten al top
+            
+        if sim > 0.12: # Threshold ligeramente más estricto
             scored_chunks.append({
                 'score': sim,
                 'chunk': chunk

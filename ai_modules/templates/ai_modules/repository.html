@@ -133,8 +133,8 @@
         {% for case in cases %}
         <div class="case-card">
             <div>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700;">{{ case.title }}</h3>
-                <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--primary);">{{ case.title }}</h3>
+                <p style="margin: 3px 0 0; font-size: 11px; color: #64748b;">
                     Establecimiento: {{ case.assistant.establishment }} | Creado: {{ case.created_at|date:"d/m/Y" }}
                 </p>
             </div>

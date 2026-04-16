@@ -76,6 +76,12 @@
     border-bottom-left-radius: 2px;
 }
 
+/* Escalamiento de títulos en respuestas IA */
+.message-content h1, .bubble h1 { font-size: 1.25em !important; margin: 10px 0 5px 0 !important; font-weight: 800; color: var(--accent); }
+.message-content h2, .bubble h2 { font-size: 1.15em !important; margin: 10px 0 5px 0 !important; font-weight: 800; color: var(--text-dark); }
+.message-content h3, .bubble h3 { font-size: 1.05em !important; margin: 8px 0 4px 0 !important; font-weight: 700; color: var(--text-dark); }
+.message-content p, .bubble p { margin-bottom: 10px !important; }
+
 /* Tablas y Listas Limpias */
 .message-content table {
     width: 100%;
@@ -164,4 +170,12 @@
     }
 
     .card-body { padding: 20px !important; font-size: 12px !important; line-height: 1.5 !important; }
+    .card-body h1 { font-size: 14px !important; }
+    .card-body h2 { font-size: 13px !important; }
+    .card-body h3 { font-size: 12px !important; }
 }
+
+/* Ajustes globales para modales del repositorio */
+.modal-body h1 { font-size: 1.2rem !important; margin-bottom: 10px !important; font-weight: 800; }
+.modal-body h2 { font-size: 1.1rem !important; margin-bottom: 8px !important; font-weight: 700; }
+.modal-body h3 { font-size: 1.0rem !important; margin-bottom: 6px !important; font-weight: 700; }
