@@ -142,6 +142,37 @@ ASSISTANTS = [
             "indícalo y ofrece ayuda para contactar a la dirección. Prohibido identificarte como DeepSeek o mencionar que eres una IA genérica."
         )
     },
+    {
+        'name': 'Asistente Representante Legal (Temuco)', 
+        'slug': 'representante-temuco', 
+        'profile_role': 'REPRESENTANTE', 
+        'establishment': 'TEMUCO',
+        'is_chat_enabled': True,
+        'image_name': 'asistente-representante.jpg', 
+        'description': 'Asistente legal y administrativo experto en normativa educacional.',
+        'use_cases': 'Contratación\nNormativa Educacional\nRecursos SEP/PIE\nGestión de Crisis',
+        'system_instruction': (
+            "Eres la representante legal y administradora superior del establecimiento educativo, "
+            "conoces la normativa internacional (derechos humanos y del niño), toda la normativa vigente sobre contratacion de personal "
+            "y especialmente lo relativo a 'normativa y legislacion en educacion', tu respuesta se enmarca siempre en la busqueda del "
+            "bienestar superior de los estudiantes, de los funcionarios y la optimizacion del uso de recursos materiales, muebles e inmubles, "
+            "humanos (tiempo y capital de formacion) y economicos para resolver las diversas situaciones emergentes de la comunidad educativa. "
+            "En ese contexto y con esas habilidades debes responder en formato de:\n\n"
+            "A.- BIENESTAR SUPERIOR DEL ESTUDIANTE Y LA COMUNIDAD EDUCATIVA\n"
+            "1.- contextualización del caso\n"
+            "2.- categorizacion de prioridad del caso\n"
+            "3.- normativa vigente a la que alude el caso\n"
+            "4.- elemento del MBDLE que facilitara el desarrollo positivo del caso\n\n"
+            "B.- RECURSOS Y PLAN A IMPLEMENTAR PARA RESOLVER EL CASO\n"
+            "1.- priorizacion de recursos SEP aplicando categoria y codigo de cuenta para respaldo de gasto segun manual de cuentas\n"
+            "2.- priorizacion de recursos PIE aplicando categoria y codigo de cuenta para respaldo de gasto segun manual de cuentas\n"
+            "3.- redes de apoyo externas\n\n"
+            "C.- ESCALAMIENTO DE EMERGENTE\n"
+            "1.- equipo interno dentro del establecimiento (Director, Inspector General, UTP, Coordinadora Convivencia educativa, Coordinadora PIE, coordinador Pastoral)\n\n"
+            "D.- CHECK LIST\n"
+            "Finaliza con un check list para asegurar un correcto monitoreo del proceso y su paso a paso."
+        )
+    },
 ]
 
 for data in ASSISTANTS:
@@ -155,33 +186,84 @@ for data in ASSISTANTS:
             setattr(assistant, key, value)
         assistant.save()
 
-# Procesamiento automático de PDFs para RAG (si el contexto está vacío)
-temuco_assistant = AIAssistant.objects.filter(slug='utp-temuco').first()
-if temuco_assistant and not temuco_assistant.context_text:
-    print("📚 Base de conocimientos vacía para Temuco. Iniciando procesamiento RAG...")
-    from ai_modules.utils import process_knowledge_base_file
-    
-    kb_path = os.path.join(os.path.dirname(__file__), 'ai_modules', 'knowledge_base')
-    if os.path.exists(kb_path):
-        pdfs = [f for f in os.listdir(kb_path) if f.endswith('.pdf')]
-        print(f"  -> Encontrados {len(pdfs)} documentos en {kb_path}")
+# ── 6. Procesamiento de Motor de Conocimiento (JSON RAG) ─────────────────────
+json_configs = [
+    ('utp-temuco', 'utp_temuco.json'),
+    ('representante-temuco', 'representante_temuco.json'),
+]
+
+for slug, json_file in json_configs:
+    assistant = AIAssistant.objects.filter(slug=slug).first()
+    if assistant and assistant.chunks.count() == 0:
+        print(f"📚 Base de datos de vectores vacía para {assistant.name}. Iniciando ingesta desde {json_file}...")
         
-        for pdf_name in pdfs:
-            pdf_path = os.path.join(kb_path, pdf_name)
-            try:
-                with open(pdf_path, 'rb') as f:
-                    # Envolviendo el archivo en un objeto compatible si es necesario
-                    # Pero process_knowledge_base_file espera un objeto similar a un archivo de Django (con .name)
-                    # Vamos a simularlo mínimamente
-                    setattr(f, 'name', pdf_name)
-                    process_knowledge_base_file(temuco_assistant, f)
-                print(f"  ✅ Procesado: {pdf_name}")
-            except Exception as e:
-                print(f"  ❌ Error procesando {pdf_name}: {e}")
+        json_path = os.path.join(settings.BASE_DIR, 'ai_modules', 'knowledge_base', json_file)
+        if not os.path.exists(json_path):
+            print(f"  ⚠️  Archivo {json_file} no encontrado en path: {json_path}")
+            continue
+
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Manejar diferentes estructuras de JSON (utp es lista, representante es dict con key 'chunks')
+            chunks_data = data.get('chunks', []) if isinstance(data, dict) else data
+
+        if not chunks_data:
+            print(f"  ⚠️  No se encontraron fragmentos en {json_file}")
+            continue
+
+        print(f"  -> Procesando {len(chunks_data)} fragmentos...")
+
+        import openai
+        import uuid
+        from ai_modules.models import AIKnowledgeChunk
         
-        print(f"✨ RAG inicializado. Contexto total: {len(temuco_assistant.context_text)} caracteres.")
-    else:
-        print(f"⚠️  Carpeta de conocimientos no encontrada en: {kb_path}")
+        api_key_val = getattr(settings, 'OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+        if not api_key_val:
+            print("  ❌ Error: OPENAI_API_KEY no encontrada.")
+            continue
+            
+        client = openai.OpenAI(api_key=api_key_val)
+        doc_counters = {}
+        chunks_batch = []
+        texts_batch = []
+        batch_size = 100 
+        session_id = uuid.uuid4().hex[:6]
+
+        for i, item in enumerate(chunks_data):
+            # Normalizar acceso a contenido entre versiones de JSON
+            text_content = item.get('text_content') or item.get('texto_contenido', '')
+            if not text_content: continue
+
+            # Normalizar metadatos
+            metadata = item.get('legal_metadata') or item.get('metadatos', {})
+            doc_name = metadata.get('source_file') or metadata.get('fuente_archivo', 'Desconocido')
+            
+            if doc_name not in doc_counters:
+                doc_counters[doc_name] = 0
+            
+            chunk = AIKnowledgeChunk(
+                assistant=assistant,
+                content=text_content,
+                metadata=json.dumps(metadata),
+                chunk_id=f"{slug[:4]}_{session_id}_{i}",
+                document_name=doc_name,
+                index=doc_counters[doc_name]
+            )
+            chunks_batch.append(chunk)
+            texts_batch.append(text_content)
+            doc_counters[doc_name] += 1
+
+            if len(texts_batch) == batch_size or i == len(chunks_data) - 1:
+                try:
+                    response = client.embeddings.create(input=texts_batch, model="text-embedding-3-small")
+                    for j, emb_data in enumerate(response.data):
+                        chunks_batch[j].embedding = json.dumps(emb_data.embedding)
+                    AIKnowledgeChunk.objects.bulk_create(chunks_batch)
+                except Exception as e:
+                    print(f"  ❌ Error en embeddings batch: {e}")
+                chunks_batch, texts_batch = [], []
+
+        print(f"  ✅ {assistant.name} vectorizado correctamente.")
 
 print("\n🚀 MEGA-SEED completado con éxito.")
 print("💡 Tip: Para probar, usa p.ej. 'utp.temuco' / 'Admin1234!'")
