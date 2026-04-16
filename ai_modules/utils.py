@@ -63,97 +63,117 @@ def get_openai_embedding(text):
 
 def get_relevant_chunks(assistant, query, top_n=12):
     """
-    Busca fragmentos relevantes usando similitud coseno en embeddings pre-calculados.
-    Incluye lógica de boosting para documentos prioritarios.
+    Busca fragmentos relevantes usando similitud coseno vectorizada con numpy.
+    Optimizado para baja RAM (4GB) y alto volumen de fragmentos (8,000+).
     """
     from .models import AIKnowledgeChunk
     import json
+    import numpy as np
 
     # 1. Convertir la consulta en embedding
     query_embedding = get_openai_embedding(query)
     
-    debug_info = []
-    
     if not query_embedding:
-        debug_info.append("Fallo al generar query_embedding (OPENAI API KEY incorrecta o limite de cuota al consultar).")
+        return "!!! MODO DEPURACIÓN ACTIVADO !!!\n\nDile al usuario: Fallo al generar query_embedding (OPENAI API KEY incorrecta o limite de cuota)."
 
-    chunks = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True)
-    chunks_count = chunks.count()
+    # 2. Obtener datos de la BD de forma eficiente
+    # Nota: .values_list es mucho más ligero que instanciar objetos Django models
+    chunk_data = AIKnowledgeChunk.objects.filter(
+        assistant=assistant
+    ).exclude(
+        embedding__isnull=True
+    ).values_list('id', 'embedding', 'document_name', 'index')
+
+    if not chunk_data:
+        return "!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: La base de datos tiene 0 chunks con embeddings."
+
+    # 3. Preparar vectores para cálculo masivo
+    ids, embeddings, doc_names, indices = zip(*chunk_data)
     
-    if chunks_count == 0:
-        debug_info.append("La base de datos tiene 0 chunks con embeddings. setup_utp_temuco.py falló al vectorizar.")
+    # Convertir a matriz numpy de forma eficiente
+    # Si los embeddings ya son listas (JSONField), no necesitamos json.loads
+    try:
+        if isinstance(embeddings[0], str):
+            # Formato antiguo/corrupto: string de JSON
+            matrix = np.array([json.loads(e) for e in embeddings], dtype=np.float32)
+        else:
+            # Formato correcto: lista de floats
+            matrix = np.array(embeddings, dtype=np.float32)
+    except Exception as e:
+        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\nError cargando matriz: {e}"
 
-    if debug_info:
-        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\n\nDile al usuario textualmente estos errores:\n{' - '.join(debug_info)}"
+    # Vector de consulta
+    q_vec = np.array(query_embedding, dtype=np.float32)
 
-    # 2. Lógica de Priorización (Boosting)
-    priority_files = [
-        "2.-Ley-21809_01-ABR-2026.pdf",
-        "3_-_Manual-de-cuentas-2026_baja.pdf"
-    ]
-    # Palabras clave que disparan el boost - Ampliadas para cubrir códigos y rendición
-    priority_keywords = [
-        "ley 21809", "manual de cuentas", "codigo", "item", "gasto", "rendicion", 
-        "sep", "pie", "recurso", "gasto sep", "gasto pie", "rendición de cuentas",
-        "asignacion", "financiamiento", "presupuesto"
-    ]
+    # 4. Cálculo de Similitud Coseno Vectorizada
+    # Si los embeddings de OpenAI están normalizados (que lo están), bastaría con el producto punto.
+    dot_product = np.dot(matrix, q_vec)
+    
+    # Para mayor seguridad si no estuvieran normalizados, pero el dot product es la base
+    # matrix_norms = np.linalg.norm(matrix, axis=1)
+    # query_norm = np.linalg.norm(q_vec)
+    # similarities = dot_product / (matrix_norms * query_norm + 1e-9)
+    
+    # Optimizamos asumiendo normalización (estándar de OpenAI)
+    similarities = dot_product
+
+    # 5. Lógica de Boosting (Prioridad Normativa)
+    # Usamos una búsqueda insensible a guiones/espacios para mayor robustez
+    priority_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
+    account_keywords = ["codigo", "cuenta", "item", "clase", "sep", "pie", "801", "802", "803", "804"]
+    
     query_lower = query.lower()
-    is_priority_query = any(k in query_lower for k in priority_keywords) or assistant.slug == "representante-temuco"
+    is_account_query = any(k in query_lower for k in account_keywords)
+    
+    # Crear máscara para archivos prioritarios
+    priority_mask = np.zeros(len(doc_names), dtype=bool)
+    for pattern in priority_patterns:
+        priority_mask |= np.array([pattern in str(d) for d in doc_names])
 
-    scored_chunks = []
-    malformed_embeddings = 0
-    for chunk in chunks:
-        if not chunk.embedding: continue
-        
-        emb = chunk.embedding
-        if isinstance(emb, str):
-            try:
-                emb = json.loads(emb)
-            except:
-                malformed_embeddings += 1
-                continue
-                
-        # Similitud base
-        sim = cosine_similarity(query_embedding, emb)
-        
-        # Aplicar Boost si corresponde (Agresivo para Manual de Cuentas y Ley 21809)
-        if is_priority_query and chunk.document_name in priority_files:
-            sim *= 10.0 # Decuplicar relevancia para documentos críticos y asegurar que floten al top
-            
-        if sim > 0.12: # Threshold ligeramente más estricto
-            scored_chunks.append({
-                'score': sim,
-                'chunk': chunk
+    # Aplicar Boost Base (10x para documentos críticos)
+    similarities[priority_mask] *= 10.0
+
+    # Boost de Precisión Quirúrgica: Si la consulta es sobre cuentas, 
+    # darle un extra de 5x a los fragmentos del manual que ya son prioritarios
+    if is_account_query:
+        similarities[priority_mask] *= 5.0
+
+    # 6. Selección de Top N
+    # Obtenemos los índices de los mayores scores
+    top_indices = np.argsort(similarities)[::-1][:top_n]
+    
+    scored_results = []
+    for idx in top_indices:
+        if similarities[idx] > 0.12: # Threshold
+            scored_results.append({
+                'id': ids[idx],
+                'doc': doc_names[idx],
+                'index': indices[idx],
+                'score': similarities[idx]
             })
 
-    if not scored_chunks:
-        return f"!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: No se encontraron chunks con score > 0.1. Chunks evaluados: {chunks_count}. Chunks malformados: {malformed_embeddings}. Longitud query: {len(query_embedding)}."
+    if not scored_results:
+        return "!!! MODO DEPURACIÓN ACTIVADO !!!\nDile al usuario: No se encontraron fragmentos con relevancia suficiente."
 
-    # 3. Ordenar por score
-    scored_chunks.sort(key=lambda x: x['score'], reverse=True)
-    top_items = scored_chunks[:top_n]
-    
-    # 4. Expansión por vecindad
-    expanded_ids = set()
+    # 7. Expansión por vecindad y Re-obtención de Contenido
+    # Para ahorrar RAM no pedimos el 'content' masivamente arriba, lo pedimos ahora solo para el top
     final_chunks = []
+    processed_ids = set()
 
-    for item in top_items:
-        c = item['chunk']
-        doc = c.document_name
-        idx = c.index
-
+    for item in scored_results:
+        # Traer el chunk original y sus vecinos inmediatos para contexto
         neighbors = AIKnowledgeChunk.objects.filter(
             assistant=assistant,
-            document_name=doc,
-            index__in=[idx - 1, idx, idx + 1]
+            document_name=item['doc'],
+            index__in=[item['index'] - 1, item['index'], item['index'] + 1]
         ).order_by('index')
 
         for n in neighbors:
-            if n.chunk_id not in expanded_ids:
-                expanded_ids.add(n.chunk_id)
+            if n.id not in processed_ids:
+                processed_ids.add(n.id)
                 final_chunks.append(n)
 
-    # Ordenar por documento e índice
+    # Orden final para el prompt
     final_chunks.sort(key=lambda c: (c.document_name or '', c.index or 0))
 
     return "\n\n---\n\n".join(

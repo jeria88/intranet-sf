@@ -449,14 +449,21 @@
                 body: new URLSearchParams({ 'message': text })
             });
             const d = await r.json();
-            document.getElementById(tid).remove();
+            if(document.getElementById(tid)) document.getElementById(tid).remove();
+            
             if (d.status === 'success') {
                 appendMsg('assistant', d.response);
                 updateReport(d.response);
                 autoSaveCase(text, d.response);
+            } else {
+                appendMsg('assistant', "⚠️ Error del servidor: " + (d.response || "No se pudo procesar la respuesta."));
             }
             scrollToBottom();
-        } catch (e) { if(document.getElementById(tid)) document.getElementById(tid).remove(); }
+        } catch (e) { 
+            if(document.getElementById(tid)) document.getElementById(tid).remove();
+            appendMsg('assistant', "⚠️ Error de conexión: La consulta está tomando demasiado tiempo o el servidor no responde. Por favor, reintente en unos momentos.");
+            scrollToBottom();
+        }
     }
 
     async function autoSaveCase(userMsg, aiMsg) {

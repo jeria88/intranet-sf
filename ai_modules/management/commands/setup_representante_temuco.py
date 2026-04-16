@@ -107,77 +107,82 @@ class Command(BaseCommand):
             
         client = openai.OpenAI(api_key=api_key_val)
 
-        self.stdout.write('Iniciando procesamiento por lotes (batch_size=50)...')
+        self.stdout.write('Iniciando procesamiento por lotes...')
 
+        # Contador de documentos para generar IDs secuenciales
         doc_counters = {}
-        chunks_batch = []
-        texts_batch = []
-        batch_size = 50 
         
+        # Procesar de forma que no mantengamos referencias innecesarias
         processed_count = 0
         skipped_count = 0
+        batch_size = 20 # Reducido para mayor estabilidad en 4GB RAM
 
-        for item in chunks_data:
-            text_content = item.get('text_content', '')
-            if not text_content:
-                continue
-
-            metadata = item.get('legal_metadata', {})
-            doc_name = metadata.get('source_file', 'representante_temuco.json')
+        def get_batch():
+            chunks_batch = []
+            texts_batch = []
+            nonlocal processed_count, skipped_count
             
-            if doc_name not in doc_counters:
-                doc_counters[doc_name] = 0
+            for item in chunks_data:
+                text_content = item.get('text_content', '')
+                if not text_content: continue
 
-            unique_chunk_id = f"rep_tem_{doc_name}_{doc_counters[doc_name]}".replace(" ", "_").replace(".", "_")
-            doc_counters[doc_name] += 1
+                metadata = item.get('legal_metadata', {})
+                doc_name = metadata.get('source_file', 'unknown')
+                
+                if doc_name not in doc_counters:
+                    doc_counters[doc_name] = 0
+                
+                # Generar ID único basado en el documento y el índice local
+                unique_chunk_id = f"rep_tem_{doc_name}_{doc_counters[doc_name]}".replace(" ", "_").replace(".", "_")
+                doc_counters[doc_name] += 1
 
-            if unique_chunk_id in existing_ids:
-                skipped_count += 1
+                if unique_chunk_id in existing_ids:
+                    skipped_count += 1
+                    continue
+
+                chunks_batch.append(AIKnowledgeChunk(
+                    assistant=assistant,
+                    chunk_id=unique_chunk_id,
+                    content=text_content,
+                    metadata=metadata,
+                    document_name=doc_name,
+                    index=doc_counters[doc_name] - 1
+                ))
+                texts_batch.append(text_content)
+
+                if len(texts_batch) >= batch_size:
+                    yield chunks_batch, texts_batch
+                    chunks_batch = []
+                    texts_batch = []
+
+            if texts_batch:
+                yield chunks_batch, texts_batch
+
+        # Ejecutar procesamiento
+        for c_batch, t_batch in get_batch():
+            try:
+                self.process_batch(client, c_batch, t_batch)
+                processed_count += len(c_batch)
+                self.stdout.write(f'PROGRESO: {processed_count + skipped_count}/{total_chunks} fragmentos analizados...')
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Fallo crítico en lote: {e}'))
+                # No salimos, intentamos el siguiente lote para no perder todo el progreso
                 continue
-
-            # Crear el objeto (pero no guardar embedding todavía)
-            chunk = AIKnowledgeChunk(
-                assistant=assistant,
-                chunk_id=unique_chunk_id,
-                content=text_content,
-                metadata=json.dumps(metadata),
-                document_name=doc_name,
-                index=doc_counters[doc_name] - 1
-            )
-            
-            chunks_batch.append(chunk)
-            texts_batch.append(text_content)
-
-            # Procesar en lotes
-            if len(texts_batch) == batch_size:
-                self.process_batch(client, chunks_batch, texts_batch)
-                processed_count += len(chunks_batch)
-                chunks_batch = []
-                texts_batch = []
-                self.stdout.write(f'Progresando: {processed_count + skipped_count}/{total_chunks}...')
-
-        # Lote final
-        if texts_batch:
-            self.process_batch(client, chunks_batch, texts_batch)
-            processed_count += len(chunks_batch)
 
         self.stdout.write(self.style.SUCCESS(
-            f'Finalizado: {processed_count} nuevos fragmentos procesados, {skipped_count} saltados (ya existían).'
+            f'LOGRO: {processed_count} nuevos fragmentos inyectados, {skipped_count} omitidos.'
         ))
 
     def process_batch(self, client, chunks_batch, texts_batch):
-        try:
-            response = client.embeddings.create(
-                input=texts_batch,
-                model="text-embedding-3-small"
-            )
-            for j, emb_data in enumerate(response.data):
-                chunks_batch[j].embedding = json.dumps(emb_data.embedding)
-            
-            # Guardar en lote para eficiencia
-            AIKnowledgeChunk.objects.bulk_create(chunks_batch)
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Error en lote: {e}'))
-            # En caso de error, intentar guardar uno a uno o re-intentar si es transitorio
-            # Pero para baja RAM, mejor fallar y dejar que el modo resumable lo retome.
-            raise e
+        """Genera embeddings y guarda en la base de datos."""
+        response = client.embeddings.create(
+            input=texts_batch,
+            model="text-embedding-3-small"
+        )
+        for j, emb_data in enumerate(response.data):
+            chunks_batch[j].embedding = emb_data.embedding
+        
+        AIKnowledgeChunk.objects.bulk_create(chunks_batch)
+        # Limpieza explícita de referencias
+        del chunks_batch
+        del texts_batch

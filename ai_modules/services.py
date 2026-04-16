@@ -14,20 +14,23 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
         return "Error: DEEPSEEK_API_KEY no configurado."
 
     # RAG: Recuperar fragmentos relevantes de la BD
-    relevant_context = get_relevant_chunks(assistant, user_query)
+    try:
+        relevant_context = get_relevant_chunks(assistant, user_query)
+    except Exception as e:
+        print(f"Error en RAG: {e}")
+        relevant_context = "Error al recuperar contexto legal. Procede con base en conocimientos generales pero advierte al usuario."
 
     # Construir el prompt del sistema con identidad + contexto + formato de 6 puntos
     system_instruction = assistant.system_instruction or "Eres un asistente servicial."
     full_system_prompt = (
         f"{system_instruction}\n\n"
-        "### INSTRUCCIONES CRÍTICAS:\n"
-        "1. El 'CONTEXTO DE DOCUMENTOS' contiene fragmentos de los reglamentos REALES del colegio.\n"
-        "2. Utiliza estos fragmentos como base legal para fundamentar tu análisis.\n"
-        "3. Cita el artículo, sección o documento específico cuando fundamentes cada punto.\n"
-        "4. Si un punto no tiene sustento directo en el contexto, indica qué normativa general aplicaría.\n"
-        "5. Nunca menciones que eres DeepSeek ni que eres un modelo de IA.\n"
-        f"6. Mantén siempre tu identidad como {assistant.name}.\n\n"
-        "### CONTEXTO DE DOCUMENTOS RELEVANTES (Fuente de Verdad):\n"
+        "### INSTRUCCIONES CRÍTICAS DE SEGURIDAD Y PRECISIÓN:\n"
+        "1. El 'CONTEXTO DE DOCUMENTOS' contiene fragmentos de la Ley 21809 y el Manual de Cuentas 2026.\n"
+        "2. CÓDIGOS DE CUENTA: Si el usuario pregunta por códigos, BUSCA el número exacto (ej. 801, 802) en el contexto. Si no hay una coincidencia exacta, NO inventes el código.\n"
+        "3. Cita siempre el documento y la sección cuando fundamentes tu respuesta.\n"
+        "4. Si el contexto RAG contiene un error de depuración, ignóralo y responde usando tu conocimiento base, pero menciona que hay una incidencia técnica en la base de conocimientos.\n"
+        f"5. Identidad: {assistant.name}.\n\n"
+        "### CONTEXTO DE DOCUMENTOS RELEVANTES:\n"
         f"{relevant_context}\n"
         "--- FIN DEL CONTEXTO ---"
     )
@@ -61,4 +64,4 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
         return data['choices'][0]['message']['content']
     except Exception as e:
         print(f"Error calling DeepSeek: {e}")
-        return f"Lo siento, hubo un error al procesar tu consulta con la IA. ({str(e)})"
+        return f"Lo siento, hubo un error al procesar tu consulta (DeepSeek API Error). Por favor, intenta de nuevo en unos momentos o reporta este error: {str(e)}"
