@@ -172,7 +172,7 @@
         <div class="chat-header">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
-                <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para UTP</h2>
+                <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para {{ assistant.name }}</h2>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
@@ -326,19 +326,52 @@
 
     function extractSections(text) {
         if (!text) return null;
-        const regexA = /A\.\s+SUSTENTO/i;
-        const regexB = /B\.\s+RUTA/i;
-        const regexC = /C\.\s+CHECKLIST/i;
 
-        if (text.match(regexA) || text.match(regexB) || text.match(regexC)) {
-            const parts = text.split(regexB);
-            const partA = (parts[0] || '').replace(regexA, '').trim();
-            const remainBC = parts[1] || '';
-            const partsBC = remainBC.split(regexC);
-            const partB = (partsBC[0] || '').trim();
-            const partC = (partsBC[1] || '').trim();
+        // --- Patrones para UTP ---
+        const regexA_utp = /A\.\s+SUSTENTO/i;
+        const regexB_utp = /B\.\s+RUTA/i;
+        const regexC_utp = /C\.\s+CHECKLIST/i;
+
+        // --- Patrones para REPRESENTANTE ---
+        const regexA_rep = /A\.-?\s+BIENESTAR/i;
+        const regexB_rep = /B\.-?\s+RECURSOS/i;
+        const regexC_rep = /C\.-?\s+ESCALAMIENTO/i;
+        const regexD_rep = /D\.-?\s+CHECK\s*LIST/i;
+
+        // 1. Intentar match con Estructura Representante (A, B, C, D)
+        if (text.match(regexA_rep) && text.match(regexB_rep)) {
+            const partsB = text.split(regexB_rep);
+            const partA = (partsB[0] || '').replace(regexA_rep, '').trim();
+            
+            const remainBCD = partsB[1] || '';
+            const partsC = remainBCD.split(regexC_rep);
+            const partB = (partsC[0] || '').trim();
+            
+            const remainD = partsC[1] || '';
+            const partsD = remainD.split(regexD_rep);
+            const partC_esc = (partsD[0] || '').trim();
+            const partD_chk = (partsD[1] || '').trim();
+
+            return { 
+                a: partA, 
+                b: partB, 
+                c: (partC_esc ? "ESCALAMIENTO:\n" + partC_esc + "\n\n" : "") + "CHECKLIST:\n" + partD_chk 
+            };
+        }
+
+        // 2. Intentar match con Estructura UTP (A, B, C)
+        if (text.match(regexA_utp) && text.match(regexB_utp)) {
+            const partsB = text.split(regexB_utp);
+            const partA = (partsB[0] || '').replace(regexA_utp, '').trim();
+            
+            const remainBC = partsB[1] || '';
+            const partsC = remainBC.split(regexC_utp);
+            const partB = (partsC[0] || '').trim();
+            const partC = (partsC[1] || '').trim();
+
             return { a: partA, b: partB, c: partC };
         }
+
         return null;
     }
 

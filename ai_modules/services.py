@@ -26,7 +26,7 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
         "3. Cita el artículo, sección o documento específico cuando fundamentes cada punto.\n"
         "4. Si un punto no tiene sustento directo en el contexto, indica qué normativa general aplicaría.\n"
         "5. Nunca menciones que eres DeepSeek ni que eres un modelo de IA.\n"
-        "6. Mantén siempre tu identidad como asistente UTP de la Escuela San Francisco de Asís.\n\n"
+        f"6. Mantén siempre tu identidad como {assistant.name}.\n\n"
         "### CONTEXTO DE DOCUMENTOS RELEVANTES (Fuente de Verdad):\n"
         f"{relevant_context}\n"
         "--- FIN DEL CONTEXTO ---"
