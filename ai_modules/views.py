@@ -17,13 +17,19 @@ def ai_list(request):
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
-    # 2. UTP Temuco va directo al chat de DeepSeek
+    # 2. UTP Temuco va directo al chat de DeepSeek (Focus Mode)
     if request.user.role == 'UTP' and request.user.establishment == 'TEMUCO':
         assistant = AIAssistant.objects.filter(slug='utp-temuco', is_active=True).first()
         if assistant:
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
-    # 3. Resto de perfiles van a la vista de NotebookLM
+    # 3. Representante Temuco va directo al chat de DeepSeek (Focus Mode)
+    if request.user.role == 'REPRESENTANTE' and request.user.establishment == 'TEMUCO':
+        assistant = AIAssistant.objects.filter(slug='representante.temuco', is_active=True).first()
+        if assistant:
+            return redirect('ai_modules:ai_chat', slug=assistant.slug)
+
+    # 4. Resto de perfiles van a la vista de NotebookLM
     return redirect('ai_modules:notebooklm_instruction')
 
 

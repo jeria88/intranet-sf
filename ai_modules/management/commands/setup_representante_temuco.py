@@ -16,10 +16,14 @@ class Command(BaseCommand):
             return
 
         # 1. Crear o actualizar el asistente
+        # Aseguramos que tenga el mismo perfil que UTP Temuco para habilitar el chat
         assistant, created = AIAssistant.objects.update_or_create(
             slug='representante.temuco',
             defaults={
                 'name': 'Asistente Representante Legal (Temuco)',
+                'profile_role': 'REPRESENTANTE',
+                'establishment': 'TEMUCO',
+                'is_active': True,
                 'system_instruction': (
                     "Eres la representante legal y administradora superior del establecimiento educativo, "
                     "conoces la normativa internacional (derechos humanos y del niño), toda la normativa vigente sobre contratacion de personal "
@@ -44,41 +48,35 @@ class Command(BaseCommand):
             }
         )
 
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'Asistente {assistant.slug} creado'))
-        else:
-            self.stdout.write(self.style.SUCCESS(f'Asistente {assistant.slug} actualizado'))
+        self.stdout.write(self.style.SUCCESS(f'Asistente {assistant.slug} configurado correctamente con rol REPRESENTANTE y EST: TEMUCO'))
 
         # 2. Cargar chunks del JSON
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             chunks = data.get('chunks', [])
 
-        self.stdout.write(self.style.NOTICE(f'Procesando {len(chunks)} fragmentos...'))
+        total = len(chunks)
+        self.stdout.write(self.style.NOTICE(f'Procesando {total} fragmentos de conocimiento...'))
         
-        # Limpiar chunks previos para este asistente
+        # Opcional: Limpiar chunks previos para evitar duplicados en re-ejecución
         AIKnowledgeChunk.objects.filter(assistant=assistant).delete()
 
         count = 0
-        limit = 300 # Límite para prueba inicial
+        limit = 300 # Límite para prueba inicial (puedes subirlo si deseas)
         for index, item in enumerate(chunks[:limit]): 
             text = item.get('text_content', '')
-            if not text:
-                continue
+            if not text: continue
                 
             embedding = get_openai_embedding(text)
             metadata = item.get('legal_metadata', {})
             source_file = metadata.get('source_file', 'representante_temuco.json')
-            
-            # Generar chunk_id único basado en UUID para evitar IntegrityError
-            unique_chunk_id = f"rep_tem_{uuid.uuid4().hex[:8]}_{index}"
             
             AIKnowledgeChunk.objects.create(
                 assistant=assistant,
                 content=text,
                 embedding=json.dumps(embedding) if embedding else None,
                 metadata=json.dumps(metadata),
-                chunk_id=unique_chunk_id,
+                chunk_id=f"rep_tem_{uuid.uuid4().hex[:8]}_{index}",
                 document_name=source_file,
                 index=index
             )
@@ -86,5 +84,5 @@ class Command(BaseCommand):
             if count % 50 == 0:
                 self.stdout.write(f'Procesados {count}/{limit}...')
 
-        self.stdout.write(self.style.SUCCESS(f'Carga completada: {count} fragmentos vectorizados para {assistant.slug}'))
+        self.stdout.write(self.style.SUCCESS(f'Motor de conocimiento activado: {count} fragmentos cargados.'))
 
