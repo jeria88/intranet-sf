@@ -3,6 +3,8 @@ import django
 import random
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
+import json
 
 # Configurar entorno de Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
