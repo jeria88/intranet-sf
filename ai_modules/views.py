@@ -29,6 +29,12 @@ def ai_list(request):
         if assistant:
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
+    # 4. Director Temuco va directo al chat de DeepSeek (Focus Mode)
+    if request.user.role == 'DIRECTOR' and request.user.establishment == 'TEMUCO':
+        assistant = AIAssistant.objects.filter(slug='director-temuco', is_active=True).first()
+        if assistant:
+            return redirect('ai_modules:ai_chat', slug=assistant.slug)
+
     # 4. Resto de perfiles van a la vista de NotebookLM
     return redirect('ai_modules:notebooklm_instruction')
 
@@ -177,9 +183,8 @@ def ai_chat(request, slug):
     """Vista de chat tipo ChatGPT para asistentes internos."""
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True, is_chat_enabled=True)
     
-    # Verificación de seguridad básica (UTP y Admin)
-    # Si el usuario es de Temuco y el asistente es de Temuco (UTP o REPRESENTANTE), o es Admin
-    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role in ['UTP', 'REPRESENTANTE'])
+    # Verificación de seguridad básica (UTP, REPRESENTANTE, DIRECTOR en Temuco y Admin)
+    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role in ['UTP', 'REPRESENTANTE', 'DIRECTOR'])
     if not request.user.is_staff and not is_temuco_user:
         return render(request, 'ai_modules/no_access.html')
 
