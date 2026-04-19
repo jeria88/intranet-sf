@@ -92,6 +92,19 @@ DATABASES = {
     )
 }
 
+# ── Base de Datos de Conocimiento (Supabase / Vector DB) ───────────────────
+KNOWLEDGE_BASE_URL = os.environ.get('KNOWLEDGE_BASE_URL')
+if KNOWLEDGE_BASE_URL:
+    DATABASES['knowledge_base'] = dj_database_url.config(
+        default=KNOWLEDGE_BASE_URL,
+        conn_max_age=600
+    )
+else:
+    # Fallback a la base por defecto si no hay URL dedicada
+    DATABASES['knowledge_base'] = DATABASES['default']
+
+DATABASE_ROUTERS = ['ai_modules.db_routers.KnowledgeBaseRouter']
+
 # ── Validación de contraseñas ──────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

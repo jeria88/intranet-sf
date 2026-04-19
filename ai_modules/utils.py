@@ -112,7 +112,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
                 matrix = np.load(matrix_path, mmap_mode='r')
                 
                 # Pre-calcular el priority_mask una sola vez para ahorrar CPU
-                p_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
+                p_patterns = ["2.-Ley-21809", "Manual-de-cuentas-2026"]
                 p_mask = np.zeros(len(doc_names), dtype=bool)
                 for pattern in p_patterns:
                     p_mask |= np.array([pattern in str(d) for d in doc_names])
@@ -138,7 +138,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
         import gc
         print(f"Reconstruyendo caché para {assistant.slug} (Iterativo para bajo RAM)...")
         
-        queryset = AIKnowledgeChunk.objects.filter(
+        queryset = AIKnowledgeChunk.objects.using('knowledge_base').filter(
             assistant=assistant
         ).exclude(
             embedding__isnull=True
@@ -184,7 +184,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
             # Recargar ahora con mmap para liberar la RAM usada en la reconstrucción
             matrix = np.load(matrix_path, mmap_mode='r')
             
-            p_patterns = ["2.-Ley-21809", "Manual-de-cuentas"]
+            p_patterns = ["2.-Ley-21809", "Manual-de-cuentas-2026"]
             priority_mask = np.zeros(len(doc_names), dtype=bool)
             for pattern in p_patterns:
                 priority_mask |= np.array([pattern in str(d) for d in doc_names])
@@ -205,21 +205,35 @@ def get_relevant_chunks(assistant, query, top_n=10):
     q_vec = np.array(query_embedding, dtype=np.float32)
     similarities = np.dot(matrix, q_vec)
 
-    # 5. Boosting Normativo (Optimizado con máscara pre-calculada)
+    # 5. Boosting Normativo EXTREMO (Optimizado con máscara pre-calculada)
     query_lower = query.lower()
     account_keywords = ["codigo", "cuenta", "item", "clase", "sep", "pie", "801", "802", "803", "804"]
     is_account_query = any(k in query_lower for k in account_keywords)
     
-    similarities[priority_mask] *= 10.0
+    # Priorización agresiva para asegurar que la Ley y el Manual siempre estén arriba
+    similarities[priority_mask] *= 500.0  # Incrementado de 100 a 500
     if is_account_query:
-        similarities[priority_mask] *= 5.0
+        similarities[priority_mask] *= 10.0 # Incrementado de 5 a 10
 
-    # 6. Selección de Top N
-    top_indices = np.argsort(similarities)[::-1][:top_n]
+    # 6. Selección por "Cubos" (Garantiza presencia de normativa oficial)
+    # Cubo A: Fragmentos de Ley/Manual (Prioridad Legal)
+    sacred_idxs = np.where(priority_mask)[0]
+    sacred_top_n = min(len(sacred_idxs), 7)
+    sacred_top = sacred_idxs[np.argsort(similarities[sacred_idxs])[::-1][:sacred_top_n]]
+    
+    # Cubo B: Resto de documentos (Contexto Institucional)
+    other_idxs = np.where(~priority_mask)[0]
+    other_top_n = min(len(other_idxs), top_n - len(sacred_top))
+    other_top = other_idxs[np.argsort(similarities[other_idxs])[::-1][:other_top_n]]
+    
+    # Combinar manteniendo el orden de relevancia
+    top_indices = np.concatenate([sacred_top, other_top])
     
     scored_results = []
     for idx in top_indices:
-        if similarities[idx] > 0.05: # Threshold reducido para mayor flexibilidad
+        # Umbral dinámico: más restrictivo para evitar alucinaciones por ruido (Ajedrez galáctico ~0.25)
+        threshold = 0.25 if priority_mask[idx] else 0.35
+        if similarities[idx] > threshold:
             scored_results.append({
                 'id': ids[idx],
                 'doc': doc_names[idx],
@@ -237,7 +251,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
     
     # Traer todos los fragmentos vecinos de una vez
     relevant_docs = set(item['doc'] for item in scored_results)
-    neighbors = AIKnowledgeChunk.objects.filter(
+    neighbors = AIKnowledgeChunk.objects.using('knowledge_base').filter(
         assistant=assistant,
         document_name__in=relevant_docs,
         index__in=needed_indices
