@@ -90,7 +90,29 @@ def get_relevant_chunks(assistant, query, top_n=10):
 
     # 2. Intentar cargar desde caché (Memoria RAM persistente en el proceso)
     cached = _VECTOR_RESOURCES.get(assistant.slug)
-    db_count_trigger = AIKnowledgeChunk.objects.filter(assistant=assistant).exclude(embedding__isnull=True).count()
+    
+    # Si es un asistente específico (ej. utp-temuco), consultamos la base global filtrada
+    is_specific = assistant.slug != 'global-knowledge'
+    
+    # Filtro base para la base de datos
+    from django.db.models import Q
+    
+    # Lógica de filtros jerárquicos según INSTRUCCIONES_IA_RAG.md
+    if is_specific:
+        # Extraer rol y establecimiento del slug (asumimos formato: rol-establecimiento)
+        # O mejor aún, usamos los campos del asistente si están disponibles
+        rol_obj = assistant.slug.split('-')[0] # ej: 'utp' o 'representante'
+        est_obj = assistant.slug.split('-')[1] if '-' in assistant.slug else 'temuco'
+        
+        # El filtro recupera: Nacional + Institucional (del establecimiento) + Rol (del establecimiento)
+        filter_q = Q(metadata__nivel__in=['nacional', 'congregacional']) | \
+                   (Q(metadata__establecimiento=est_obj) & Q(metadata__nivel='institucional')) | \
+                   (Q(metadata__establecimiento=est_obj) & Q(metadata__rol=rol_obj))
+    else:
+        filter_q = Q() # Sin filtro para el global
+
+    # Conteo para trigger de caché
+    db_count_trigger = AIKnowledgeChunk.objects.using('knowledge_base').filter(filter_q).exclude(embedding__isnull=True).count()
 
     if cached and cached['meta']['count'] == db_count_trigger:
         ids = cached['ids']
@@ -136,10 +158,10 @@ def get_relevant_chunks(assistant, query, top_n=10):
     # 3. Si no hay caché o está desactualizado, reconstruir desde BD
     if not cache_ready:
         import gc
-        print(f"Reconstruyendo caché para {assistant.slug} (Iterativo para bajo RAM)...")
+        print(f"Reconstruyendo caché JERÁRQUICO para {assistant.slug}...")
         
         queryset = AIKnowledgeChunk.objects.using('knowledge_base').filter(
-            assistant=assistant
+            filter_q
         ).exclude(
             embedding__isnull=True
         ).only('id', 'embedding', 'document_name', 'index')
@@ -252,7 +274,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
     # Traer todos los fragmentos vecinos de una vez
     relevant_docs = set(item['doc'] for item in scored_results)
     neighbors = AIKnowledgeChunk.objects.using('knowledge_base').filter(
-        assistant=assistant,
+        filter_q,
         document_name__in=relevant_docs,
         index__in=needed_indices
     ).order_by('document_name', 'index')
