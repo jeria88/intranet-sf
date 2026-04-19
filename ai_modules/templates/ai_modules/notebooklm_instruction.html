@@ -105,8 +105,8 @@
     <div class="notebook-header">
         {% if assistant %}
             <img src="{% static 'img/' %}{{ assistant.image_name }}" alt="{{ assistant.name }}">
-            <h1>Instructivo: Asistente {{ assistant.name }}</h1>
-            <p>Tu asistente ha sido configurado en la plataforma **NotebookLM** de Google para procesamiento masivo de documentos.</p>
+            <h1>{{ assistant.name }}</h1>
+            <p>Este asistente utiliza la biblioteca de documentos oficiales de tu establecimiento.</p>
         {% else %}
             <div style="font-size: 60px; margin-bottom: 20px;">🤖</div>
             <h1>Asistente IA no configurado</h1>
