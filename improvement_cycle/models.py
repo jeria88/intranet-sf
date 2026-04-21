@@ -38,6 +38,17 @@ class ImprovementGoal(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # --- Nuevos campos para automatización ---
+    strategic_objectives = models.TextField(blank=True, verbose_name='Objetivos Estratégicos')
+    is_meeting_cycle = models.BooleanField(default=False, verbose_name='Es ciclo de reunión')
+    associated_booking = models.ForeignKey(
+        'meetings.MeetingBooking', on_delete=models.SET_NULL, null=True, blank=True, related_name='improvement_cycles'
+    )
+    process_route = models.JSONField(default=list, blank=True, verbose_name='Ruta de Procesos (IA)')
+    indicators = models.JSONField(default=list, blank=True, verbose_name='Indicadores de Logro (IA)')
+    # ----------------------------------------
+
+
     class Meta:
         ordering = ['deadline', 'establishment']
         verbose_name = 'Meta de Mejora'

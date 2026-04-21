@@ -78,6 +78,60 @@
 </div>
 {% endif %}
 
+<!-- Procesamiento IA -->
+<div class="section-card" style="border-left: 4px solid #1e73be; margin-bottom: 24px;">
+    <h4 style="color: #1e73be;">🤖 Procesamiento de Reunión (IA)</h4>
+    
+    {% if booking.processing_status == 'procesando' %}
+        <div style="text-align: center; padding: 30px;">
+            <div style="font-size: 24px; margin-bottom: 15px;">⌛</div>
+            <h5 style="margin: 0 0 8px; color: #222;">Procesando grabación...</h5>
+            <p style="font-size: 13px; color: #575760; margin: 0;">La IA está transcribiendo y redactando el acta. Esto puede tomar unos minutos dependiendo de la duración.</p>
+        </div>
+    {% elif booking.processing_status == 'completado' %}
+        <div style="margin-bottom: 24px;">
+            <h5 style="font-size: 14px; color: #1e73be; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📄 Acta de la Reunión</h5>
+            <div style="font-size: 14px; color: #222; line-height: 1.7; white-space: pre-wrap; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eef0f2;">{{ booking.acta }}</div>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+            <h5 style="font-size: 14px; color: #d97706; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📍 Acuerdos Detectados</h5>
+            <div style="font-size: 14px; color: #92400e; line-height: 1.7; white-space: pre-wrap; background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fef3c7;">{{ booking.acuerdos_text }}</div>
+        </div>
+
+        <details style="background: #f1f5f9; border-radius: 8px; padding: 10px;">
+            <summary style="font-size: 13px; color: #475569; cursor: pointer; font-weight: 600; outline: none;">Ver Transcripción Completa</summary>
+            <div style="font-size: 12px; color: #64748b; line-height: 1.6; max-height: 400px; overflow-y: auto; margin-top: 15px; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">{{ booking.transcript }}</div>
+        </details>
+    {% elif booking.processing_status == 'fallido' %}
+        <div style="background: #fef2f2; border: 1px solid #fee2e2; color: #b91c1c; padding: 15px; border-radius: 8px; font-size: 14px;">
+            <strong>⚠️ Error de procesamiento:</strong> No se pudo completar el análisis de la reunión.
+        </div>
+    {% else %}
+        <p style="color: #b2b2be; font-size: 13px; margin: 0; padding: 10px 0;">Esperando grabación para iniciar el análisis automático.</p>
+    {% endif %}
+</div>
+
+<!-- Participantes Detectados -->
+{% if booking.detected_participants.exists %}
+<div class="section-card" style="margin-bottom: 24px;">
+    <h4>🎙️ Participantes Detectados</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+        {% for part in booking.detected_participants.all %}
+            <div style="background: white; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">
+                    {{ part.name|slice:":1"|upper }}
+                </div>
+                <div>
+                    <strong style="display: block; font-size: 13px; color: #1e293b;">{{ part.name }}</strong>
+                    <span style="color: #64748b; font-size: 11px;">Visto por última vez: {{ part.left_at|date:"H:i" }}</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="booking-grid">
     <!-- Asistentes -->
     <div class="section-card">

@@ -88,6 +88,29 @@
             </div>
 
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h3 style="margin:0 0 20px; font-size:18px;">📊 Indicadores de Logro (IA)</h3>
+                {% if goal.indicators %}
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    {% for indicator in goal.indicators %}
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:#f8f9fa; border-radius:10px; border-left:4px solid var(--accent);">
+                        <span style="font-size:14px; font-weight:600; color:var(--contrast);">{{ indicator.name }}</span>
+                        <span style="font-size:12px; background:var(--accent); color:white; padding:2px 10px; border-radius:20px;">Meta: {{ indicator.target }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="font-size:14px; color:var(--contrast-3); font-style:italic;">No hay indicadores generados automáticamente.</p>
+                {% endif %}
+            </div>
+
+            <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h4 style="margin:0 0 12px; font-size:15px; color:var(--contrast-2);">Objetivos Estratégicos</h4>
+                <div style="font-size:14px; line-height:1.6; color:var(--contrast); background:#fffef0; padding:15px; border-radius:10px; border:1px solid #ffeeba;">
+                    {{ goal.strategic_objectives|default:"No se definieron objetivos estratégicos."|linebreaks }}
+                </div>
+            </div>
+
+            <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <h4 style="margin:0 0-12px; font-size:15px; color:var(--contrast-2);">Descripción de la Meta</h4>
                 <p style="font-size:14px; line-height:1.6; color:var(--contrast); margin-top:20px;">{{ goal.description|default:"Sin descripción detallada." }}</p>
                 <div style="margin-top:20px; padding-top:20px; border-top:1px solid #f0f0f0;">

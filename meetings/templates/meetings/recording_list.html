@@ -120,7 +120,13 @@
         <form action="{% url 'meetings:sync_daily_recordings' %}" method="post">
             {% csrf_token %}
             <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                🔄 Sincronizar con Daily.co
+                🔄 Sincronizar Manual
+            </button>
+        </form>
+        <form action="{% url 'meetings:register_daily_webhook' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" style="background: #1e73be; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;" title="Configura el webhook automáticamente en Daily.co">
+                🔗 Activar Webhook Automático
             </button>
         </form>
         {% endif %}

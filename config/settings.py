@@ -48,6 +48,9 @@ DAILY_API_KEY = os.environ.get('DAILY_API_KEY')
 # ── DeepSeek ─────────────────────────────────────────────────────────────
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
 DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
+INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', 'default-dev-key')
+
+
 
 # ── Middleware ─────────────────────────────────────────────────────────────
 MIDDLEWARE = [

@@ -42,6 +42,23 @@ class MeetingBooking(models.Model):
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='programada')
     agenda = models.TextField(blank=True, verbose_name='Agenda')
     
+    # Sincronización con Daily.co y Procesamiento IA
+    recording_id = models.CharField(max_length=200, blank=True, null=True, verbose_name='ID de Grabación')
+    transcript = models.TextField(blank=True, verbose_name='Transcripción (Whisper)')
+    acta = models.TextField(blank=True, verbose_name='Acta de Reunión (DeepSeek)')
+    acuerdos_text = models.TextField(blank=True, verbose_name='Acuerdos Extraídos')
+    
+    PROCESSING_STATUS = [
+        ('pendiente', 'Pendiente'),
+        ('procesando', 'Procesando'),
+        ('completado', 'Completado'),
+        ('fallido', 'Fallido'),
+    ]
+    processing_status = models.CharField(
+        max_length=15, choices=PROCESSING_STATUS, default='pendiente', 
+        verbose_name='Estado de Procesamiento IA'
+    )
+    
     # Sincronización con Calendario Red
     calendar_event = models.OneToOneField(
         'calendar_red.CalendarEvent', on_delete=models.SET_NULL, 
@@ -83,6 +100,22 @@ class MeetingAttendance(models.Model):
 
     def __str__(self):
         return f"{self.user} en {self.booking}"
+
+
+class MeetingParticipant(models.Model):
+    """Participantes reales detectados por la API de Daily.co"""
+    booking = models.ForeignKey(MeetingBooking, on_delete=models.CASCADE, related_name='detected_participants')
+    name = models.CharField(max_length=200, verbose_name='Nombre/Identificador')
+    joined_at = models.DateTimeField(null=True, blank=True)
+    left_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Participante Detectado'
+        verbose_name_plural = 'Participantes Detectados'
+
+    def __str__(self):
+        return f"{self.name} — {self.booking}"
 
 
 class MeetingDocument(models.Model):

@@ -4,6 +4,7 @@ from .models import ImprovementGoal, RiskAlert, ImprovementAction
 from users.models import User
 from django.db.models import Count
 from django.contrib import messages
+from .utils import generate_cycle_content_ai
 
 
 @login_required
@@ -60,11 +61,19 @@ def meta_crear(request):
             subvention_type=request.POST.get('subvention_type', 'SEP'),
             title=request.POST.get('title', ''),
             description=request.POST.get('description', ''),
+            strategic_objectives=request.POST.get('strategic_objectives', ''),
+            is_meeting_cycle=request.POST.get('is_meeting_cycle') == 'on',
             target_value=target_val,
             measurement_unit=request.POST.get('measurement_unit', ''),
             deadline=request.POST.get('deadline'),
             created_by=request.user,
         )
+        
+        # Disparar generación por IA en segundo plano (aquí síncrono por simplicidad, idealmente Celery)
+        if goal.strategic_objectives:
+            generate_cycle_content_ai(goal)
+            messages.success(request, "Ciclo de mejora creado y procesado por IA.")
+        
         return redirect(f'/mejora/?ee={ee}')
     return render(request, 'improvement_cycle/meta_form.html', {
         'establishments': User.ESTABLISHMENT_CHOICES,

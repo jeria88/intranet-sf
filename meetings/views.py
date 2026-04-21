@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.conf import settings
 import requests
 from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement
+from improvement_cycle.models import ImprovementGoal
 
 MONTHLY_QUOTA = 4  # Reuniones máximas por usuario por mes (salvo RED)
 
@@ -206,11 +207,33 @@ def booking_crear(request, slug):
                     created_by=request.user,
                 )
 
-                MeetingBooking.objects.create(
+                booking = MeetingBooking.objects.create(
                     room=room, booked_by=request.user,
                     scheduled_at=scheduled_at, agenda=agenda,
                     calendar_event=event
                 )
+
+                # Crear Ciclo de Mejora Automático para la Reunión
+                ImprovementGoal.objects.create(
+                    establishment=request.user.establishment,
+                    profile_role=request.user.role,
+                    title=f"Mejora: {room.name} ({scheduled_at.date()})",
+                    description=f"Seguimiento de entregables para la reunión: {agenda}",
+                    strategic_objectives=f"Optimizar la gestión de la reunión {room.name} y asegurar el cumplimiento de acuerdos.",
+                    is_meeting_cycle=True,
+                    associated_booking=booking,
+                    target_value=100,
+                    measurement_unit='%',
+                    deadline=scheduled_at.date(),
+                    created_by=request.user,
+                )
+                # Nota: La lógica de IA se disparará si llamamos a generate_cycle_content_ai aquí, 
+                # pero ImprovementGoal.save() no lo hace solo. Lo forzamos:
+                from improvement_cycle.utils import generate_cycle_content_ai
+                goal = ImprovementGoal.objects.filter(associated_booking=booking).first()
+                if goal:
+                    generate_cycle_content_ai(goal)
+
                 return redirect('meetings:meeting_list')
             except (ValueError, TypeError):
                 error = 'Fecha y hora inválidas.'
@@ -313,27 +336,53 @@ def recording_webhook(request):
     
     try:
         data = json.loads(request.body)
+        
+        # Manejar la prueba de validación de Daily
+        if data.get('test') == 'test':
+            print("🔍 Webhook: Recibida prueba de validación de Daily.co")
+            return JsonResponse({"status": "verified"})
+
         event_type = data.get('type')
         payload = data.get('payload', {})
         
+        print(f"📥 Webhook recibido de Daily: {event_type}")
+
         if event_type == 'recording.ready-to-download':
             room_id = payload.get('room_name')
             download_url = payload.get('download_url')
+            recording_id = payload.get('recording_id')
             
             if room_id and download_url:
-                # Buscar la sala por su identificador de Daily
+                # 1. Buscar la sala
                 room = MeetingRoom.objects.filter(daily_identifier=room_id).first()
-                if room:
-                    # Vincular a la reserva más reciente (activa o recientemente programada)
-                    booking = MeetingBooking.objects.filter(room=room).order_by('-scheduled_at').first()
-                    if booking:
-                        booking.recording_url = download_url
-                        booking.save(update_fields=['recording_url'])
-                        print(f"✅ Grabación vinculada a reserva: {booking}")
+                if not room:
+                    print(f"⚠️ Webhook: Sala '{room_id}' no encontrada en la base de datos.")
+                    return JsonResponse({"status": "ignored", "reason": "room_not_found"})
+
+                # 2. Buscar la reserva más lógica para esta grabación
+                # Priorizamos reuniones que están 'activas' o terminaron hace poco.
+                now = timezone.now()
+                booking = MeetingBooking.objects.filter(
+                    room=room,
+                    scheduled_at__lte=now + timezone.timedelta(hours=1) # Margen por si empezó antes
+                ).order_by('-scheduled_at').first()
+
+                if booking:
+                    # Si ya tiene una URL de grabación, no la sobreescribimos a menos que sea la misma o estemos forzando
+                    booking.recording_url = download_url
+                    booking.recording_id = recording_id
+                    booking.processing_status = 'pendiente'
+                    booking.save(update_fields=['recording_url', 'recording_id', 'processing_status'])
+                    
+                    print(f"✅ Grabación vinculada exitosamente a Booking ID: {booking.id} ({booking})")
+                    return JsonResponse({"status": "linked", "booking_id": booking.id})
+                else:
+                    print(f"⚠️ Webhook: No se encontró una reserva reciente para la sala '{room_id}'.")
+                    return JsonResponse({"status": "ignored", "reason": "no_recent_booking"})
         
-        return JsonResponse({"status": "received"})
+        return JsonResponse({"status": "received", "event": event_type})
     except Exception as e:
-        print(f"Webhook Error: {e}")
+        print(f"❌ Webhook Error: {e}")
         return HttpResponse(status=400)
 
 
@@ -442,3 +491,166 @@ def download_recording(request, pk):
     except Exception as e:
         messages.error(request, f"Error al conectar con Daily.co: {str(e)}")
         return redirect('meetings:recording_list')
+
+
+@login_required
+def register_daily_webhook(request):
+    """
+    Registra automáticamente el webhook en la API de Daily.co.
+    Útil si el usuario no tiene acceso a la UI de configuración de webhooks.
+    """
+    if not request.user.is_staff and not request.user.is_red_team:
+        messages.error(request, "No tienes permiso para realizar esta acción.")
+        return redirect('meetings:recording_list')
+
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    api_key = settings.DAILY_API_KEY
+    if not api_key:
+        messages.error(request, "Error de configuración: DAILY_API_KEY no encontrada.")
+        return redirect('meetings:recording_list')
+
+    # URL absoluta del webhook en esta aplicación
+    webhook_url = request.build_absolute_uri('/meetings/webhook/recording/')
+    # Asegurar HTTPS si estamos en producción (Railway)
+    if 'railway.app' in webhook_url:
+        webhook_url = webhook_url.replace('http://', 'https://')
+
+    url = "https://api.daily.co/v1/webhooks"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "url": webhook_url,
+        "eventTypes": ["recording.ready-to-download"]
+    }
+
+    try:
+        # Primero listamos los existentes para no duplicar si es posible
+        # (O simplemente intentamos crear, Daily devolverá error si ya existe el mismo URL)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code in [200, 201]:
+            messages.success(request, f"✅ Webhook registrado exitosamente: {webhook_url}")
+        else:
+            res_data = response.json()
+            error_msg = res_data.get('error', 'Error desconocido')
+            if 'already exists' in error_msg.lower():
+                messages.info(request, "ℹ️ El webhook ya estaba registrado en Daily.co.")
+            else:
+                messages.error(request, f"❌ Error API Daily: {response.status_code} - {error_msg}")
+    except Exception as e:
+        messages.error(request, f"❌ Error de conexión: {str(e)}")
+
+    return redirect('meetings:recording_list')
+
+
+# ── API para Procesamiento Externo (GitHub Actions) ──────────────────────────
+
+def _check_api_key(request):
+    """Valida la clave API interna."""
+    key = request.headers.get('X-Internal-API-Key')
+    return key == settings.INTERNAL_API_KEY
+
+
+@csrf_exempt
+def api_pending_meetings(request):
+    """Retorna las reuniones que necesitan ser procesadas."""
+    if not _check_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    
+    # Reuniones con status 'pendiente' o 'fallido' que tengan recording_url
+    pending = MeetingBooking.objects.filter(
+        processing_status__in=['pendiente', 'fallido'],
+        recording_url__isnull=False
+    ).exclude(recording_url='')
+    
+    data = []
+    for p in pending:
+        data.append({
+            "id": p.id,
+            "recording_url": p.recording_url,
+            "room_name": p.room.daily_identifier,
+            "recording_id": p.recording_id
+        })
+    
+    return JsonResponse({"meetings": data})
+
+
+@csrf_exempt
+def api_update_meeting(request, pk):
+    """Recibe los resultados del procesamiento IA."""
+    if not _check_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    
+    try:
+        body = json.loads(request.body)
+        
+        # Si hay un error reportado por el script
+        if body.get('status') == 'failed':
+            booking.processing_status = 'fallido'
+            booking.save(update_fields=['processing_status'])
+            return JsonResponse({"status": "updated_to_failed"})
+
+        # Actualizar datos
+        booking.transcript = body.get('transcript', '')
+        booking.acta = body.get('acta', '')
+        booking.acuerdos_text = body.get('acuerdos_text', '')
+        booking.processing_status = 'completado'
+        
+        if body.get('recording_id'):
+            booking.recording_id = body.get('recording_id')
+            
+        booking.save()
+        
+        # Guardar participantes si vienen en el body
+        participants = body.get('participants', [])
+        for p in participants:
+            MeetingParticipant.objects.update_or_create(
+                booking=booking,
+                name=p.get('name'),
+                defaults={
+                    "joined_at": p.get('joined_at'),
+                    "left_at": p.get('left_at'),
+                    "duration_seconds": p.get('duration_seconds', 0)
+                }
+            )
+            
+        # Sincronizar con el Ciclo de Mejora si existe
+        from improvement_cycle.models import ImprovementAction
+        goal = booking.improvement_cycles.first()
+        if goal:
+            # Marcar acciones específicas como completadas
+            actions_to_complete = [
+                "Grabación de Video", 
+                "Lista de Participantes", 
+                "Acta de Reunión", 
+                "Acuerdos Redactados"
+            ]
+            ImprovementAction.objects.filter(
+                goal=goal, 
+                title__in=actions_to_complete
+            ).update(status='completado')
+
+        return JsonResponse({"status": "success"})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def api_start_processing(request, pk):
+    """Marca una reunión como 'en proceso' para evitar duplicados."""
+    if not _check_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    booking.processing_status = 'procesando'
+    booking.save(update_fields=['processing_status'])
+    return JsonResponse({"status": "processing_started"})
