@@ -507,8 +507,10 @@ def download_recording(request, pk):
 @login_required
 def register_daily_webhook(request):
     """
-    Registra automáticamente el webhook en la API de Daily.co.
-    Útil si el usuario no tiene acceso a la UI de configuración de webhooks.
+    Ejecuta el management command que registra el webhook de Daily.co.
+    Daily valida la URL al registrar, y el CDN de Railway interfería cuando la
+    petición venía del navegador. El management command lo ejecuta el servidor
+    directamente, sin ese problema.
     """
     if not request.user.is_staff and not request.user.is_red_team:
         messages.error(request, "No tienes permiso para realizar esta acción.")
@@ -517,53 +519,21 @@ def register_daily_webhook(request):
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    api_key = (settings.DAILY_API_KEY or "").strip()
-    if not api_key:
-        messages.error(request, "Error de configuración: DAILY_API_KEY no encontrada.")
-        return redirect('meetings:recording_list')
+    from django.core.management import call_command
+    from io import StringIO
 
-    # URL absoluta del webhook en esta aplicación
-    # Corregido: Usar reverse para obtener la ruta correcta según configuración de URLs
-    # Usar un path más corto y directo para evitar problemas de ruteo
-    webhook_url = f"https://{request.get_host()}/webhook-daily/webhook/recording/"
-    
-    print(f"🌐 Registro Webhook (Hardcoded): {webhook_url}")
-    
-    print(f"🌐 Registro Webhook: {webhook_url}")
-
-    print(f"🌐 Intentando registrar Webhook en Daily.co: {webhook_url}")
-
-    url = "https://api.daily.co/v1/webhooks"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "url": webhook_url,
-    }
-
+    out = StringIO()
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        
-        if response.status_code in [200, 201]:
-            messages.success(request, f"✅ Webhook registrado exitosamente: {webhook_url}")
+        call_command('register_daily_webhook', stdout=out)
+        output = out.getvalue()
+        if '✅' in output:
+            messages.success(request, "✅ Webhook de Daily.co registrado y activo.")
+        elif 'DAILY_API_KEY' in output:
+            messages.error(request, "❌ DAILY_API_KEY no configurada.")
         else:
-            try:
-                res_data = response.json()
-                error_msg = res_data.get('error', 'Error desconocido')
-                info_msg = res_data.get('info', '')
-                
-                # Caso especial: El webhook ya existe
-                if 'only 1 webhook' in info_msg.lower():
-                    messages.info(request, "ℹ️ El webhook ya está configurado y activo en Daily.co.")
-                else:
-                    full_error = f"{error_msg} - {info_msg}" if info_msg else error_msg
-                    print(f"❌ Daily API Error Full: {response.status_code} - {response.text}")
-                    messages.error(request, f"Error API Daily: {response.status_code} - {full_error} (URL: {webhook_url})")
-            except:
-                messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
+            messages.info(request, f"ℹ️ {output.strip()}")
     except Exception as e:
-        messages.error(request, f"❌ Error de conexión: {str(e)}")
+        messages.error(request, f"❌ Error al ejecutar el registro: {str(e)}")
 
     return redirect('meetings:recording_list')
 

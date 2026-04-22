@@ -15,7 +15,6 @@ urlpatterns = [
     path('mejora/', include('improvement_cycle.urls')),
     path('notificaciones/', include('notifications.urls')),
     path('usuarios/', include('users.urls')),
-    path('webhook-daily/', include('meetings.urls')), # Alias adicional
 ]
 
 if settings.DEBUG:
