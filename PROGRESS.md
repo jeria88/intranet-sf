@@ -13,5 +13,6 @@ Automatizar los entregables de videollamadas, integrar con el Calendario y el m�
 
 ## Notas y Conclusiones
 - El sistema tiene <4GB de RAM, optimizar procesos pesados (usar GitHub Actions para procesamiento de video/audio si es posible, como se mencionó en conversaciones anteriores).
-- Daily.co webhooks: Corregido path `/salas/webhook/recording/` y limpieza de API Key (eliminación de espacios/newlines) para evitar Error 400.
-- Modelo: `recording_url` cambiado a `CharField` para soportar identificadores internos `daily_id:`.
+- Daily.co webhooks: Corregido `event_types` (underscore) en el registro de webhooks para eliminar el Error 400.
+- Automatización: Pipeline completo configurado (Webhook -> Pendiente -> GitHub Actions -> Transcripción/IA -> Django).
+- Script: `scripts/process_recordings.py` actualizado para manejar links directos e IDs manuales (`daily_id:`).

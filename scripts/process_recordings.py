@@ -54,7 +54,20 @@ def process_meeting(m):
             # 2. Descargar audio
             print("Downloading audio...")
             audio_path = os.path.join(tmpdir, "recording.mp4")
-            resp = requests.get(download_url, stream=True)
+            
+            final_download_url = download_url
+            if download_url.startswith('daily_id:'):
+                daily_id = download_url.replace('daily_id:', '')
+                print(f"Fetching fresh access link for Daily ID: {daily_id}")
+                access_url = f"https://api.daily.co/v1/recordings/{daily_id}/access-link"
+                headers = {"Authorization": f"Bearer {DAILY_API_KEY}"}
+                acc_res = requests.get(access_url, headers=headers, timeout=10)
+                if acc_res.status_code == 200:
+                    final_download_url = acc_res.json().get('download_link')
+                else:
+                    raise Exception(f"Could not get access link: {acc_res.status_code}")
+
+            resp = requests.get(final_download_url, stream=True)
             with open(audio_path, 'wb') as f:
                 for chunk in resp.iter_content(chunk_size=8192):
                     f.write(chunk)

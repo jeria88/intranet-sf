@@ -530,7 +530,7 @@ def register_daily_webhook(request):
     }
     data = {
         "url": webhook_url,
-        "eventTypes": ["recording.ready-to-download"]
+        "event_types": ["recording.ready-to-download"]
     }
 
     try:
