@@ -541,12 +541,15 @@ def register_daily_webhook(request):
         if response.status_code in [200, 201]:
             messages.success(request, f"✅ Webhook registrado exitosamente: {webhook_url}")
         else:
-            res_data = response.json()
-            error_msg = res_data.get('error', 'Error desconocido')
-            if 'already exists' in error_msg.lower():
-                messages.info(request, "ℹ️ El webhook ya estaba registrado en Daily.co.")
-            else:
-                messages.error(request, f"❌ Error API Daily: {response.status_code} - {error_msg}")
+            try:
+                res_data = response.json()
+                error_msg = res_data.get('error', 'Error desconocido')
+                info_msg = res_data.get('info', '')
+                full_error = f"{error_msg} - {info_msg}" if info_msg else error_msg
+                print(f"❌ Daily API Error Full: {response.status_code} - {response.text}")
+                messages.error(request, f"Error API Daily: {response.status_code} - {full_error}")
+            except:
+                messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
     except Exception as e:
         messages.error(request, f"❌ Error de conexión: {str(e)}")
 
