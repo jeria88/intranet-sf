@@ -8,6 +8,7 @@ urlpatterns = [
     path('repositorio/', views.recording_list, name='recording_list'),
     path('sync/', views.sync_daily_recordings, name='sync_daily_recordings'),
     path('webhook/recording/', views.recording_webhook, name='recording_webhook'),
+    path('webhook/recording', views.recording_webhook),
     path('webhook/register/', views.register_daily_webhook, name='register_daily_webhook'),
     path('<slug:slug>/', views.meeting_room, name='meeting_room'),
     path('<slug:slug>/reservar/', views.booking_crear, name='booking_crear'),

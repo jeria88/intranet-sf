@@ -527,9 +527,10 @@ def register_daily_webhook(request):
     webhook_path = reverse('meetings:recording_webhook')
     webhook_url = request.build_absolute_uri(webhook_path)
     
-    # Asegurar HTTPS si estamos en producción (Railway)
-    if 'railway.app' in webhook_url:
-        webhook_url = webhook_url.replace('http://', 'https://')
+    # Asegurar HTTPS en producción
+    webhook_url = webhook_url.replace('http://', 'https://')
+    
+    print(f"🌐 Registro Webhook: {webhook_url}")
 
     print(f"🌐 Intentando registrar Webhook en Daily.co: {webhook_url}")
 
@@ -559,7 +560,7 @@ def register_daily_webhook(request):
                 else:
                     full_error = f"{error_msg} - {info_msg}" if info_msg else error_msg
                     print(f"❌ Daily API Error Full: {response.status_code} - {response.text}")
-                    messages.error(request, f"Error API Daily: {response.status_code} - {full_error}")
+                    messages.error(request, f"Error API Daily: {response.status_code} - {full_error} (URL: {webhook_url})")
             except:
                 messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
     except Exception as e:
