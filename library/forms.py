@@ -6,8 +6,8 @@ class DocumentForm(forms.ModelForm):
     class Meta:
         model = Document
         fields = [
-            'title', 'file', 'category', 'establishment',
-            'description', 'version', 'parent_document',
+            'title', 'file', 'category',
+            'description', 'parent_document',
             'cargo_type', 'materia', 'is_mandatory', 'expiry_alert_date',
         ]
         widgets = {

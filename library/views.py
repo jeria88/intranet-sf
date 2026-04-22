@@ -53,6 +53,9 @@ def document_upload(request):
             try:
                 doc = form.save(commit=False)
                 doc.author = request.user
+                # Asignar establecimiento del usuario y versión inicial automáticamente
+                doc.establishment = request.user.establishment
+                doc.version = '1.0'
                 doc.save()
                 messages.success(request, f"Documento '{doc.title}' subido con éxito.")
                 logger.info(f"Documento subido: {doc.title} por {request.user.username}")
