@@ -3,26 +3,48 @@ name: Process Meeting Recordings
 on:
   schedule:
     - cron: '*/15 * * * *'  # Corre cada 15 minutos
-  workflow_dispatch:      # Permite correrlo manualmente
+  workflow_dispatch:         # Permite correrlo manualmente
 
 jobs:
   process:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ── Verificación temprana: ¿hay reuniones pendientes? ──────────────────
+      # Si no hay nada que procesar, terminamos aquí y nos ahorramos ~60s de
+      # instalación de ffmpeg + pip deps.
+      - name: Check for pending meetings
+        id: check
+        run: |
+          RESPONSE=$(curl -s --max-time 10 \
+            -H "X-Internal-API-Key: ${{ secrets.INTERNAL_API_KEY }}" \
+            "${{ secrets.DJANGO_API_URL }}/pending/" 2>/dev/null \
+            || echo '{"meetings":[]}')
+          COUNT=$(echo "$RESPONSE" | python3 -c \
+            "import sys,json; print(len(json.loads(sys.stdin.read()).get('meetings',[])))" \
+            2>/dev/null || echo "0")
+          echo "pending_count=$COUNT" >> $GITHUB_OUTPUT
+          echo "📊 Reuniones pendientes encontradas: $COUNT"
+
+      # ── Dependencias (solo si hay trabajo que hacer) ───────────────────────
       - name: Set up Python
+        if: steps.check.outputs.pending_count != '0'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: steps.check.outputs.pending_count != '0'
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install requests pydub openai
 
+      # ── Procesamiento ──────────────────────────────────────────────────────
       - name: Run processing script
+        if: steps.check.outputs.pending_count != '0'
         env:
           DJANGO_API_URL: ${{ secrets.DJANGO_API_URL }}
           INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
@@ -30,3 +52,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: python scripts/process_recordings.py
+
+      - name: Skip (no pending meetings)
+        if: steps.check.outputs.pending_count == '0'
+        run: echo "✅ No hay reuniones pendientes. Saliendo sin instalar dependencias."

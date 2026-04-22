@@ -1,0 +1,37 @@
+{# Partial: tarjeta de una sala de reuniones. Variables: room, icon #}
+<div class="meeting-card"
+     style="border-top-color: {% if room.status_label == 'EN_CURSO' %}#28a745{% elif room.status_label == 'PROXIMA' %}#eab308{% else %}#ced4da{% endif %};">
+
+    <div style="font-size: 32px;">{{ icon }}</div>
+    <h3>{{ room.name }}</h3>
+
+    {% if room.status_label == 'EN_CURSO' %}
+        <p style="color: #155724; font-weight: 700; font-size: 11px;">🟢 EN CURSO</p>
+        <p style="font-size: 12px; height: 32px; overflow: hidden; text-overflow: ellipsis;">
+            {{ room.active_booking.agenda|truncatechars:40 }}
+        </p>
+        <p style="font-size: 11px;">Anfitrión: <strong>{{ room.active_booking.booked_by.get_full_name }}</strong></p>
+        <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter"
+           style="background: #28a745;" target="_blank">
+            Unirse ahora
+        </a>
+
+    {% elif room.status_label == 'PROXIMA' %}
+        <p style="color: #856404; font-weight: 700; font-size: 11px;">
+            🕒 SIGUIENTE: {{ room.next_booking.scheduled_at|time:"H:i" }}
+        </p>
+        <p style="font-size: 11px;">Anfitrión: {{ room.next_booking.booked_by.get_full_name }}</p>
+        <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter"
+           style="background: #eab308; color: #5d4803;" target="_blank">
+            Entrar antes (Libre)
+        </a>
+
+    {% else %}
+        <p style="color: #6c757d; font-weight: 700; font-size: 11px;">⚪ DISPONIBLE</p>
+        <p style="font-size: 11px; margin-bottom: 15px;">No hay reuniones programadas ahora.</p>
+        <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter"
+           style="background: #6c757d;" target="_blank">
+            Entrar ahora
+        </a>
+    {% endif %}
+</div>

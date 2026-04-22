@@ -12,11 +12,11 @@ class MeetingRoom(models.Model):
     description = models.TextField(blank=True)
     room_type = models.CharField(max_length=10, choices=ROOM_TYPES, default='jitsi')
     daily_identifier = models.CharField(max_length=100, blank=True, help_text='ID al final de la URL de Daily')
-    
+
     # Para segmentación automática
     target_establishment = models.CharField(max_length=20, blank=True, verbose_name='Establecimiento vinculado')
     target_role = models.CharField(max_length=20, blank=True, verbose_name='Rol vinculado')
-    
+
     allowed_roles = models.JSONField(default=list, blank=True, verbose_name='Roles permitidos (Manual)')
     is_unlimited = models.BooleanField(default=False, verbose_name='Reuniones ilimitadas')
 
@@ -41,31 +41,37 @@ class MeetingBooking(models.Model):
     duration_minutes = models.PositiveIntegerField(default=60, verbose_name='Duración (min)')
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='programada')
     agenda = models.TextField(blank=True, verbose_name='Agenda')
-    
+
     # Sincronización con Daily.co y Procesamiento IA
     recording_id = models.CharField(max_length=200, blank=True, null=True, verbose_name='ID de Grabación')
     transcript = models.TextField(blank=True, verbose_name='Transcripción (Whisper)')
     acta = models.TextField(blank=True, verbose_name='Acta de Reunión (DeepSeek)')
     acuerdos_text = models.TextField(blank=True, verbose_name='Acuerdos Extraídos')
-    
+
     PROCESSING_STATUS = [
-        ('pendiente', 'Pendiente'),
-        ('procesando', 'Procesando'),
-        ('completado', 'Completado'),
-        ('fallido', 'Fallido'),
+        ('sin_grabacion', 'Sin Grabación'),   # Estado inicial — no hay recording aún
+        ('pendiente',     'Pendiente'),         # Grabación recibida, esperando proceso IA
+        ('procesando',    'Procesando'),        # GitHub Actions está trabajando
+        ('completado',    'Completado'),        # IA completó la generación de artefactos
+        ('fallido',       'Fallido'),           # El proceso falló, reintentable
     ]
     processing_status = models.CharField(
-        max_length=15, choices=PROCESSING_STATUS, default='pendiente', 
+        max_length=15, choices=PROCESSING_STATUS,
+        default='sin_grabacion',               # ← Solo pasa a 'pendiente' cuando llega el webhook
         verbose_name='Estado de Procesamiento IA'
     )
-    
+
     # Sincronización con Calendario Red
     calendar_event = models.OneToOneField(
-        'calendar_red.CalendarEvent', on_delete=models.SET_NULL, 
+        'calendar_red.CalendarEvent', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='meeting_booking'
     )
-    
-    recording_url = models.CharField(max_length=500, blank=True, null=True, verbose_name='URL de Grabación', help_text='Enlace al video o identificador de Daily')
+
+    recording_url = models.CharField(
+        max_length=500, blank=True, null=True,
+        verbose_name='URL de Grabación',
+        help_text='Enlace al video o identificador de Daily (daily_id:xxx)'
+    )
     # Para control de cuota (4 reuniones/mes por rol, excepto RED)
     month_year = models.CharField(max_length=7, verbose_name='Mes-Año (YYYY-MM)', editable=False)
 

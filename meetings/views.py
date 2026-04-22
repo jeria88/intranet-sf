@@ -5,10 +5,12 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 import json
+import threading
+from collections import defaultdict
 from django.utils import timezone
 from django.conf import settings
 import requests
-from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement
+from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement, MeetingParticipant
 from improvement_cycle.models import ImprovementGoal
 
 MONTHLY_QUOTA = 4  # Reuniones máximas por usuario por mes (salvo RED)
@@ -32,7 +34,7 @@ def _generate_daily_token(room_name, user_name, is_owner=False):
     api_key = (settings.DAILY_API_KEY or "").strip()
     if not api_key:
         return None
-    
+
     url = "https://api.daily.co/v1/meeting-tokens"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -45,7 +47,7 @@ def _generate_daily_token(room_name, user_name, is_owner=False):
             "is_owner": is_owner
         }
     }
-    
+
     try:
         response = requests.post(url, headers=headers, json=data, timeout=5)
         if response.status_code == 200:
@@ -54,7 +56,7 @@ def _generate_daily_token(room_name, user_name, is_owner=False):
             print(f"Daily API Error: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"Daily Connection Error: {e}")
-    
+
     return None
 
 
@@ -63,53 +65,79 @@ def meeting_list(request):
     user = request.user
     now = timezone.now()
 
+    # ── Salas visibles ────────────────────────────────────────────────────────
     if user.is_staff:
-        rooms_est = MeetingRoom.objects.filter(room_type='daily').exclude(target_establishment='')
-        rooms_role = MeetingRoom.objects.filter(room_type='daily').exclude(target_role='')
+        rooms_est = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_establishment=''))
+        rooms_role = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_role=''))
     else:
-        rooms_est = MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily')
-        rooms_role = MeetingRoom.objects.filter(target_role=user.role, room_type='daily')
+        rooms_est = list(MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily'))
+        rooms_role = list(MeetingRoom.objects.filter(target_role=user.role, room_type='daily'))
+
+    all_rooms = rooms_est + rooms_role
+    room_ids = [r.id for r in all_rooms]
+
+    # ── Pre-load TODOS los bookings relevantes en UNA SOLA QUERY (fix N+1) ───
+    since = now - timezone.timedelta(hours=8)  # Margen para reuniones en curso
+    bookings_qs = list(
+        MeetingBooking.objects.filter(
+            room_id__in=room_ids,
+            scheduled_at__gte=since,
+            status__in=['programada', 'activa']
+        ).select_related('booked_by').order_by('scheduled_at')
+    )
+
+    bookings_by_room = defaultdict(list)
+    for b in bookings_qs:
+        bookings_by_room[b.room_id].append(b)
 
     def _process_room_status(room):
-        # 1. ¿Hay una reunión EN CURSO ahora?
-        current = MeetingBooking.objects.filter(
-            room=room,
-            scheduled_at__lte=now,
-            status__in=['programada', 'activa']
-        ).order_by('-scheduled_at').first()
-        
-        if current and now < current.end_time:
+        """Determina el estado de la sala sin nuevas queries a la BD."""
+        room_bookings = bookings_by_room.get(room.id, [])
+
+        # ¿Reunión en curso ahora mismo?
+        current = next(
+            (b for b in sorted(room_bookings, key=lambda x: x.scheduled_at, reverse=True)
+             if b.scheduled_at <= now < b.end_time),
+            None
+        )
+        if current:
             room.status_label = 'EN_CURSO'
             room.active_booking = current
             return
 
-        # 2. ¿Hay una reunión PRÓXIMA hoy?
-        next_booking = MeetingBooking.objects.filter(
-            room=room,
-            scheduled_at__gt=now,
-            scheduled_at__date=now.date(),
-            status='programada'
-        ).order_by('scheduled_at').first()
-        
-        if next_booking:
+        # ¿Próxima reunión hoy?
+        next_b = next(
+            (b for b in sorted(room_bookings, key=lambda x: x.scheduled_at)
+             if b.scheduled_at > now and b.scheduled_at.date() == now.date()
+             and b.status == 'programada'),
+            None
+        )
+        if next_b:
             room.status_label = 'PROXIMA'
-            room.next_booking = next_booking
+            room.next_booking = next_b
         else:
             room.status_label = 'LIBRE'
 
-    # Procesar estados
-    for r in rooms_est:
-        _process_room_status(r)
-    for r in rooms_role:
+    for r in all_rooms:
         _process_room_status(r)
 
+    # ── Próximas reuniones para el widget de calendario (datos reales) ────────
+    upcoming_bookings = MeetingBooking.objects.filter(
+        room_id__in=room_ids,
+        scheduled_at__gte=now,
+        status='programada'
+    ).select_related('room', 'booked_by').order_by('scheduled_at')[:8]
+
     month_year = now.strftime('%Y-%m')
-    user_count = MeetingBooking.objects.filter(booked_by=user, month_year=month_year).exclude(status='cancelada').count()
+    user_count = MeetingBooking.objects.filter(
+        booked_by=user, month_year=month_year
+    ).exclude(status='cancelada').count()
     quota_remaining = None if user.is_red_team else max(0, MONTHLY_QUOTA - user_count)
-    
+
     return render(request, 'meetings/meeting_list.html', {
         'rooms_est': rooms_est,
         'rooms_role': rooms_role,
+        'upcoming_bookings': upcoming_bookings,
         'quota_remaining': quota_remaining,
     })
 
@@ -118,10 +146,10 @@ def meeting_list(request):
 def meeting_room(request, slug):
     room = get_object_or_404(MeetingRoom, slug=slug)
     now = timezone.now()
-    
+
     # 1. Buscar si hay una reserva formal en curso
     booking = MeetingBooking.objects.filter(
-        room=room, 
+        room=room,
         scheduled_at__lte=now,
         status__in=['programada', 'activa']
     ).order_by('-scheduled_at').first()
@@ -138,31 +166,32 @@ def meeting_room(request, slug):
             scheduled_at__range=(now, now + timezone.timedelta(minutes=5)),
             status='programada'
         ).exists()
-        
+
         if conflict and not request.user.is_staff:
             messages.warning(request, "La sala estará ocupada en breve por una reunión agendada.")
             return redirect('meetings:meeting_list')
-        
+
         # Entrada Libre: Creamos una reserva "al vuelo" para auditoría y acuerdos
         if not request.user.is_staff:
             if not _check_quota(request.user, room):
                 messages.error(request, "No tienes cupo para iniciar una reunión ahora.")
                 return redirect('meetings:meeting_list')
-            
+
             booking = MeetingBooking.objects.create(
                 room=room,
                 booked_by=request.user,
                 scheduled_at=now,
                 duration_minutes=60,
                 status='activa',
-                agenda='Reunión espontánea (Sin agenda previa)'
+                agenda='Reunión espontánea (Sin agenda previa)',
+                processing_status='sin_grabacion'  # Solo cambia a 'pendiente' al llegar el webhook
             )
 
     # Redirección a Daily.co
     if room.room_type == 'daily':
         daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
         token = _generate_daily_token(
-            room.daily_identifier, 
+            room.daily_identifier,
             request.user.get_full_name() or request.user.username,
             is_owner=(request.user.is_staff or (booking and booking.booked_by == request.user))
         )
@@ -193,7 +222,7 @@ def booking_crear(request, slug):
             try:
                 scheduled_at = datetime.fromisoformat(scheduled_str)
                 scheduled_at = timezone.make_aware(scheduled_at)
-                
+
                 # Sincronización con Calendario
                 from calendar_red.models import CalendarEvent
                 event = CalendarEvent.objects.create(
@@ -210,7 +239,8 @@ def booking_crear(request, slug):
                 booking = MeetingBooking.objects.create(
                     room=room, booked_by=request.user,
                     scheduled_at=scheduled_at, agenda=agenda,
-                    calendar_event=event
+                    calendar_event=event,
+                    processing_status='sin_grabacion'
                 )
 
                 # Crear Ciclo de Mejora Automático para la Reunión
@@ -227,8 +257,6 @@ def booking_crear(request, slug):
                     deadline=scheduled_at.date(),
                     created_by=request.user,
                 )
-                # Nota: La lógica de IA se disparará si llamamos a generate_cycle_content_ai aquí, 
-                # pero ImprovementGoal.save() no lo hace solo. Lo forzamos:
                 from improvement_cycle.utils import generate_cycle_content_ai
                 goal = ImprovementGoal.objects.filter(associated_booking=booking).first()
                 if goal:
@@ -284,7 +312,7 @@ def start_recording(request, pk):
     booking = get_object_or_404(MeetingBooking, pk=pk)
     if request.method == 'POST':
         # Simular URL de grabación guardada
-        booking.recording_url = f"https://sfared.cl/recordings/jitsi_{booking.slug}_{booking.pk}.mp4"
+        booking.recording_url = f"https://sfared.cl/recordings/jitsi_{booking.room.slug}_{booking.pk}.mp4"
         booking.save(update_fields=['recording_url'])
     return redirect('meetings:meeting_room', slug=booking.room.slug)
 
@@ -297,7 +325,7 @@ def recording_list(request):
     # 1. Base del QuerySet: solo aquello que tiene video
     bookings = MeetingBooking.objects.filter(
         Q(recording_url__isnull=False)
-    ).exclude(recording_url='')
+    ).exclude(recording_url='').select_related('room', 'booked_by')
 
     # 2. Filtro de SEGURIDAD (Segmentación por Perfil)
     if not request.user.is_red_team and not request.user.is_staff:
@@ -311,14 +339,14 @@ def recording_list(request):
     est = request.GET.get('establishment')
     role = request.GET.get('role')
     month = request.GET.get('month')
-    
+
     if est:
         bookings = bookings.filter(booked_by__establishment=est)
     if role:
         bookings = bookings.filter(booked_by__role=role)
     if month:
         bookings = bookings.filter(scheduled_at__month=month)
-        
+
     return render(request, 'meetings/recording_list.html', {
         'bookings': bookings,
         'establishments': request.user.ESTABLISHMENT_CHOICES,
@@ -329,45 +357,43 @@ def recording_list(request):
 @csrf_exempt
 def recording_webhook(request):
     """
-    Recibe notificaciones de Daily.co cuando una grabación está lista.
+    Recibe notificaciones de Daily.co cuando una grabación está lista o una reunión empieza.
     """
     if request.method not in ['POST', 'GET']:
         return HttpResponse(status=405)
-    
+
     if request.method == 'GET':
         return HttpResponse("Webhook is active", status=200)
-    
-    # Si no hay cuerpo, retornamos 200 para validación inicial si es necesario
+
+    # Cuerpo vacío → validación inicial de Daily
     if not request.body:
         print("🔍 Webhook: Recibido cuerpo vacío (posible validación)")
         return HttpResponse(status=200)
 
     try:
         data = json.loads(request.body)
-        
-        # Manejar la prueba de validación de Daily
+
+        # Manejar prueba de validación de Daily
         if data.get('test') == 'test' or data.get('type') == 'test':
             print("🔍 Webhook: Recibida prueba de validación de Daily.co")
             return JsonResponse({"status": "verified"})
 
         event_type = data.get('type')
         payload = data.get('payload', {})
-        
+
         print(f"📥 Webhook recibido de Daily: {event_type}")
 
         if event_type == 'recording.ready-to-download':
             room_id = payload.get('room_name')
             download_url = payload.get('download_url')
             recording_id = payload.get('recording_id')
-            
+
             if room_id and download_url:
-                # 1. Buscar la sala
                 room = MeetingRoom.objects.filter(daily_identifier=room_id).first()
                 if not room:
                     print(f"⚠️ Webhook: Sala '{room_id}' no encontrada en la base de datos.")
                     return JsonResponse({"status": "ignored", "reason": "room_not_found"})
 
-                # 2. Buscar la reserva más reciente para esta grabación
                 now = timezone.now()
                 booking = MeetingBooking.objects.filter(
                     room=room,
@@ -386,47 +412,49 @@ def recording_webhook(request):
                     return JsonResponse({"status": "ignored", "reason": "no_recent_booking"})
 
         elif event_type == 'meeting-started':
-            # Cuando empieza una reunión, iniciamos la grabación automáticamente
+            # Devolvemos 200 INMEDIATAMENTE y disparamos la grabación en background
             room_id = payload.get('room')
-            print(f"🟢 Reunión iniciada: sala={room_id} → iniciando grabación automática...")
-            
+            print(f"🟢 Reunión iniciada: sala={room_id} → disparando grabación en background...")
+
+            def _start_recording_async(room_name):
+                """Inicia la grabación en Daily sin bloquear el webhook."""
+                api_key = (settings.DAILY_API_KEY or '').strip()
+                if not api_key:
+                    return
+                try:
+                    res = requests.post(
+                        f'https://api.daily.co/v1/rooms/{room_name}/recordings/start',
+                        headers={
+                            'Authorization': f'Bearer {api_key}',
+                            'Content-Type': 'application/json'
+                        },
+                        json={},
+                        timeout=10
+                    )
+                    if res.status_code in [200, 201]:
+                        print(f"   ✅ Grabación iniciada automáticamente: {room_name}")
+                    else:
+                        print(f"   ⚠️ Error al iniciar grabación: {res.status_code} - {res.text[:100]}")
+                except Exception as e:
+                    print(f"   ❌ Error en grabación async: {e}")
+
             if room_id:
-                from django.conf import settings as dj_settings
-                api_key = (dj_settings.DAILY_API_KEY or '').strip()
-                if api_key:
-                    import requests as req
-                    try:
-                        rec_res = req.post(
-                            f'https://api.daily.co/v1/rooms/{room_id}/recordings/start',
-                            headers={
-                                'Authorization': f'Bearer {api_key}',
-                                'Content-Type': 'application/json'
-                            },
-                            json={},
-                            timeout=10
-                        )
-                        if rec_res.status_code in [200, 201]:
-                            print(f"   ✅ Grabación iniciada automáticamente en sala {room_id}")
-                        else:
-                            print(f"   ⚠️ Error al iniciar grabación: {rec_res.status_code} - {rec_res.text[:100]}")
-                    except Exception as e:
-                        print(f"   ❌ Error llamando API Daily para iniciar grabación: {e}")
-            
+                t = threading.Thread(target=_start_recording_async, args=(room_id,), daemon=True)
+                t.start()
+
             return JsonResponse({"status": "received", "event": "meeting-started"})
 
         elif event_type == 'meeting-ended':
-            # La reunión terminó. Si por algún motivo no llegó recording.ready-to-download,
-            # usamos el session_id para buscar y vincular la grabación manualmente.
             room_id = payload.get('room')
             session_id = payload.get('session_id')
             print(f"🔴 Reunión terminada: sala={room_id}, session={session_id}")
             return JsonResponse({"status": "received", "event": "meeting-ended"})
 
         return JsonResponse({"status": "received", "event": event_type})
+
     except Exception as e:
         print(f"❌ Webhook Error: {e}")
-        # Retornamos 200 de todas formas para no bloquear la validación de la API de Daily
-        # pero logueamos el error para debug.
+        # Siempre 200 para no bloquear la validación de Daily
         return HttpResponse("Error handled", status=200)
 
 
@@ -434,7 +462,6 @@ def recording_webhook(request):
 def sync_daily_recordings(request):
     """
     Sincroniza manualmente las grabaciones desde la API de Daily.co.
-    Adaptado para obtener enlaces al Dashboard en planes gratuitos.
     """
     if not request.user.is_staff and not request.user.is_red_team:
         messages.error(request, "No tienes permiso para realizar esta acción.")
@@ -447,14 +474,14 @@ def sync_daily_recordings(request):
 
     url = "https://api.daily.co/v1/recordings"
     headers = {"Authorization": f"Bearer {api_key}"}
-    
+
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
             print(f"❌ Daily API Sync Error: {response.status_code} - {response.text}")
             messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
             return redirect('meetings:recording_list')
-        
+
         data = response.json()
         recordings = data.get('data', [])
         total_found = len(recordings)
@@ -464,31 +491,29 @@ def sync_daily_recordings(request):
         for rec in recordings:
             recording_id = rec.get('id')
             room_name = (rec.get('room_name') or "").lower().strip()
-            # Priorizamos download_url para descarga directa, fallback al dashboard
-            download_link = rec.get('download_url') or f"https://dashboard.daily.co/recordings/{recording_id}"
-            
+
             if room_name and recording_id:
-                # Buscar sala vinculada
                 room = MeetingRoom.objects.filter(daily_identifier__iexact=room_name).first()
                 if room:
-                    # Buscamos la reserva MÁS RECIENTE de esta sala que NO tenga video aún
                     booking = MeetingBooking.objects.filter(
                         Q(recording_url__isnull=True) | Q(recording_url=''),
                         room=room
                     ).order_by('-scheduled_at').first()
-                    
+
                     if booking:
-                        # Guardamos el ID de la grabación con un prefijo para identificarla
+                        # ── FIX #6: guardar también recording_id, no solo recording_url ──
                         booking.recording_url = f"daily_id:{recording_id}"
-                        booking.save(update_fields=['recording_url'])
+                        booking.recording_id = recording_id
+                        booking.processing_status = 'pendiente'
+                        booking.save(update_fields=['recording_url', 'recording_id', 'processing_status'])
                         synced_count += 1
                     else:
                         matches_room_but_not_time += 1
-        
+
         if synced_count > 0:
             messages.success(request, f"✅ Sincronización exitosa: {synced_count} grabaciones nuevas vinculadas.")
         elif matches_room_but_not_time > 0:
-            messages.warning(request, f"ℹ️ Se encontraron {matches_room_but_not_time} grabaciones en la sala correcta, pero fuera del rango de tiempo.")
+            messages.warning(request, f"ℹ️ Se encontraron {matches_room_but_not_time} grabaciones en la sala correcta, pero sin reserva sin video disponible.")
         elif total_found > 0:
             messages.info(request, f"🔎 Se encontraron {total_found} grabaciones en Daily.co, pero no coinciden con las salas de la intranet.")
         else:
@@ -496,7 +521,7 @@ def sync_daily_recordings(request):
 
     except Exception as e:
         messages.error(request, f"❌ Error: {str(e)}")
-    
+
     return redirect('meetings:recording_list')
 
 
@@ -507,9 +532,8 @@ def download_recording(request, pk):
     Esto evita problemas con los enlaces firmados de S3 que expiran.
     """
     booking = get_object_or_404(MeetingBooking, pk=pk)
-    
+
     if not booking.recording_url or not booking.recording_url.startswith('daily_id:'):
-        # Si es un link antiguo o no es de Daily, intentamos redirigir directo
         if booking.recording_url:
             return redirect(booking.recording_url)
         messages.error(request, "No se encontró el ID de grabación para esta sesión.")
@@ -524,12 +548,10 @@ def download_recording(request, pk):
         response = requests.get(access_url, headers=headers, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            # El campo correcto en la API de Daily es 'download_link'
             download_link = data.get('download_link')
             if download_link:
                 return redirect(download_link)
-        
-        # Fallback: Si falla el link directo, intentar el dashboard como ultima opcion
+
         messages.warning(request, "No se pudo obtener el enlace de descarga directa. Redirigiendo al panel de Daily.co.")
         return redirect(f"https://dashboard.daily.co/recordings/{daily_id}")
 
@@ -542,9 +564,6 @@ def download_recording(request, pk):
 def register_daily_webhook(request):
     """
     Ejecuta el management command que registra el webhook de Daily.co.
-    Daily valida la URL al registrar, y el CDN de Railway interfería cuando la
-    petición venía del navegador. El management command lo ejecuta el servidor
-    directamente, sin ese problema.
     """
     if not request.user.is_staff and not request.user.is_red_team:
         messages.error(request, "No tienes permiso para realizar esta acción.")
@@ -572,7 +591,7 @@ def register_daily_webhook(request):
     return redirect('meetings:recording_list')
 
 
-# ── API para Procesamiento Externo (GitHub Actions) ──────────────────────────
+# ── API para Procesamiento Externo (GitHub Actions) ───────────────────────────
 
 def _check_api_key(request):
     """Valida la clave API interna."""
@@ -582,16 +601,15 @@ def _check_api_key(request):
 
 @csrf_exempt
 def api_pending_meetings(request):
-    """Retorna las reuniones que necesitan ser procesadas."""
+    """Retorna las reuniones que necesitan ser procesadas (máx. 10 a la vez)."""
     if not _check_api_key(request):
         return JsonResponse({"error": "Unauthorized"}, status=401)
-    
-    # Reuniones con status 'pendiente' o 'fallido' que tengan recording_url
+
     pending = MeetingBooking.objects.filter(
         processing_status__in=['pendiente', 'fallido'],
         recording_url__isnull=False
-    ).exclude(recording_url='')
-    
+    ).exclude(recording_url='').select_related('room')[:10]  # Máx. 10 por ciclo
+
     data = []
     for p in pending:
         data.append({
@@ -600,7 +618,7 @@ def api_pending_meetings(request):
             "room_name": p.room.daily_identifier,
             "recording_id": p.recording_id
         })
-    
+
     return JsonResponse({"meetings": data})
 
 
@@ -609,32 +627,30 @@ def api_update_meeting(request, pk):
     """Recibe los resultados del procesamiento IA."""
     if not _check_api_key(request):
         return JsonResponse({"error": "Unauthorized"}, status=401)
-    
+
     if request.method != 'POST':
         return JsonResponse({"error": "Method not allowed"}, status=405)
-    
+
     booking = get_object_or_404(MeetingBooking, pk=pk)
-    
+
     try:
         body = json.loads(request.body)
-        
-        # Si hay un error reportado por el script
+
         if body.get('status') == 'failed':
             booking.processing_status = 'fallido'
             booking.save(update_fields=['processing_status'])
             return JsonResponse({"status": "updated_to_failed"})
 
-        # Actualizar datos
         booking.transcript = body.get('transcript', '')
         booking.acta = body.get('acta', '')
         booking.acuerdos_text = body.get('acuerdos_text', '')
         booking.processing_status = 'completado'
-        
+
         if body.get('recording_id'):
             booking.recording_id = body.get('recording_id')
-            
+
         booking.save()
-        
+
         # Guardar participantes si vienen en el body
         participants = body.get('participants', [])
         for p in participants:
@@ -647,20 +663,19 @@ def api_update_meeting(request, pk):
                     "duration_seconds": p.get('duration_seconds', 0)
                 }
             )
-            
+
         # Sincronizar con el Ciclo de Mejora si existe
         from improvement_cycle.models import ImprovementAction
         goal = booking.improvement_cycles.first()
         if goal:
-            # Marcar acciones específicas como completadas
             actions_to_complete = [
-                "Grabación de Video", 
-                "Lista de Participantes", 
-                "Acta de Reunión", 
+                "Grabación de Video",
+                "Lista de Participantes",
+                "Acta de Reunión",
                 "Acuerdos Redactados"
             ]
             ImprovementAction.objects.filter(
-                goal=goal, 
+                goal=goal,
                 title__in=actions_to_complete
             ).update(status='completado')
 
@@ -674,7 +689,7 @@ def api_start_processing(request, pk):
     """Marca una reunión como 'en proceso' para evitar duplicados."""
     if not _check_api_key(request):
         return JsonResponse({"error": "Unauthorized"}, status=401)
-    
+
     booking = get_object_or_404(MeetingBooking, pk=pk)
     booking.processing_status = 'procesando'
     booking.save(update_fields=['processing_status'])

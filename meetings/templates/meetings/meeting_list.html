@@ -83,15 +83,8 @@
         font-weight: 600;
     }
 
-    .badge-upcoming {
-        background: #d1fae5;
-        color: #065f46;
-    }
-
-    .badge-pending {
-        background: #fef3c7;
-        color: #92400e;
-    }
+    .badge-upcoming { background: #d1fae5; color: #065f46; }
+    .badge-pending  { background: #fef3c7; color: #92400e; }
 
     /* ── ROOM CARDS ── */
     .rooms-grid {
@@ -161,10 +154,10 @@
     <p>Acceda a las salas de trabajo colaborativo en red.</p>
 </div>
 
-<!-- Upcoming Schedule Widget -->
+<!-- Calendario de Próximas Reuniones (datos reales desde BD) -->
 <div class="schedule-widget">
     <h3>
-        📅 Calendario de Próximas Reuniones
+        📅 Próximas Reuniones Programadas
         <a href="{% url 'meetings:recording_list' %}" class="repo-btn">
             📁 Repositorio de Reuniones
         </a>
@@ -172,42 +165,33 @@
     <table class="schedule-table">
         <thead>
             <tr>
-                <th>Reunión</th>
+                <th>Agenda</th>
                 <th>Fecha</th>
                 <th>Hora</th>
                 <th>Sala</th>
+                <th>Anfitrión</th>
                 <th>Estado</th>
             </tr>
         </thead>
         <tbody>
+            {% for booking in upcoming_bookings %}
             <tr>
-                <td>3ª Reunión Red Directores</td>
-                <td>Marzo 2026</td>
-                <td>Por confirmar</td>
-                <td>Sala Directores</td>
-                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+                <td>{{ booking.agenda|truncatechars:45|default:"Sin agenda" }}</td>
+                <td>{{ booking.scheduled_at|date:"d/m/Y" }}</td>
+                <td>{{ booking.scheduled_at|time:"H:i" }} hrs</td>
+                <td>{{ booking.room.name }}</td>
+                <td>{{ booking.booked_by.get_full_name|default:booking.booked_by.username }}</td>
+                <td>
+                    <span class="status-badge badge-upcoming">{{ booking.get_status_display }}</span>
+                </td>
             </tr>
+            {% empty %}
             <tr>
-                <td>3ª Reunión Red Inspectores</td>
-                <td>Marzo 2026</td>
-                <td>Por confirmar</td>
-                <td>Sala Inspectores</td>
-                <td><span class="status-badge badge-pending">Por confirmar</span></td>
+                <td colspan="6" style="text-align: center; color: var(--contrast-3); padding: 20px;">
+                    📭 No hay reuniones programadas próximamente.
+                </td>
             </tr>
-            <tr>
-                <td>3ª Reunión Red Convivencia</td>
-                <td>Marzo 2026</td>
-                <td>Por confirmar</td>
-                <td>Sala Convivencia</td>
-                <td><span class="status-badge badge-pending">Por confirmar</span></td>
-            </tr>
-            <tr>
-                <td>3ª Reunión Red UTP</td>
-                <td>Marzo 2026</td>
-                <td>Por confirmar</td>
-                <td>Sala UTP</td>
-                <td><span class="status-badge badge-pending">Por confirmar</span></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
@@ -220,31 +204,7 @@
         <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🏢 Mi Establecimiento</h2>
         <div class="rooms-grid">
             {% for room in rooms_est %}
-            <div class="meeting-card" style="border-top-color: {% if room.status_label == 'EN_CURSO' %}#28a745{% elif room.status_label == 'PROXIMA' %}#eab308{% else %}#ced4da{% endif %};">
-                <div style="font-size: 32px;">🏫</div>
-                <h3>{{ room.name }}</h3>
-                
-                {% if room.status_label == 'EN_CURSO' %}
-                    <p style="color: #155724; font-weight: 700; font-size: 11px;">🟢 EN CURSO</p>
-                    <p style="font-size: 12px; height: 32px; overflow: hidden; text-overflow: ellipsis;">{{ room.active_booking.agenda|truncatechars:40 }}</p>
-                    <p style="font-size: 11px;">Anfitrión: <strong>{{ room.active_booking.booked_by.get_full_name }}</strong></p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #28a745;" target="_blank">
-                        Unirse ahora
-                    </a>
-                {% elif room.status_label == 'PROXIMA' %}
-                    <p style="color: #856404; font-weight: 700; font-size: 11px;">🕒 SIGUIENTE: {{ room.next_booking.scheduled_at|time:"H:i" }}</p>
-                    <p style="font-size: 11px;">Anfitrión: {{ room.next_booking.booked_by.get_full_name }}</p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #eab308; color: #5d4803;" target="_blank">
-                        Entrar antes (Libre)
-                    </a>
-                {% else %}
-                    <p style="color: #6c757d; font-weight: 700; font-size: 11px;">⚪ DISPONIBLE</p>
-                    <p style="font-size: 11px; margin-bottom: 15px;">No hay reuniones programadas ahora.</p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #6c757d;" target="_blank">
-                        Entrar ahora
-                    </a>
-                {% endif %}
-            </div>
+                {% include 'meetings/_room_card.html' with room=room icon="🏫" %}
             {% endfor %}
         </div>
     </section>
@@ -255,31 +215,7 @@
         <h2 style="font-size: 18px; border-left: 4px solid #007bff; padding-left: 12px; margin-bottom: 20px;">👤 Mi Perfil / Cargo</h2>
         <div class="rooms-grid">
             {% for room in rooms_role %}
-            <div class="meeting-card" style="border-top-color: {% if room.status_label == 'EN_CURSO' %}#28a745{% elif room.status_label == 'PROXIMA' %}#eab308{% else %}#ced4da{% endif %};">
-                <div style="font-size: 32px;">💼</div>
-                <h3>{{ room.name }}</h3>
-
-                {% if room.status_label == 'EN_CURSO' %}
-                    <p style="color: #155724; font-weight: 700; font-size: 11px;">🟢 EN CURSO</p>
-                    <p style="font-size: 12px; height: 32px; overflow: hidden; text-overflow: ellipsis;">{{ room.active_booking.agenda|truncatechars:40 }}</p>
-                    <p style="font-size: 11px;">Anfitrión: <strong>{{ room.active_booking.booked_by.get_full_name }}</strong></p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #28a745;" target="_blank">
-                        Unirse ahora
-                    </a>
-                {% elif room.status_label == 'PROXIMA' %}
-                    <p style="color: #856404; font-weight: 700; font-size: 11px;">🕒 SIGUIENTE: {{ room.next_booking.scheduled_at|time:"H:i" }}</p>
-                    <p style="font-size: 11px;">Anfitrión: {{ room.next_booking.booked_by.get_full_name }}</p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #eab308; color: #5d4803;" target="_blank">
-                        Entrar antes (Libre)
-                    </a>
-                {% else %}
-                    <p style="color: #6c757d; font-weight: 700; font-size: 11px;">⚪ DISPONIBLE</p>
-                    <p style="font-size: 11px; margin-bottom: 15px;">No hay reuniones programadas ahora.</p>
-                    <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter" style="background: #6c757d;" target="_blank">
-                        Entrar ahora
-                    </a>
-                {% endif %}
-            </div>
+                {% include 'meetings/_room_card.html' with room=room icon="💼" %}
             {% endfor %}
         </div>
     </section>
