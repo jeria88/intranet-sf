@@ -13,25 +13,28 @@ from django.http import JsonResponse
 def ai_list(request):
     """Redirige automáticamente según el rol y establecimiento del usuario."""
     # 1. Admins y Equipo Red ven la lista completa
-    if request.user.is_staff or request.user.is_red_team:
+    if request.user.is_staff or getattr(request.user, 'is_red_team', False):
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
-    # 2. UTP Temuco va directo al chat de DeepSeek (Focus Mode)
-    if request.user.role == 'UTP' and request.user.establishment == 'TEMUCO':
-        assistant = AIAssistant.objects.filter(slug='utp-temuco', is_active=True).first()
+    # 2. Excepción para representantes específicos
+    if request.user.role == 'REPRESENTANTE' or request.user.username in ['representante.temuco', 'representante.utp']:
+        # Buscar el específico primero, si no el general
+        assistant = AIAssistant.objects.filter(profile_role='REPRESENTANTE', is_active=True).filter(
+            models.Q(establishment=request.user.establishment) | models.Q(establishment='')
+        ).first()
         if assistant:
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
-    # 3. Representante Temuco va directo al chat de DeepSeek (Focus Mode)
-    if (request.user.role == 'REPRESENTANTE' and request.user.establishment == 'TEMUCO') or request.user.username in ['representante.temuco', 'representante.utp']:
-        assistant = AIAssistant.objects.filter(slug='representante-temuco', is_active=True).first()
-        if assistant:
-            return redirect('ai_modules:ai_chat', slug=assistant.slug)
-
-    # 4. Director Temuco va directo al chat de DeepSeek (Focus Mode)
-    if request.user.role == 'DIRECTOR' and request.user.establishment == 'TEMUCO':
-        assistant = AIAssistant.objects.filter(slug='director-temuco', is_active=True).first()
+    # 3. Redirección dinámica para todos los roles con agente
+    allowed_roles = ['DIRECTOR', 'UTP', 'INSPECTOR', 'CONVIVENCIA']
+    if request.user.role in allowed_roles:
+        # Buscar asistente que coincida con rol y (establecimiento o sin establecimiento)
+        from django.db import models
+        assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).filter(
+            models.Q(establishment=request.user.establishment) | models.Q(establishment='')
+        ).order_by('-establishment').first() # Priorizar el que tiene establecimiento definido
+        
         if assistant:
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
@@ -183,9 +186,20 @@ def ai_chat(request, slug):
     """Vista de chat tipo ChatGPT para asistentes internos."""
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True, is_chat_enabled=True)
     
-    # Verificación de seguridad básica (UTP, REPRESENTANTE, DIRECTOR en Temuco y Admin)
-    is_temuco_user = (request.user.establishment == 'TEMUCO' and request.user.role in ['UTP', 'REPRESENTANTE', 'DIRECTOR'])
-    if not request.user.is_staff and not is_temuco_user:
+    # Verificación de seguridad básica
+    has_access = request.user.is_staff or getattr(request.user, 'is_red_team', False)
+    if not has_access:
+        role_match = (request.user.role == assistant.profile_role)
+        establishment_match = True
+        if assistant.establishment:
+            establishment_match = (request.user.establishment == assistant.establishment)
+        
+        is_representante_exception = (assistant.profile_role == 'REPRESENTANTE' and request.user.username in ['representante.temuco', 'representante.utp'])
+        
+        if (role_match and establishment_match) or is_representante_exception:
+            has_access = True
+
+    if not has_access:
         return render(request, 'ai_modules/no_access.html')
 
     if request.method == 'POST':

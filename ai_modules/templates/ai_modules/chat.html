@@ -188,7 +188,7 @@
         <div id="chat-messages">
             {% if not chat_messages %}
             <div class="message-row ai">
-                <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?</div>
+                <div class="bubble">Bienvenido. He analizado la normativa institucional. ¿Qué situación normativa deseas consultar hoy?<br><br><em>*La Inteligencia Artificial es un asesor que operacionaliza los procesos en pos de la optimización de los tiempos para promover el análisis y reflexión de los equipos*</em></div>
             </div>
             {% endif %}
             {% for msg in chat_messages %}
@@ -327,18 +327,35 @@
     function extractSections(text) {
         if (!text) return null;
 
-        // --- Patrones para UTP ---
+        // --- NUEVA ESTRUCTURA UNIVERSAL ---
+        const regexA_uni = /A\.-?\s+SUSTENTO/i;
+        const regexB_uni = /B\.-?\s+PLAN/i;
+        const regexC_uni = /C\.-?\s+CHECK/i;
+
+        if (text.match(regexA_uni) && text.match(regexB_uni)) {
+            const partsB = text.split(regexB_uni);
+            const partA = (partsB[0] || '').replace(regexA_uni, '').trim();
+            
+            const remainBC = partsB[1] || '';
+            const partsC = remainBC.split(regexC_uni);
+            const partB = (partsC[0] || '').trim();
+            const partC = (partsC[1] || '').trim();
+
+            return { a: partA, b: partB, c: partC };
+        }
+
+        // --- Patrones para UTP (Legacy) ---
         const regexA_utp = /A\.\s+SUSTENTO/i;
         const regexB_utp = /B\.\s+RUTA/i;
         const regexC_utp = /C\.\s+CHECKLIST/i;
 
-        // --- Patrones para REPRESENTANTE ---
+        // --- Patrones para REPRESENTANTE (Legacy) ---
         const regexA_rep = /A\.-?\s+BIENESTAR/i;
         const regexB_rep = /B\.-?\s+RECURSOS/i;
         const regexC_rep = /C\.-?\s+ESCALAMIENTO/i;
         const regexD_rep = /D\.-?\s+CHECK\s*LIST/i;
 
-        // --- Patrones para DIRECTOR ---
+        // --- Patrones para DIRECTOR (Legacy) ---
         const regexA_dir = /1\.\s+Matriz/i;
         const regexB_dir = /2\.\s+Mapa/i;
         const regexC_dir = /3\.\s+Estrategia/i;
