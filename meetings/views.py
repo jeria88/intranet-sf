@@ -524,11 +524,10 @@ def register_daily_webhook(request):
 
     # URL absoluta del webhook en esta aplicación
     # Corregido: Usar reverse para obtener la ruta correcta según configuración de URLs
-    webhook_path = reverse('meetings:recording_webhook')
-    webhook_url = request.build_absolute_uri(webhook_path)
+    # Usar un path más corto y directo para evitar problemas de ruteo
+    webhook_url = f"https://{request.get_host()}/webhook-daily/webhook/recording/"
     
-    # Asegurar HTTPS en producción
-    webhook_url = webhook_url.replace('http://', 'https://')
+    print(f"🌐 Registro Webhook (Hardcoded): {webhook_url}")
     
     print(f"🌐 Registro Webhook: {webhook_url}")
 
