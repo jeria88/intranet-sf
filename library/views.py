@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
 from django.db.models import Q
 from .models import Document, Category
 from users.models import User
@@ -29,11 +33,14 @@ def document_list(request):
         docs = docs.filter(parent_document__isnull=True)
 
     return render(request, 'library/document_list.html', {
-        'docs': docs,
+        'documents': docs,
         'categories': categories,
         'establishments': User.ESTABLISHMENT_CHOICES,
         'roles': User.ROLE_CHOICES,
-        'q': q, 'selected_cat': cat, 'selected_ee': ee, 'selected_cargo': cargo,
+        'query': q, 
+        'selected_category': cat, 
+        'selected_establishment': ee, 
+        'selected_role': cargo,
     })
 
 
@@ -43,10 +50,19 @@ def document_upload(request):
         from .forms import DocumentForm
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
-            doc = form.save(commit=False)
-            doc.author = request.user
-            doc.save()
-            return redirect('library:document_list')
+            try:
+                doc = form.save(commit=False)
+                doc.author = request.user
+                doc.save()
+                messages.success(request, f"Documento '{doc.title}' subido con éxito.")
+                logger.info(f"Documento subido: {doc.title} por {request.user.username}")
+                return redirect('library:document_list')
+            except Exception as e:
+                logger.error(f"Error al guardar documento: {str(e)}")
+                messages.error(request, f"Error crítico al guardar en la base de datos: {e}")
+        else:
+            logger.warning(f"Formulario de biblioteca inválido: {form.errors.as_json()}")
+            messages.error(request, "Error en el formulario. Por favor revisa los campos.")
     else:
         from .forms import DocumentForm
         form = DocumentForm()

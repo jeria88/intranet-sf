@@ -4,6 +4,29 @@
 <div class="upload-container"
     style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
     <h1 style="text-align: center; margin-bottom: 30px;">Subir Nuevo Documento</h1>
+
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div style="padding: 15px; border-radius: 10px; margin-bottom: 10px; 
+                    background: {% if message.tags == 'error' %}#fee2e2; color: #b91c1c;{% else %}#dcfce7; color: #15803d;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if form.errors %}
+    <div style="background: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 10px; margin-bottom: 25px;">
+        <strong>Error en el formulario:</strong>
+        <ul style="margin-top: 10px;">
+            {% for field, errors in form.errors.items %}
+            <li>{{ field }}: {{ errors|striptags }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div style="margin-bottom: 25px;">
@@ -22,6 +45,15 @@
             <label style="display: block; margin-bottom: 8px; font-weight: bold;">Reseña / Descripción</label>
             {{ form.description }}
         </div>
+
+        {# Campos ocultos con valores por defecto si no se muestran #}
+        <div style="display: none;">
+            {{ form.establishment }}
+            {{ form.version }}
+            {{ form.cargo_type }}
+            {{ form.materia }}
+        </div>
+
         <div style="display: flex; gap: 15px;">
             <button type="submit" class="button"
                 style="flex: 1; background: var(--accent); color: white; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer;">PUBLICAR
