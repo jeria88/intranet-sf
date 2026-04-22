@@ -13,6 +13,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from meetings.models import MeetingRoom, MeetingBooking
 from ai_modules.models import AIAssistant
+from library.models import Category
 
 User = get_user_model()
 
@@ -102,6 +103,24 @@ for r_data in ROOMS:
         for key, value in r_data.items():
             setattr(room, key, value)
         room.save()
+
+# ── 3.5 Categorías de Biblioteca ─────────────────────────────────────────────
+print("\n📚 Generando categorías de biblioteca...")
+LIBRARY_CATEGORIES = [
+    {'name': 'Reglamentos', 'description': 'Reglamentos Internos, RICE, RIOHS, etc.'},
+    {'name': 'Protocolos', 'description': 'Protocolos de actuación y convivencia.'},
+    {'name': 'Planificaciones', 'description': 'Planificaciones curriculares y de aula.'},
+    {'name': 'Actas y Minutas', 'description': 'Registros de reuniones y consejos técnicos.'},
+    {'name': 'Circulares e Informativos', 'description': 'Comunicados oficiales de la red o establecimiento.'},
+    {'name': 'Formatos y Plantillas', 'description': 'Documentos base para uso administrativo.'},
+    {'name': 'Gestión Institucional (PEI/PME)', 'description': 'Documentos de gestión estratégica.'},
+]
+
+for cat_data in LIBRARY_CATEGORIES:
+    Category.objects.get_or_create(
+        name=cat_data['name'],
+        defaults={'description': cat_data['description']}
+    )
 
 # ── 4. Limpieza y Creación de Reservas Activas para Pruebas ──────────────────
 print("\n📅 Generando agenda de pruebas...")
