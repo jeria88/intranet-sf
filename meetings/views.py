@@ -367,27 +367,61 @@ def recording_webhook(request):
                     print(f"⚠️ Webhook: Sala '{room_id}' no encontrada en la base de datos.")
                     return JsonResponse({"status": "ignored", "reason": "room_not_found"})
 
-                # 2. Buscar la reserva más lógica para esta grabación
-                # Priorizamos reuniones que están 'activas' o terminaron hace poco.
+                # 2. Buscar la reserva más reciente para esta grabación
                 now = timezone.now()
                 booking = MeetingBooking.objects.filter(
                     room=room,
-                    scheduled_at__lte=now + timezone.timedelta(hours=1) # Margen por si empezó antes
+                    scheduled_at__lte=now + timezone.timedelta(hours=1)
                 ).order_by('-scheduled_at').first()
 
                 if booking:
-                    # Si ya tiene una URL de grabación, no la sobreescribimos a menos que sea la misma o estemos forzando
                     booking.recording_url = download_url
                     booking.recording_id = recording_id
                     booking.processing_status = 'pendiente'
                     booking.save(update_fields=['recording_url', 'recording_id', 'processing_status'])
-                    
-                    print(f"✅ Grabación vinculada exitosamente a Booking ID: {booking.id} ({booking})")
+                    print(f"✅ Grabación vinculada a Booking ID: {booking.id}")
                     return JsonResponse({"status": "linked", "booking_id": booking.id})
                 else:
-                    print(f"⚠️ Webhook: No se encontró una reserva reciente para la sala '{room_id}'.")
+                    print(f"⚠️ Webhook: No se encontró reserva reciente para sala '{room_id}'.")
                     return JsonResponse({"status": "ignored", "reason": "no_recent_booking"})
-        
+
+        elif event_type == 'meeting-started':
+            # Cuando empieza una reunión, iniciamos la grabación automáticamente
+            room_id = payload.get('room')
+            print(f"🟢 Reunión iniciada: sala={room_id} → iniciando grabación automática...")
+            
+            if room_id:
+                from django.conf import settings as dj_settings
+                api_key = (dj_settings.DAILY_API_KEY or '').strip()
+                if api_key:
+                    import requests as req
+                    try:
+                        rec_res = req.post(
+                            f'https://api.daily.co/v1/rooms/{room_id}/recordings/start',
+                            headers={
+                                'Authorization': f'Bearer {api_key}',
+                                'Content-Type': 'application/json'
+                            },
+                            json={},
+                            timeout=10
+                        )
+                        if rec_res.status_code in [200, 201]:
+                            print(f"   ✅ Grabación iniciada automáticamente en sala {room_id}")
+                        else:
+                            print(f"   ⚠️ Error al iniciar grabación: {rec_res.status_code} - {rec_res.text[:100]}")
+                    except Exception as e:
+                        print(f"   ❌ Error llamando API Daily para iniciar grabación: {e}")
+            
+            return JsonResponse({"status": "received", "event": "meeting-started"})
+
+        elif event_type == 'meeting-ended':
+            # La reunión terminó. Si por algún motivo no llegó recording.ready-to-download,
+            # usamos el session_id para buscar y vincular la grabación manualmente.
+            room_id = payload.get('room')
+            session_id = payload.get('session_id')
+            print(f"🔴 Reunión terminada: sala={room_id}, session={session_id}")
+            return JsonResponse({"status": "received", "event": "meeting-ended"})
+
         return JsonResponse({"status": "received", "event": event_type})
     except Exception as e:
         print(f"❌ Webhook Error: {e}")
