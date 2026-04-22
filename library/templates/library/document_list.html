@@ -114,8 +114,8 @@
                     <div style="display: flex; justify-content: space-between; align-items: start;">
                         <h3 style="margin: 0 0 10px 0; color: var(--accent);">{{ doc.title }}</h3>
                         <span
-                            style="background: var(--base); font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: bold; color: var(--contrast-2);">{{
-                            doc.get_establishment_display }}</span>
+                            style="background: var(--base); font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: bold; color: var(--contrast-2);">
+                            {{ doc.get_establishment_display }}</span>
                     </div>
                     <p style="font-size: 14px; color: var(--contrast-2); margin-bottom: 15px;">{{ doc.description }}</p>
                     <div class="meta"
@@ -124,6 +124,14 @@
                         <span><strong>👤:</strong> {{ doc.author.get_role_display|default:doc.author.username }}</span>
                         <span><strong>📅:</strong> {{ doc.upload_date|date:"d M Y" }}</span>
                     </div>
+
+                    {# CRUD Actions for Owner or Admin #}
+                    {% if user == doc.author or user.is_staff %}
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <a href="{% url 'library:document_edit' doc.pk %}" style="font-size: 12px; color: var(--accent); text-decoration: none;">✏️ Editar</a>
+                        <a href="{% url 'library:document_delete' doc.pk %}" style="font-size: 12px; color: #b91c1c; text-decoration: none;">🗑️ Eliminar</a>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="actions" style="display: flex; align-items: center;">
                     <a href="{{ doc.file.url }}" class="button"

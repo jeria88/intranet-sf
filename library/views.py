@@ -79,3 +79,47 @@ def document_detalle(request, pk):
         Q(pk=doc.pk) | Q(parent_document=doc) | Q(parent_document=doc.parent_document, parent_document__isnull=False)
     ).order_by('version')
     return render(request, 'library/document_detalle.html', {'doc': doc, 'versions': versions})
+
+
+@login_required
+def document_edit(request, pk):
+    doc = get_object_or_404(Document, pk=pk)
+    
+    # Seguridad: solo el autor o staff pueden editar
+    if doc.author != request.user and not request.user.is_staff:
+        messages.error(request, "No tienes permiso para editar este documento.")
+        return redirect('library:document_list')
+
+    from .forms import DocumentForm
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES, instance=doc)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Documento '{doc.title}' actualizado.")
+            return redirect('library:document_list')
+    else:
+        form = DocumentForm(instance=doc)
+    
+    return render(request, 'library/document_upload.html', {
+        'form': form,
+        'is_edit': True,
+        'doc': doc
+    })
+
+
+@login_required
+def document_delete(request, pk):
+    doc = get_object_or_404(Document, pk=pk)
+    
+    # Seguridad: solo el autor o staff pueden eliminar
+    if doc.author != request.user and not request.user.is_staff:
+        messages.error(request, "No tienes permiso para eliminar este documento.")
+        return redirect('library:document_list')
+
+    if request.method == 'POST':
+        title = doc.title
+        doc.delete()
+        messages.success(request, f"Documento '{title}' eliminado permanentemente.")
+        return redirect('library:document_list')
+    
+    return render(request, 'library/document_confirm_delete.html', {'doc': doc})

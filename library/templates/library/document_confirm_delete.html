@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="delete-container" style="max-width: 500px; margin: 40px auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center;">
+    <h1 style="color: #b91c1c;">¿Eliminar Documento?</h1>
+    <p style="margin: 20px 0; color: var(--contrast-2);">
+        Estás a punto de eliminar permanentemente el documento:<br>
+        <strong style="color: var(--contrast);">"{{ doc.title }}"</strong>
+    </p>
+    <div style="background: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 10px; margin-bottom: 30px; font-size: 14px;">
+        ⚠️ Esta acción no se puede deshacer y el archivo será borrado del almacenamiento.
+    </div>
+    
+    <form method="post" style="display: flex; gap: 15px;">
+        {% csrf_token %}
+        <button type="submit" class="button" style="flex: 1; background: #b91c1c; color: white; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer;">SÍ, ELIMINAR</button>
+        <a href="{% url 'library:document_list' %}" class="button" style="flex: 1; background: var(--base); color: var(--contrast); padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center;">CANCELAR</a>
+    </form>
+</div>
+{% endblock %}
