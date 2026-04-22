@@ -334,11 +334,16 @@ def recording_webhook(request):
     if request.method != 'POST':
         return HttpResponse(status=405)
     
+    # Si no hay cuerpo, retornamos 200 para validación inicial si es necesario
+    if not request.body:
+        print("🔍 Webhook: Recibido cuerpo vacío (posible validación)")
+        return HttpResponse(status=200)
+
     try:
         data = json.loads(request.body)
         
         # Manejar la prueba de validación de Daily
-        if data.get('test') == 'test':
+        if data.get('test') == 'test' or data.get('type') == 'test':
             print("🔍 Webhook: Recibida prueba de validación de Daily.co")
             return JsonResponse({"status": "verified"})
 
@@ -383,7 +388,9 @@ def recording_webhook(request):
         return JsonResponse({"status": "received", "event": event_type})
     except Exception as e:
         print(f"❌ Webhook Error: {e}")
-        return HttpResponse(status=400)
+        # Retornamos 200 de todas formas para no bloquear la validación de la API de Daily
+        # pero logueamos el error para debug.
+        return HttpResponse("Error handled", status=200)
 
 
 @login_required
