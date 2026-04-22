@@ -331,8 +331,11 @@ def recording_webhook(request):
     """
     Recibe notificaciones de Daily.co cuando una grabación está lista.
     """
-    if request.method != 'POST':
+    if request.method not in ['POST', 'GET']:
         return HttpResponse(status=405)
+    
+    if request.method == 'GET':
+        return HttpResponse("Webhook is active", status=200)
     
     # Si no hay cuerpo, retornamos 200 para validación inicial si es necesario
     if not request.body:
