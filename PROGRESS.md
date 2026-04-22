@@ -1,134 +1,160 @@
 # PROGRESS.md — Guía de continuación para cualquier IA
 
-> **Actualizado:** 2026-04-21 · Commit: `19eb392`
+> **Actualizado:** 2026-04-21 · Últimos commits: `9856433` (PROGRESS) → `19eb392` (meetings optimize) → `5987e1e` (auto-recording)
 > Leer esto ANTES de hacer cualquier cambio al código.
 
 ---
 
-## Objetivo General
+## 🏗️ Arquitectura General
 
-Intranet escolar chilena (Red SFA) desplegada en **Railway** + **GitHub Actions**.
-Stack: **Django 6 / Python 3.11 / SQLite / Daily.co / OpenAI Whisper / DeepSeek**.
-Restricción crítica: servidor <4 GB RAM → todo procesamiento pesado va a GitHub Actions.
-
----
-
-## Arquitectura del Pipeline de Reuniones (COMPLETADA ✅)
-
-```
-Usuario agenda reunión (booking_crear)
-       ↓
-Django crea: MeetingBooking + CalendarEvent + ImprovementGoal (con IA)
-       ↓
-Participante entra a sala Daily.co
-       ↓
-Daily dispara webhook → "meeting-started" → Django inicia grabación via API (async thread)
-       ↓
-Reunión termina → Daily dispara → "recording.ready-to-download"
-       ↓
-Django: booking.processing_status = 'pendiente', guarda recording_url + recording_id
-       ↓
-GitHub Actions (cron 15 min) → consulta /meetings/api/pending/
-       ↓
-Descarga video → pydub chunks 10 min → detección silencio (dBFS < -40) → Whisper
-       ↓
-DeepSeek → genera Acta + Acuerdos → Daily API → Lista participantes reales
-       ↓
-Django: actualiza booking (completado) + ImprovementGoal actions marcadas completadas
-```
+Intranet escolar chilena (Red SFA — múltiples establecimientos) desplegada en **Railway** + **GitHub Actions**.
+- Stack: **Django / Python 3.11 / SQLite (default) + SQLite knowledge_base (ai_modules) / Daily.co / OpenAI / DeepSeek**
+- Restricción crítica: servidor <4 GB RAM → procesamiento pesado va a GitHub Actions
+- Roles de usuario: `DIRECTOR`, `UTP`, `INSPECTOR`, `CONVIVENCIA`, `REPRESENTANTE`, `RED` (superusuario de red)
+- Establecimientos: `TEMUCO`, `ANGOL`, `ARAUCO`, `IMPERIAL`, `LAUTARO`, `ERCILLA`, `SANTIAGO`, `RENAICO`
 
 ---
 
-## Estado Actual de los Módulos
+## ✅ MÓDULO COMPLETADO: Videollamadas (`meetings/`)
 
-### `meetings/` — Módulo de Videollamadas ✅ OPTIMIZADO
+Pipeline 100% automático. Ver sección completa abajo.
 
-| Archivo | Estado | Notas |
-|---------|--------|-------|
-| `models.py` | ✅ | `processing_status` default = `'sin_grabacion'` (no `'pendiente'`) |
-| `views.py` | ✅ | Sin N+1 queries; webhook meeting-started usa threading; recording_id se guarda en sync |
-| `admin.py` | ✅ | search_fields, inlines, fieldsets, MeetingParticipant registrado |
-| `urls.py` | ✅ | Webhook con y sin trailing slash |
-| `templates/meeting_list.html` | ✅ | Calendario dinámico desde BD; cards usan `_room_card.html` |
-| `templates/_room_card.html` | ✅ | Partial nuevo, elimina duplicación |
-| `management/commands/register_daily_webhook.py` | ✅ | Registra webhook al hacer deploy |
-| `migrations/0007_...py` | ✅ | Migración para nuevo default + choice |
+### Flujo del Pipeline
 
-### `scripts/process_recordings.py` ✅ OPTIMIZADO
+```
+Booking creado → CalendarEvent + ImprovementGoal (IA)
+Usuario entra → Daily dispara "meeting-started" → Django inicia grabación (async thread)
+Reunión termina → "recording.ready-to-download" → booking.processing_status = 'pendiente'
+GitHub Actions (cron 15min) → /api/pending/ → descarga → chunks 10min + detección silencio
+→ Whisper (chunks dBFS > -40) → DeepSeek (acta + acuerdos) → Daily (participantes)
+→ /api/update/ → booking.processing_status = 'completado' → ImprovementGoal actualizado
+```
 
-- Detección de silencio: chunks con `dBFS < -40` se saltan (ahorra costo Whisper)
-- Logging detallado con progreso de chunks
-- `temperature=0.3` en DeepSeek para documentos formales
-- System prompt específico para establecimientos educacionales chilenos
+### Estados `processing_status`
+`sin_grabacion` → `pendiente` → `procesando` → `completado` / `fallido`
 
-### `.github/workflows/process_recordings.yml` ✅ OPTIMIZADO
+### Archivos Clave
+| Archivo | Nota |
+|---------|------|
+| `meetings/views.py` | Sin N+1 queries; webhook async; recording_id se guarda en sync |
+| `meetings/models.py` | default=`'sin_grabacion'` (migration 0007) |
+| `meetings/templates/meetings/_room_card.html` | Partial nuevo (DRY) |
+| `scripts/process_recordings.py` | Detección silencio, logging detallado |
+| `.github/workflows/process_recordings.yml` | Early-exit si no hay pendientes |
+| `meetings/management/commands/register_daily_webhook.py` | Re-registra en deploy |
 
-- Early-exit: verifica pendientes ANTES de instalar ffmpeg/pip (ahorra ~60s si no hay trabajo)
-- Máximo 10 reuniones por ciclo de procesamiento
+### Pendientes Menores (Meetings)
+- [ ] Probar pipeline end-to-end con reunión real
+- [ ] Notificación al `booked_by` cuando `processing_status = completado`
+- [ ] Badges de estado en `recording_list.html`
+- [ ] Consolidar `MeetingAttendance` vs `MeetingParticipant` en `booking_detalle.html`
 
 ---
 
-## Flujo de Estados de `MeetingBooking.processing_status`
+## 🚧 MÓDULO EN DESARROLLO: Agentes IA (`ai_modules/`)
 
-```
-sin_grabacion → (webhook recording.ready-to-download) → pendiente
-pendiente     → (GH Actions api_start_processing)     → procesando
-procesando    → (GH Actions api_update_meeting OK)    → completado
-procesando    → (GH Actions api_update_meeting fail)  → fallido
-fallido       → (reintento automático en próximo cron) → procesando
-```
+### Lo que YA existe (NO reescribir)
 
----
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| `models.py` | ✅ Completo | `AIAssistant`, `AIKnowledgeBase`, `AIQuery`, `AIChatMessage`, `AIKnowledgeChunk`, `AICase`, `CaseObservation` |
+| `utils.py` | ✅ Completo | Motor RAG con embeddings OpenAI + numpy, caché binario mmap, similitud coseno, boosting normativo |
+| `services.py` | ✅ Completo | `call_deepseek_ai()` — inyecta RAG + historial → DeepSeek |
+| `views.py` | ✅ Completo | chat, casos, consultas, repositorio, impresión, descargos |
+| `urls.py` | ✅ Completo | Rutas completas |
+| Base de conocimiento | ✅ 23.568 chunks indexados con embeddings | Ver documentos listados abajo |
+| BD separada | ✅ `knowledge_base` router SQLite separado | `ai_modules/db_routers.py` |
+| Cmds admin | ✅ | `setup_utp_temuco.py`, `setup_representante_temuco.py`, `sync_centralized_knowledge.py` |
 
-## Configuración de Secretos Requeridos
+### Agentes existentes en BD
 
-### Railway (variables de entorno)
-- `DAILY_API_KEY` — API key de Daily.co
-- `DAILY_BASE_URL` — `https://intranet-sfa.daily.co/`
-- `INTERNAL_API_KEY` — clave compartida entre Django y GitHub Actions
+| slug | Rol | Est. | Chat | System Prompt |
+|------|-----|------|------|---------------|
+| `utp-temuco` | UTP | TEMUCO | ✅ | ~970 chars — **INCOMPLETO** |
+| `representante-temuco` | REPRESENTANTE | TEMUCO | ✅ | ~1916 chars — **INCOMPLETO** |
+| `director-temuco` | DIRECTOR | TEMUCO | ✅ | ~1104 chars — **INCOMPLETO** |
+| `director` | DIRECTOR | (todos) | ❌ | **VACÍO** |
+| `utp` | UTP | (todos) | ❌ | **VACÍO** |
+| `inspector` | INSPECTOR | (todos) | ❌ | **VACÍO** |
+| `convivencia` | CONVIVENCIA | (todos) | ❌ | **VACÍO** |
+| `global-knowledge` | — | — | ❌ | **VACÍO** |
 
-### GitHub Actions Secrets
-- `DJANGO_API_URL` — `https://web-production-2b719.up.railway.app/meetings/api`
-- `INTERNAL_API_KEY` — mismo valor que en Railway
-- `DAILY_API_KEY` — mismo que en Railway
-- `OPENAI_API_KEY` — para Whisper
-- `DEEPSEEK_API_KEY` — para generación de acta/acuerdos
-- `DEEPSEEK_BASE_URL` — (opcional) default: `https://api.deepseek.com`
+### Documentos ya indexados en la Knowledge Base (23.568 chunks)
 
----
+**Internacionales:** `DERECHOS HUMANOS.pdf`, `derechos DEL NIÑO.pdf`
+**Nacionales:** `constitucion.pdf`, `DFL-1_22-ENE-1997.pdf` (Estatuto Docente), `REGLAMENTO_INTERNO_N_2025.pdf`
+**Educación:** `5.-DFL-2_28-NOV-1998.pdf`, `Ley-20370_12-SEP-2009.pdf` (LGE), `Decreto-67_31-DIC-2018.pdf`, `Decreto-83-EXENTO_05-FEB-2015.pdf`, `Decreto-170_21-ABR-2010.pdf`, `MBE-2-1.pdf`, `MBDLE_2015.pdf`, `EID_estandar.pdf`, `Ley-20845_08-JUN-2015.pdf` (LIE), `LEY-20248_01-FEB-2008.pdf` (SEP), `3_-_Manual-de-cuentas-2026.pdf`, `2.-Ley-21809_01-ABR-2026.pdf`, `Ley-21545_10-MAR-2023.pdf` (TEA), `Ley-20536.pdf` (convivencia), `politica-nacional-de-convivencia-educativa-mineduc-2024.pdf`, `REGLAMENTO DE EVALUACIÓN 2025.pdf`
+**Internos:** `1.-PEI - TEMUCO.pdf`, `ia-representante-legal.docx`, `ia utp.pdf`, `promt directores-comparativa.pdf`, `promt entrenamiento IA CONVIVENCIA EDUCATIVA.pdf`
 
-## Salas Daily.co Configuradas
-
-Nombres en `daily_identifier` (= nombre en Daily): `angol`, `arauco`, `imperial`,
-`lautaro`, `ercilla`, `santiago`, `renaico`, `temuco`, `utp`, `director`,
-`inspector`, `convivenciaescolar`.
-
-La URL del webhook es:
-`https://web-production-2b719.up.railway.app/salas/webhook/recording/`
-
-El webhook se re-registra automáticamente en cada deploy via `Procfile`:
-```
-web: python manage.py register_daily_webhook && gunicorn config.wsgi ...
-```
+**Documentos faltantes en la knowledge base:**
+- `RICE` (Reglamento Interno de Convivencia Escolar) — No indexado
+- `RIOHS` (Reglamento Interno de Orden, Higiene y Seguridad) — Presente como `REGLAMENTO_INTERNO_N_2025` (verificar si es el mismo)
+- `PME` (Plan de Mejoramiento Educativo) — No indexado
+- PEI de establecimientos distintos a Temuco — Solo está `1.-PEI - TEMUCO.pdf`
 
 ---
 
-## Tareas Pendientes (Próximas sesiones)
+## 🎯 TAREA ACTUAL: Completar los 5 Agentes IA
 
-- [ ] **Probar el pipeline end-to-end** con una reunión real: entrar a sala → salir → esperar 15 min → verificar que GH Actions procesó y subió acta al intranet.
-- [ ] **Notificaciones**: cuando `processing_status` cambia a `completado`, notificar al `booked_by` por correo o notificación interna.
-- [ ] **Dashboard de estadísticas**: en `recording_list.html`, mostrar procesamiento_status con badges de color (actualmente solo muestra grabaciones sin estado).
-- [ ] **Consolidar asistencia**: `MeetingAttendance` (quien entró por el intranet) vs `MeetingParticipant` (quien detectó Daily) — actualmente son dos secciones separadas en `booking_detalle.html`.
-- [ ] **Prueba de silencio**: verificar que el threshold de -40 dBFS es correcto para reuniones escolares (puede necesitar ajuste a -35 dBFS si hay ruido de fondo leve).
+### Especificaciones del usuario (LEER COMPLETO)
+
+Cada agente debe:
+
+1. **Disclaimer inicial y final**: *"La Inteligencia Artificial es un asesor que operacionaliza los procesos en pos de la optimización de los tiempos para promover el análisis y reflexión de los equipos"*
+2. **Verificar pertinencia del rol**: si la consulta corresponde → resuelve; si no → aconseja y deriva
+3. **Jerarquía documental**: PEI → Normativos → Documentos internos
+4. **Plan de acción estructurado**: a) Preventivo b) Formativo c) Reparatorio
+5. **Checklist de proceso**
+6. **Bienestar superior del estudiante** como prioridad transversal
+
+### Agente 1: DIRECTOR
+- **Dominio**: Cualquier consulta (rol coordinador)
+- **Misión específica**: Evaluar urgente/importante · Delegar liderazgo · Asegurar monitoreo
+- **Marco**: Matrícula Eisenhower + MBDLE + PEI
+
+### Agente 2: UTP
+- **Dominio**: Curricular · Pedagógico · Reglamento de Evaluación · PIE
+- **Leyes clave**: Decreto 67, 83, 170 · LGE Art. que apliquen · DFL-2 · LIE · SEP
+- **Marco**: MBE + MBDLE + PEI
+
+### Agente 3: REPRESENTANTE LEGAL
+- **Dominio**: Contratos · Recursos (SEP, PIE) · Fiscalizaciones · Normativa laboral
+- **Leyes clave**: Ley 21809 · Manual de Cuentas · Código del Trabajo · Estatuto Docente · DFL-2
+
+### Agente 4: INSPECTOR GENERAL
+- **Dominio**: Aplicación del RIOHS al personal
+- **Marco**: RIOHS + Código del Trabajo + Estatuto Docente + debida investigación
+- **Enfoque**: Proceso sumarial · Medidas disciplinarias · Derechos del funcionario
+
+### Agente 5: CONVIVENCIA ESCOLAR
+- **Dominio**: Aplicación del RICE · Debido proceso
+- **Marco (en orden)**: urgente/importante → lo inmediato/conflicto → preventivo → formativo → reparatorio
+- **Leyes clave**: Ley 20536 · Política Nacional de Convivencia · Protocolo de actuación
+
+### Plan de Implementación
+
+La implementación se hace actualizando los `system_instruction` de los agentes existentes y habilitando `is_chat_enabled=True`. Se usa un **management command** `setup_all_agents.py` para aplicar de forma reproducible.
+
+**Archivos a crear/modificar:**
+
+1. `ai_modules/management/commands/setup_all_agents.py` — **[NUEVO]** Script que actualiza los 5 agentes con sus prompts completos y habilita el chat
+2. `ai_modules/views.py` — Ampliar la lógica de redirección en `ai_list()` para cubrir Inspector y Convivencia
+3. `ai_modules/templates/ai_modules/chat.html` — Revisar si el disclaimer aparece en la UI
+
+**Orden de trabajo:**
+1. Crear `setup_all_agents.py` con los 5 prompts completos
+2. Ejecutar: `python manage.py setup_all_agents`
+3. Verificar en `ai_list()` que Inspector y Convivencia también van a `ai_chat`
+4. Probar cada agente con consultas de prueba representativas de su rol
 
 ---
 
 ## Módulos Relacionados (No tocar sin contexto)
 
 ### `improvement_cycle/`
-- `ImprovementGoal` — tiene FK `associated_booking` → `MeetingBooking`
-- `is_meeting_cycle=True` marca los ciclos generados automáticamente desde reuniones
-- Al completar una reunión, `api_update_meeting` marca acciones como completadas
+- `ImprovementGoal` — FK `associated_booking` → `MeetingBooking`
+- `is_meeting_cycle=True` marca ciclos generados desde reuniones
+- `api_update_meeting` marca acciones como completadas al finalizar el proceso IA
 
 ### `calendar_red/`
 - `CalendarEvent` tiene `OneToOne` → `MeetingBooking.calendar_event`
@@ -136,10 +162,21 @@ web: python manage.py register_daily_webhook && gunicorn config.wsgi ...
 
 ---
 
-## Commits Recientes Relevantes
+## Secretos de Entorno
+
+### Railway
+`DAILY_API_KEY`, `DAILY_BASE_URL` (https://intranet-sfa.daily.co/), `INTERNAL_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`
+
+### GitHub Actions
+`DJANGO_API_URL` (https://web-production-2b719.up.railway.app/meetings/api), `INTERNAL_API_KEY`, `DAILY_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`
+
+---
+
+## Commits Recientes
 
 | Hash | Descripción |
 |------|-------------|
-| `19eb392` | Optimize meetings: N+1 fix, silence detection, async webhook, DRY templates |
-| `5987e1e` | Auto-recording via meeting-started webhook + meeting-ended handler |
-| `2d031dd` | (anterior) Webhook registration management command |
+| `9856433` | docs: update PROGRESS.md |
+| `19eb392` | perf: optimize meetings module (N+1, silence detection, async webhook, DRY) |
+| `5987e1e` | feat: auto-recording via meeting-started webhook |
+| `2d031dd` | feat: webhook registration management command |
