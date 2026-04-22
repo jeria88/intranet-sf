@@ -530,12 +530,9 @@ def register_daily_webhook(request):
     }
     data = {
         "url": webhook_url,
-        "event_types": ["recording.ready-to-download"]
     }
 
     try:
-        # Primero listamos los existentes para no duplicar si es posible
-        # (O simplemente intentamos crear, Daily devolverá error si ya existe el mismo URL)
         response = requests.post(url, headers=headers, json=data, timeout=10)
         
         if response.status_code in [200, 201]:
@@ -545,9 +542,14 @@ def register_daily_webhook(request):
                 res_data = response.json()
                 error_msg = res_data.get('error', 'Error desconocido')
                 info_msg = res_data.get('info', '')
-                full_error = f"{error_msg} - {info_msg}" if info_msg else error_msg
-                print(f"❌ Daily API Error Full: {response.status_code} - {response.text}")
-                messages.error(request, f"Error API Daily: {response.status_code} - {full_error}")
+                
+                # Caso especial: El webhook ya existe
+                if 'only 1 webhook' in info_msg.lower():
+                    messages.info(request, "ℹ️ El webhook ya está configurado y activo en Daily.co.")
+                else:
+                    full_error = f"{error_msg} - {info_msg}" if info_msg else error_msg
+                    print(f"❌ Daily API Error Full: {response.status_code} - {response.text}")
+                    messages.error(request, f"Error API Daily: {response.status_code} - {full_error}")
             except:
                 messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
     except Exception as e:
