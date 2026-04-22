@@ -65,7 +65,7 @@ class MeetingBooking(models.Model):
         null=True, blank=True, related_name='meeting_booking'
     )
     
-    recording_url = models.URLField(blank=True, null=True, verbose_name='URL de Grabación', help_text='Enlace al video de la reunión')
+    recording_url = models.CharField(max_length=500, blank=True, null=True, verbose_name='URL de Grabación', help_text='Enlace al video o identificador de Daily')
     # Para control de cuota (4 reuniones/mes por rol, excepto RED)
     month_year = models.CharField(max_length=7, verbose_name='Mes-Año (YYYY-MM)', editable=False)
 

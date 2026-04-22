@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -29,7 +29,7 @@ def _generate_daily_token(room_name, user_name, is_owner=False):
     """
     Solicita un token de acceso a la API de Daily.co.
     """
-    api_key = settings.DAILY_API_KEY
+    api_key = (settings.DAILY_API_KEY or "").strip()
     if not api_key:
         return None
     
@@ -407,6 +407,7 @@ def sync_daily_recordings(request):
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code != 200:
+            print(f"❌ Daily API Sync Error: {response.status_code} - {response.text}")
             messages.error(request, f"Error API Daily: {response.status_code} - {response.text}")
             return redirect('meetings:recording_list')
         
@@ -471,7 +472,7 @@ def download_recording(request, pk):
         return redirect('meetings:recording_list')
 
     daily_id = booking.recording_url.replace('daily_id:', '')
-    api_key = settings.DAILY_API_KEY
+    api_key = (settings.DAILY_API_KEY or "").strip()
     headers = {"Authorization": f"Bearer {api_key}"}
     access_url = f"https://api.daily.co/v1/recordings/{daily_id}/access-link"
 
@@ -506,16 +507,21 @@ def register_daily_webhook(request):
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    api_key = settings.DAILY_API_KEY
+    api_key = (settings.DAILY_API_KEY or "").strip()
     if not api_key:
         messages.error(request, "Error de configuración: DAILY_API_KEY no encontrada.")
         return redirect('meetings:recording_list')
 
     # URL absoluta del webhook en esta aplicación
-    webhook_url = request.build_absolute_uri('/meetings/webhook/recording/')
+    # Corregido: Usar reverse para obtener la ruta correcta según configuración de URLs
+    webhook_path = reverse('meetings:recording_webhook')
+    webhook_url = request.build_absolute_uri(webhook_path)
+    
     # Asegurar HTTPS si estamos en producción (Railway)
     if 'railway.app' in webhook_url:
         webhook_url = webhook_url.replace('http://', 'https://')
+
+    print(f"🌐 Intentando registrar Webhook en Daily.co: {webhook_url}")
 
     url = "https://api.daily.co/v1/webhooks"
     headers = {
