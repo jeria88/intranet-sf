@@ -15,6 +15,7 @@ class ImprovementGoal(models.Model):
         ('PIE', 'PIE'),
         ('MANTENCION', 'Mantención'),
         ('PRO_RETENCION', 'Pro-Retención'),
+        ('NO_CORRESPONDE', 'No corresponde'),
         ('OTRO', 'Otro'),
     ]
     establishment = models.CharField(
@@ -39,7 +40,7 @@ class ImprovementGoal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # --- Nuevos campos para automatización ---
-    strategic_objectives = models.TextField(blank=True, verbose_name='Objetivos Estratégicos')
+    strategic_objectives = models.JSONField(default=list, blank=True, verbose_name='Objetivos Estratégicos')
     is_meeting_cycle = models.BooleanField(default=False, verbose_name='Es ciclo de reunión')
     associated_booking = models.ForeignKey(
         'meetings.MeetingBooking', on_delete=models.SET_NULL, null=True, blank=True, related_name='improvement_cycles'

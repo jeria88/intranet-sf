@@ -106,7 +106,15 @@
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <h4 style="margin:0 0 12px; font-size:15px; color:var(--contrast-2);">Objetivos Estratégicos</h4>
                 <div style="font-size:14px; line-height:1.6; color:var(--contrast); background:#fffef0; padding:15px; border-radius:10px; border:1px solid #ffeeba;">
-                    {{ goal.strategic_objectives|default:"No se definieron objetivos estratégicos."|linebreaks }}
+                    {% if goal.strategic_objectives %}
+                        <ul style="margin:0; padding-left:20px;">
+                        {% for obj in goal.strategic_objectives %}
+                            <li>{{ obj }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        No se definieron objetivos estratégicos.
+                    {% endif %}
                 </div>
             </div>
 

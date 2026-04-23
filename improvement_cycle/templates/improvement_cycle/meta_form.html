@@ -34,6 +34,7 @@
                         <option value="PIE">PIE</option>
                         <option value="MANTENCION">Mantención</option>
                         <option value="PRO_RETENCION">Pro-Retención</option>
+                        <option value="NO_CORRESPONDE">No corresponde</option>
                         <option value="OTRO">Otro</option>
                     </select>
                 </div>
@@ -70,12 +71,44 @@
                         style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
                 </div>
             </div>
-            
+
             <div style="margin-bottom:20px;">
                 <label style="display:block;margin-bottom:8px;font-weight:600;font-size:14px;">Objetivos Estratégicos (Automatización IA)</label>
-                <textarea name="strategic_objectives" rows="4" placeholder="Describe los objetivos estratégicos para que la IA diseñe automáticamente la ruta de procesos, indicadores y metas..."
-                    style="width:100%;padding:12px;border-radius:10px;border:1px solid #ddd;font-family:inherit;"></textarea>
+                <div id="objectives-container" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" name="strategic_objectives[]" placeholder="Describa el primer objetivo estratégico..."
+                            style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd; font-family:inherit; font-size:14px;">
+                        <button type="button" onclick="removeRow(this)" style="background:#ffefef; color:#d93025; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700;">&times;</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addRow()" style="background:#f0f7ff; color:#1e73be; border:1px dashed #1e73be; border-radius:10px; padding:10px; width:100%; cursor:pointer; font-weight:600; font-size:13px;">
+                    + Añadir otro objetivo estratégico
+                </button>
             </div>
+
+            <script>
+                function addRow() {
+                    const container = document.getElementById('objectives-container');
+                    const div = document.createElement('div');
+                    div.style.display = 'flex';
+                    div.style.gap = '10px';
+                    div.style.alignItems = 'center';
+                    div.innerHTML = `
+                        <input type="text" name="strategic_objectives[]" placeholder="Siguiente objetivo estratégico..."
+                            style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd; font-family:inherit; font-size:14px;">
+                        <button type="button" onclick="removeRow(this)" style="background:#ffefef; color:#d93025; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; font-weight:700;">&times;</button>
+                    `;
+                    container.appendChild(div);
+                }
+                function removeRow(btn) {
+                    const container = document.getElementById('objectives-container');
+                    if (container.children.length > 1) {
+                        btn.parentElement.remove();
+                    } else {
+                        btn.parentElement.querySelector('input').value = '';
+                    }
+                }
+            </script>
 
             <div style="margin-bottom:24px; display:flex; align-items:center; gap:12px; background:#f0f7ff; padding:16px; border-radius:12px; border:1px solid #cce3ff;">
                 <input type="checkbox" name="is_meeting_cycle" id="is_meeting_cycle" style="width:20px; height:20px; cursor:pointer;">

@@ -55,13 +55,17 @@ def meta_crear(request):
         target_val_str = request.POST.get('target_value', '0')
         target_val = float(target_val_str) if target_val_str.strip() else 0.0
         
+        objectives = request.POST.getlist('strategic_objectives[]')
+        # Limpiar objetivos vacíos
+        objectives = [obj.strip() for obj in objectives if obj.strip()]
+
         goal = ImprovementGoal.objects.create(
             establishment=ee,
             profile_role=request.POST.get('profile_role', ''),
             subvention_type=request.POST.get('subvention_type', 'SEP'),
             title=request.POST.get('title', ''),
             description=request.POST.get('description', ''),
-            strategic_objectives=request.POST.get('strategic_objectives', ''),
+            strategic_objectives=objectives,
             is_meeting_cycle=request.POST.get('is_meeting_cycle') == 'on',
             target_value=target_val,
             measurement_unit=request.POST.get('measurement_unit', ''),

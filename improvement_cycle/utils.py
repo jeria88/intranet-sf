@@ -14,11 +14,12 @@ def generate_cycle_content_ai(goal):
     if not goal.strategic_objectives or not DEEPSEEK_API_KEY:
         return False
 
+    objectives_text = "\n".join(goal.strategic_objectives) if isinstance(goal.strategic_objectives, list) else goal.strategic_objectives
     prompt = f"""
     Como experto en gestión escolar y mejora continua, analiza los siguientes OBJETIVOS ESTRATÉGICOS y genera un plan de acción detallado.
     
     OBJETIVOS ESTRATÉGICOS:
-    {goal.strategic_objectives}
+    {objectives_text}
     
     Debes responder ÚNICAMENTE con un objeto JSON con la siguiente estructura:
     {{
