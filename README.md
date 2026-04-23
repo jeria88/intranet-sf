@@ -176,32 +176,28 @@ Las salas seguirán el formato simétrico `https://intranet-sfa.daily.co/{identi
 
 ---
 
-## 🧠 Manual de Entrenamiento RAG (DeepSeek)
+## 🧠 Protocolo de Asistentes IA (San Francisco de Asís)
 
-Este manual describe el flujo para actualizar el conocimiento de los 40 asesores IA (5 roles × 8 establecimientos) utilizando **DeepSeek v4** y documentos **PDF** institucionales.
+Los 5 asistentes oficiales de **Temuco** operan bajo un protocolo de gobernanza estricto:
 
-### 1. Segmentación de Fuentes (PDF)
-Para que el entrenamiento coincida con la configuración de la intranet, los documentos deben organizarse por categorías:
-- **Nivel Red (Global):** Estatuto Docente, Normas Mineduc, Manuales de Convivencia General.
-- **Nivel Establecimiento:** Reglamento Interno (RICE), PME local, protocolos de seguridad específicos.
-- **Nivel Rol:** Formatos de planificación (UTP), manuales de liderazgo (Director), actas de mediación (Convivencia).
+### 1. Regla de Derivación (Pertinencia)
+Antes de resolver, la IA analiza si la situación corresponde a su rol. Si no es pertinente, adopta la postura **"Aconseja y deriva"**, orientando al usuario hacia el estamento correcto según el organigrama institucional.
 
-### 2. Procesamiento del Conocimiento (Embedding)
-Para que DeepSeek pueda "leer" los PDFs con precisión:
-1. **Extracción:** Convertir PDFs a Markdown para preservar la jerarquía de títulos.
-2. **Chunking:** Dividir el texto en bloques de **1000 tokens** con un solapamiento (overlap) de **200 tokens**. Esto evita que la IA pierda el contexto entre páginas.
-3. **Indexación:** Generar vectores (embeddings) que se almacenarán en el Vector Store vinculado a la API de DeepSeek.
+### 2. Estructura Jerárquica
+- **Representante Legal**: Gestión de Contratos y Recursos (SEP/PIE).
+- **Director**: Gestión de lo Urgente e Importante (Matriz Eisenhower).
+- **Gestión y Clima (Inspector/Convivencia)**: Aplicación de RICE/RIOHS y manejo de conflictos.
+- **UTP**: Curricular, Pedagógico y Decretos (67, 83, 170).
 
-### 3. Configuración de Identidad (System Prompt)
-Cada IA tiene una instrucción base distinta según su `slug` en la base de datos. La estructura del prompt debe ser:
-> "Eres el Asistente IA de **[ROL]** del establecimiento **[ESTABLECIMIENTO]**. Tu conocimiento está basado en los documentos adjuntos. Responde siempre con un tono profesional y utiliza los protocolos locales del establecimiento cuando la consulta lo requiera."
+### 3. Respuesta en 3 Enfoques
+Toda solución técnica debe proponer acciones bajo tres prismas obligatorios:
+- **Preventivo**: Para evitar recurrencia.
+- **Formativo**: Enfoque pedagógico y educativo.
+- **Reparatorio**: Acciones para corregir o sancionar.
 
-### 4. Flujo de Respuesta RAG
-1. **Consulta:** El usuario pregunta algo en la intranet.
-2. **Búsqueda (Retrieval):** El sistema busca en el Vector Store los 3 bloques de PDF más relevantes.
-3. **Aumentación (Augmentation):** Se combinan esos bloques con el *System Prompt* del rol.
-4. **Generación:** DeepSeek procesa todo y entrega la respuesta final basada únicamente en el conocimiento institucional.
+### 4. Blindaje Legal y Checklist
+Generación de una **Lista de Cotejo Universal** al final de cada intervención para asegurar el debido proceso y proteger al establecimiento ante la Superintendencia de Educación.
 
 ### 5. Ciclo de Actualización
 - **Documentos Normativos:** Actualización inmediata tras publicarse en la Biblioteca Digital.
-- **Documentos Operativos:** Sincronización mensual (Metas PME, Acuerdos de Reunión).
+- **Base de Conocimientos:** Consolidada (23.7k+ chunks) para una respuesta RAG de alta precisión.

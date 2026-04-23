@@ -40,9 +40,9 @@ GitHub Actions (cron 15min) → /api/pending/ → descarga → chunks 10min + de
 
 ## ✅ MÓDULO COMPLETADO: Agentes IA (`ai_modules/`)
 
-Estandarización y despliegue de 5 asistentes especializados con motor RAG y acceso por rol.
+Consolidación total de 5 asistentes exclusivos para **Temuco** con motor RAG y protocolo institucional.
 
-### Agentes Configurados
+### Agentes Configurados (Exclusivo Temuco)
 | slug | Rol | Dominio Principal |
 |------|-----|-------------------|
 | `director-temuco` | DIRECTOR | Coordinación, Liderazgo, Matriz Eisenhower |
@@ -52,11 +52,12 @@ Estandarización y despliegue de 5 asistentes especializados con motor RAG y acc
 | `convivencia-temuco` | CONVIVENCIA | RICE, Ley 20536, Política Nacional de Convivencia |
 
 ### Capacidades Implementadas
-- ✅ **Motor RAG**: Inyección de contexto normativo (23k+ chunks) en DeepSeek.
+- ✅ **Motor RAG**: Inyección de contexto normativo (23.7k+ chunks) en DeepSeek.
 - ✅ **Protocolo Institucional**: Jerarquía de roles, Regla de Derivación y Blindaje Legal (San Francisco de Asís).
 - ✅ **Formato Universal**: Sustento + Plan (Preventivo/Formativo/Reparatorio) + Checklist Obligatorio.
 - ✅ **Auto-Case**: Generación automática de casos y descargos desde el chat.
 - ✅ **Acceso Global**: Redirección inteligente por rol en `ai_list`.
+- ✅ **Limpieza de DB**: Eliminación definitiva de asistentes "fantasma" y genéricos mediante migración de datos.
 
 ---
 
@@ -75,7 +76,7 @@ Migración de archivos multimedia a almacenamiento compatible con S3 para optimi
 ## 🎯 TAREAS PENDIENTES / PRÓXIMOS PASOS
 
 ### Estabilización y Optimización
-- [ ] **Variables de Entorno**: Actualizar secretos de R2 (`AWS_*`) en los paneles de Railway y GitHub Actions.
+- [x] **Consolidación Temuco**: Eliminados todos los asistentes que no pertenecían a la sede Temuco.
 - [ ] **Migración a PostgreSQL**: Configurar base de datos relacional robusta en Railway para reemplazar SQLite.
 - [ ] **Litestream (Opcional)**: Si se mantiene SQLite, implementar replicación a R2.
 - [ ] **Test Pipeline**: Realizar una prueba completa de videollamada -> grabación -> procesamiento -> IA -> R2.
@@ -83,6 +84,7 @@ Migración de archivos multimedia a almacenamiento compatible con S3 para optimi
 
 ### Interfaz y UX
 - [x] **Botones de Descarga PDF**: Implementar botones de descarga para Acta, Acuerdos y Lista de Participantes con estados de "En proceso..." mientras la IA trabaja.
+- [x] **Ciclo de Mejora Dinámico**: Implementada la carga de múltiples objetivos estratégicos y opción "No corresponde" en subvenciones.
 - [ ] **Notificaciones Push**: Avisar al usuario cuando el procesamiento de su reunión termine.
 - [ ] **Badges de Estado**: Mejorar visibilidad del estado de procesamiento en la lista de grabaciones.
 
