@@ -27,11 +27,6 @@
         <p>Repositorio central de documentos y recursos técnicos.</p>
     </div>
     <div style="display: flex; gap: 10px;">
-        {% if user.is_staff %}
-        <a href="{% url 'library:sync_r2' %}" class="button"
-            style="background: #0284c7; color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold; border: 1px solid #0369a1;">
-            🔄 Sincronizar Base R2</a>
-        {% endif %}
         <a href="{% url 'library:document_upload' %}" class="button"
             style="background: var(--accent); color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold;">+
             Subir Documento</a>
@@ -141,7 +136,7 @@
                     {% endif %}
                 </div>
                 <div class="actions" style="display: flex; align-items: center;">
-                    <a href="{{ doc.file.url }}" class="button"
+                    <a href="{{ doc.file.url }}" target="_blank" class="button"
                         style="background: var(--accent); color: white; padding: 10px 20px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: bold;"
                         download>DESCARGAR</a>
                 </div>
