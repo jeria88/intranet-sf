@@ -53,7 +53,8 @@ Estandarización y despliegue de 5 asistentes especializados con motor RAG y acc
 
 ### Capacidades Implementadas
 - ✅ **Motor RAG**: Inyección de contexto normativo (23k+ chunks) en DeepSeek.
-- ✅ **Formato Universal**: Sustento + Plan (Preventivo/Formativo/Reparatorio) + Checklist.
+- ✅ **Protocolo Institucional**: Jerarquía de roles, Regla de Derivación y Blindaje Legal (San Francisco de Asís).
+- ✅ **Formato Universal**: Sustento + Plan (Preventivo/Formativo/Reparatorio) + Checklist Obligatorio.
 - ✅ **Auto-Case**: Generación automática de casos y descargos desde el chat.
 - ✅ **Acceso Global**: Redirección inteligente por rol en `ai_list`.
 
