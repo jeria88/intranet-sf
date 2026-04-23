@@ -119,7 +119,14 @@ Las salas seguirán el formato simétrico `https://intranet-sfa.daily.co/{identi
 - **Por Rol:** `https://intranet-sfa.daily.co/director`, `https://intranet-sfa.daily.co/utp`, etc.
 - **Por Establecimiento:** `https://intranet-sfa.daily.co/temuco`, `https://intranet-sfa.daily.co/angol`, etc.
 
-### 4. Pasos de Implementación (Próximamente)
+### 4. Flujo Automatizado y Reportes (IA)
+1. **Generación de Artefactos**: Al terminar la reunión, la grabación se procesa para generar automáticamente:
+   - Acta de la Reunión (DeepSeek)
+   - Acuerdos Detectados y Compromisos
+   - Lista de Participantes (Validación de Asistencia)
+2. **Descarga de PDFs**: Todos estos artefactos pueden ser descargados como documentos PDF listos para imprimir desde el detalle de la reunión. Antes de que el procesamiento termine, la plataforma mostrará un estado de "En proceso...".
+
+### 5. Pasos de Implementación (Próximamente)
 1.  **Refactorización de Modelos:** Ajustar `MeetingRoom` en `meetings/models.py` para incluir campos de filtrado por establecimiento y mejorar la validación de roles.
 2.  **Lógica de Redirección:** Modificar la vista principal de `meetings` para que detecte el origen del clic (Rol vs Establecimiento) y redirija a la URL de Daily correspondiente.
 3.  **Interfaz Dinámica:** Actualizar los botones en el frontend para que solo se muestren las salas permitidas según el contexto del usuario autenticado.

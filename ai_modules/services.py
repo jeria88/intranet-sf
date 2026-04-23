@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 from .utils import get_relevant_chunks
 
-def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
+def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0, attached_content=None):
     """
     Realiza una llamada a la API de DeepSeek inyectando el contexto RAG
     y el historial de la conversación.
@@ -19,6 +19,16 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
     except Exception as e:
         print(f"Error en RAG: {e}")
         relevant_context = "Error al recuperar contexto legal. Procede con base en conocimientos generales pero advierte al usuario."
+
+    # Bloque de adjunto si existe
+    attached_block = ""
+    if attached_content:
+        attached_block = (
+            "\n\n### DOCUMENTO ADJUNTO POR EL USUARIO:\n"
+            "El usuario ha adjuntado un documento específico para esta consulta. Analiza su contenido con ALTA PRIORIDAD para responder:\n"
+            f"{attached_content}\n"
+            "--- FIN DEL DOCUMENTO ADJUNTO ---\n"
+        )
 
     # Construir el prompt del sistema con identidad + contexto + formato de 6 puntos
     system_instruction = assistant.system_instruction or "Eres un asistente servicial."
@@ -43,6 +53,7 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0):
         "- **Reparativo:** (Acciones para corregir o sancionar)\n\n"
         "#### C) CHECKLIST DE PROCESOS\n"
         "(Lista de verificación para asegurar el cumplimiento)\n\n"
+        f"{attached_block}"
         "### CONTEXTO DE DOCUMENTOS RELEVANTES:\n"
         f"{relevant_context}\n"
         "--- FIN DEL CONTEXTO ---"

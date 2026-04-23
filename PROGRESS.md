@@ -78,9 +78,10 @@ Migración de archivos multimedia a almacenamiento compatible con S3 para optimi
 - [ ] **Migración a PostgreSQL**: Configurar base de datos relacional robusta en Railway para reemplazar SQLite.
 - [ ] **Litestream (Opcional)**: Si se mantiene SQLite, implementar replicación a R2.
 - [ ] **Test Pipeline**: Realizar una prueba completa de videollamada -> grabación -> procesamiento -> IA -> R2.
-- [ ] **Carga de Documentos**: Indexar `RICE`, `RIOHS` y `PME` faltantes en la Knowledge Base.
+- [ ] **Carga de Documentos**: Indexar `PME` faltante en la Knowledge Base (El `RICE` y el `RIOHS` ya se encuentran indexados).
 
 ### Interfaz y UX
+- [x] **Botones de Descarga PDF**: Implementar botones de descarga para Acta, Acuerdos y Lista de Participantes con estados de "En proceso..." mientras la IA trabaja.
 - [ ] **Notificaciones Push**: Avisar al usuario cuando el procesamiento de su reunión termine.
 - [ ] **Badges de Estado**: Mejorar visibilidad del estado de procesamiento en la lista de grabaciones.
 

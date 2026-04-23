@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acuerdos de Reunión - {{ booking.room.name }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; line-height: 1.6; margin: 0; padding: 20px; background: white; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 30px; }
+        .logo { width: 75px; height: auto; }
+        
+        .card { break-inside: avoid; margin-bottom: 30px; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: white; }
+        .card-header { background: #1e293b !important; color: white !important; padding: 10px 20px; font-weight: 800; text-transform: uppercase; font-size: 14px; -webkit-print-color-adjust: exact; }
+        .card-body { padding: 20px; font-size: 13px; }
+        
+        .content-box { background: #fffbeb; padding: 20px; border-radius: 8px; border: 1px solid #fef3c7; white-space: pre-wrap; font-size: 14px; color: #92400e; line-height: 1.7; -webkit-print-color-adjust: exact; }
+        
+        .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+            .card { border: none; }
+            .content-box { border: none; background: transparent; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+        <button onclick="window.print()" style="background: #d97706; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ Imprimir / Guardar como PDF</button>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <img src="/static/img/logo.png" class="logo" alt="Logo">
+            <div>
+                <h1 style="margin: 0; font-size: 22px; text-transform: uppercase;">Acuerdos y Compromisos</h1>
+                <p style="margin: 5px 0 0; font-weight: 700; color: #475569;">{{ booking.room.name }}</p>
+            </div>
+        </div>
+        <div style="text-align: right; font-size: 11px;">
+            <p style="margin: 0;"><strong>Fecha de Reunión:</strong> {{ booking.scheduled_at|date:"d/m/Y H:i" }}</p>
+            <p style="margin: 2px 0 0;"><strong>Responsable:</strong> {{ booking.booked_by.get_full_name|default:booking.booked_by.username }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Detalles Generales</div>
+        <div class="card-body">
+            <p style="margin: 0 0 10px 0;"><strong>Agenda Principal:</strong></p>
+            <p style="margin: 0; color: #475569;">{{ booking.agenda|default:"Sin agenda registrada previa a la reunión." }}</p>
+        </div>
+    </div>
+
+    <div class="card" style="border: none;">
+        <div class="card-header" style="background: #b45309 !important;">Acuerdos Detectados y Generados</div>
+        <div class="card-body" style="padding: 20px 0;">
+            {% if booking.acuerdos_text %}
+            <div class="content-box">
+{{ booking.acuerdos_text }}
+            </div>
+            {% else %}
+            <div style="padding: 30px; text-align: center; color: #94a3b8; border: 1px dashed #cbd5e0; border-radius: 8px;">
+                No hay acuerdos registrados o aún no han sido generados por la IA.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 Red Educacional SFA — Generado automáticamente por IA a partir de grabación
+    </div>
+</body>
+</html>

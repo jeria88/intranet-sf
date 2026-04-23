@@ -20,4 +20,9 @@ urlpatterns = [
     path('api/pending/', views.api_pending_meetings, name='api_pending_meetings'),
     path('api/update/<int:pk>/', views.api_update_meeting, name='api_update_meeting'),
     path('api/start/<int:pk>/', views.api_start_processing, name='api_start_processing'),
+    
+    # Reportes
+    path('reserva/<int:pk>/participantes-pdf/', views.participants_report_print, name='participants_pdf'),
+    path('reserva/<int:pk>/acta-pdf/', views.acta_report_print, name='acta_pdf'),
+    path('reserva/<int:pk>/acuerdos-pdf/', views.acuerdos_report_print, name='acuerdos_pdf'),
 ]

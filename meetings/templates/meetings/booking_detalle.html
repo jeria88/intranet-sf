@@ -82,20 +82,31 @@
 <div class="section-card" style="border-left: 4px solid #1e73be; margin-bottom: 24px;">
     <h4 style="color: #1e73be;">🤖 Procesamiento de Reunión (IA)</h4>
     
-    {% if booking.processing_status == 'procesando' %}
+    {% if booking.processing_status == 'procesando' or booking.processing_status == 'pendiente' %}
         <div style="text-align: center; padding: 30px;">
             <div style="font-size: 24px; margin-bottom: 15px;">⌛</div>
             <h5 style="margin: 0 0 8px; color: #222;">Procesando grabación...</h5>
-            <p style="font-size: 13px; color: #575760; margin: 0;">La IA está transcribiendo y redactando el acta. Esto puede tomar unos minutos dependiendo de la duración.</p>
+            <p style="font-size: 13px; color: #575760; margin: 0; margin-bottom: 20px;">La IA está transcribiendo y redactando el acta. Esto puede tomar unos minutos dependiendo de la duración.</p>
+            <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                <button disabled style="background:#e2e8f0;color:#64748b;padding:8px 16px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:not-allowed;">📥 Acta (En proceso...)</button>
+                <button disabled style="background:#e2e8f0;color:#64748b;padding:8px 16px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:not-allowed;">📥 Acuerdos (En proceso...)</button>
+                <button disabled style="background:#e2e8f0;color:#64748b;padding:8px 16px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:not-allowed;">📥 Participantes (En proceso...)</button>
+            </div>
         </div>
     {% elif booking.processing_status == 'completado' %}
         <div style="margin-bottom: 24px;">
-            <h5 style="font-size: 14px; color: #1e73be; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📄 Acta de la Reunión</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h5 style="font-size: 14px; color: #1e73be; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📄 Acta de la Reunión</h5>
+                <a href="{% url 'meetings:acta_pdf' booking.pk %}" target="_blank" style="background:#1e73be;color:white;padding:6px 14px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.1);">📥 Descargar PDF</a>
+            </div>
             <div style="font-size: 14px; color: #222; line-height: 1.7; white-space: pre-wrap; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eef0f2;">{{ booking.acta }}</div>
         </div>
         
         <div style="margin-bottom: 24px;">
-            <h5 style="font-size: 14px; color: #d97706; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📍 Acuerdos Detectados</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h5 style="font-size: 14px; color: #d97706; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📍 Acuerdos Detectados</h5>
+                <a href="{% url 'meetings:acuerdos_pdf' booking.pk %}" target="_blank" style="background:#d97706;color:white;padding:6px 14px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.1);">📥 Descargar PDF</a>
+            </div>
             <div style="font-size: 14px; color: #92400e; line-height: 1.7; white-space: pre-wrap; background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fef3c7;">{{ booking.acuerdos_text }}</div>
         </div>
 
@@ -115,8 +126,11 @@
 <!-- Participantes Detectados -->
 {% if booking.detected_participants.exists %}
 <div class="section-card" style="margin-bottom: 24px;">
-    <h4>🎙️ Participantes Detectados</h4>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h4 style="margin: 0; border: none; padding: 0;">🎙️ Participantes Detectados</h4>
+        <a href="{% url 'meetings:participants_pdf' booking.pk %}" target="_blank" style="background:#0284c7;color:white;padding:6px 14px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.1);">📥 Descargar PDF</a>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; border-top: 1px solid #f0f0f0; padding-top: 14px;">
         {% for part in booking.detected_participants.all %}
             <div style="background: white; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; display: flex; align-items: center; gap: 10px;">
                 <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Asistencia - {{ booking.room.name }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; line-height: 1.6; margin: 0; padding: 20px; background: white; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #1e293b; padding-bottom: 15px; margin-bottom: 30px; }
+        .logo { width: 75px; height: auto; }
+        
+        .card { break-inside: avoid; margin-bottom: 30px; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: white; }
+        .card-header { background: #1e293b !important; color: white !important; padding: 10px 20px; font-weight: 800; text-transform: uppercase; font-size: 14px; -webkit-print-color-adjust: exact; }
+        .card-body { padding: 20px; font-size: 13px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th { background: #f8fafc !important; border-bottom: 2px solid #cbd5e0; padding: 12px 10px; text-align: left; -webkit-print-color-adjust: exact; font-weight: 700; color: #475569; }
+        td { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; color: #1e293b; }
+        tr:last-child td { border-bottom: none; }
+        
+        .badge { background: #e2e8f0; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; color: #475569; }
+        
+        .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+            .card { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+        <button onclick="window.print()" style="background: #1e73be; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ Imprimir / Guardar como PDF</button>
+    </div>
+
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <img src="/static/img/logo.png" class="logo" alt="Logo">
+            <div>
+                <h1 style="margin: 0; font-size: 22px; text-transform: uppercase;">Registro de Asistencia</h1>
+                <p style="margin: 5px 0 0; font-weight: 700; color: #475569;">{{ booking.room.name }}</p>
+            </div>
+        </div>
+        <div style="text-align: right; font-size: 11px;">
+            <p style="margin: 0;"><strong>Fecha de Reunión:</strong> {{ booking.scheduled_at|date:"d/m/Y H:i" }}</p>
+            <p style="margin: 2px 0 0;"><strong>Responsable:</strong> {{ booking.booked_by.get_full_name|default:booking.booked_by.username }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Detalles de la Convocatoria</div>
+        <div class="card-body">
+            <p style="margin: 0 0 10px 0;"><strong>Agenda Principal:</strong></p>
+            <p style="margin: 0; color: #475569;">{{ booking.agenda|default:"Sin agenda registrada previa a la reunión." }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Nómina Oficial de Participantes (Validación Daily.co)</div>
+        <div class="card-body" style="padding: 0;">
+            {% if participants %}
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">Nº</th>
+                        <th style="width: 40%;">Nombre / Identificador</th>
+                        <th style="width: 20%;">Ingreso</th>
+                        <th style="width: 20%;">Salida</th>
+                        <th style="width: 15%; text-align: right;">Duración</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in participants %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td style="font-weight: 600;">{{ p.name }}</td>
+                        <td>{{ p.joined_at|date:"H:i:s"|default:"-" }}</td>
+                        <td>{{ p.left_at|date:"H:i:s"|default:"-" }}</td>
+                        <td style="text-align: right;">
+                            <span class="badge">
+                                {% if p.duration_seconds > 60 %}
+                                    {{ p.duration_seconds|add:"0"|divisibleby:60|yesno:"" }}{{ p.duration_seconds|add:"0"|divisibleby:1|yesno:"" }}{% widthratio p.duration_seconds 60 1 %} min
+                                {% else %}
+                                    {{ p.duration_seconds }} seg
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 30px; text-align: center; color: #94a3b8;">
+                No hay registros automáticos de asistencia para esta reunión o aún no ha sido procesada por la API.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 Red Educacional SFA — Generado por Plataforma de Videollamadas
+    </div>
+</body>
+</html>

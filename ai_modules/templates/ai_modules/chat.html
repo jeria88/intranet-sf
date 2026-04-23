@@ -202,7 +202,18 @@
         </div>
 
         <div class="chat-input-area">
+            <!-- Input de Archivo Oculto -->
+            <input type="file" id="chat-file-input" style="display: none;" accept=".pdf,.docx,.txt,.md">
+            
+            <div id="file-preview" style="display: none; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 15px; border-radius: 10px; margin-bottom: 5px; border: 1px dashed #cbd5e0;">
+                <span style="font-size: 12px; color: #475569; font-weight: 600;">📎 <span id="file-name">archivo.pdf</span></span>
+                <button onclick="clearFile()" style="background: none; border: none; color: #ef4444; font-weight: 800; cursor: pointer; font-size: 14px;">&times;</button>
+            </div>
+
             <div style="width: 100%; display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 30px; padding: 5px 15px; box-sizing: border-box;">
+                <button onclick="document.getElementById('chat-file-input').click()" style="background:none; border:none; color:#64748b; cursor:pointer; padding: 5px; display: flex; align-items: center; justify-content: center;" title="Adjuntar archivo">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path></svg>
+                </button>
                 <textarea id="chat-input" placeholder="Consulte aquí..." rows="1" style="flex:1; border:none; outline:none; resize:none; font-size:14px; padding: 8px 0;"></textarea>
                 <button id="send-btn">
                     <span>Enviar</span>
@@ -482,20 +493,54 @@
     const initialResponse = `{{ last_ai_response|safe|escapejs }}`;
     if (initialResponse && initialResponse !== 'None') { updateReport(initialResponse); }
 
+    function clearFile() {
+        document.getElementById('chat-file-input').value = '';
+        document.getElementById('file-preview').style.display = 'none';
+    }
+
+    document.getElementById('chat-file-input').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            document.getElementById('file-name').innerText = file.name;
+            document.getElementById('file-preview').style.display = 'flex';
+        }
+    });
+
     async function sendMessage() {
         const text = chatInput.value.trim();
-        if (!text) return;
+        const fileInput = document.getElementById('chat-file-input');
+        const file = fileInput.files[0];
+
+        if (!text && !file) return;
+        
         chatInput.value = '';
-        appendMsg('user', text);
+        let displayMsg = text;
+        if (file) {
+            displayMsg = (text ? text + "\n\n" : "") + `📎 *Archivo adjunto: ${file.name}*`;
+        }
+        
+        appendMsg('user', displayMsg);
         scrollToBottom();
+        
         const tid = 'load-' + Date.now();
         appendLoading(tid);
 
+        // Limpiar adjunto del UI inmediatamente para evitar re-envíos
+        const currentFile = file;
+        clearFile();
+
         try {
+            const formData = new FormData();
+            formData.append('message', text);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            if (currentFile) {
+                formData.append('attachment', currentFile);
+            }
+
             const r = await fetch(`/ia/${assistantSlug}/chat/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
-                body: new URLSearchParams({ 'message': text })
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                body: formData
             });
             const d = await r.json();
             if(document.getElementById(tid)) document.getElementById(tid).remove();
@@ -503,7 +548,7 @@
             if (d.status === 'success') {
                 appendMsg('assistant', d.response);
                 updateReport(d.response);
-                autoSaveCase(text, d.response);
+                autoSaveCase(text || `Consulta con archivo: ${currentFile ? currentFile.name : ''}`, d.response);
             } else {
                 appendMsg('assistant', "⚠️ Error del servidor: " + (d.response || "No se pudo procesar la respuesta."));
             }

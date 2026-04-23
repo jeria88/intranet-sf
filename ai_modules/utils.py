@@ -9,6 +9,8 @@ import gc
 # Caché en memoria para evitar recargas constantes en servidores con RAM limitada
 _VECTOR_RESOURCES = {}
 
+import docx
+
 def extract_text_from_pdf(file_path):
     """Extrae el texto de un archivo PDF usando pypdf."""
     text = ""
@@ -21,6 +23,51 @@ def extract_text_from_pdf(file_path):
     except Exception as e:
         print(f"Error extrayendo texto de PDF: {e}")
     return text
+
+def extract_text_from_docx(file_path):
+    """Extrae el texto de un archivo Word (.docx)."""
+    text = ""
+    try:
+        doc = docx.Document(file_path)
+        for para in doc.paragraphs:
+            text += para.text + "\n"
+    except Exception as e:
+        print(f"Error extrayendo texto de Word: {e}")
+    return text
+
+def extract_text_from_file(file_obj):
+    """
+    Detecta el tipo de archivo y extrae el texto.
+    Soporta PDF, DOCX, TXT, MD.
+    """
+    if not file_obj:
+        return ""
+    
+    # El file_obj puede ser un path o un objeto de archivo de Django
+    filename = getattr(file_obj, 'name', str(file_obj)).lower()
+    
+    # Si es un objeto de archivo (InmemoryUploadedFile o similar), necesitamos leerlo
+    # Para librerías que requieren paths, a veces es mejor guardar temporalmente
+    # Pero PdfReader y Document pueden aceptar streams en muchos casos.
+    
+    try:
+        if filename.endswith('.pdf'):
+            return extract_text_from_pdf(file_obj)
+        elif filename.endswith('.docx'):
+            return extract_text_from_docx(file_obj)
+        elif filename.endswith(('.txt', '.md', '.json')):
+            if hasattr(file_obj, 'read'):
+                content = file_obj.read()
+                if isinstance(content, bytes):
+                    return content.decode('utf-8', errors='ignore')
+                return content
+            else:
+                with open(file_obj, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+    except Exception as e:
+        print(f"Error general en extracción: {e}")
+    
+    return ""
 
 def process_knowledge_base_file(knowledge_base_obj):
     """Procesa un objeto AIKnowledgeBase, extrae su texto y actualiza el asistente."""

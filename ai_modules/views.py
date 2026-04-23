@@ -6,6 +6,7 @@ from .models import AIAssistant, AIQuery, AIChatMessage, AICase, CaseObservation
 from notifications.models import Notification
 from .forms import AIQueryForm
 from .services import call_deepseek_ai
+from .utils import extract_text_from_file
 from django.http import JsonResponse
 import re
 
@@ -118,12 +119,18 @@ def nueva_consulta(request, slug):
             
             # Generar sugerencia automática de la IA (RAG)
             if assistant.system_instruction or assistant.context_text:
+                # Extraer texto del adjunto si existe
+                attached_text = ""
+                if query.attachment:
+                    attached_text = extract_text_from_file(query.attachment)
+
                 # El historial para una consulta única es solo la pregunta actual
                 history = [{"role": "user", "content": query.question}]
                 suggestion = call_deepseek_ai(
                     assistant,
                     history,
-                    query.question
+                    query.question,
+                    attached_content=attached_text
                 )
                 query.ai_suggestion = suggestion
                 query.save(update_fields=['ai_suggestion'])
@@ -261,10 +268,16 @@ def ai_chat(request, slug):
                 history.append({'role': h.role, 'content': h.content})
             
             # 3. Llamar a la IA
+            attached_file = request.FILES.get('attachment')
+            attached_text = ""
+            if attached_file:
+                attached_text = extract_text_from_file(attached_file)
+            
             ai_response = call_deepseek_ai(
                 assistant,
                 history,
-                user_message
+                user_message,
+                attached_content=attached_text
             )
             
             # 4. Guardar respuesta de la IA

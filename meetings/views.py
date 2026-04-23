@@ -717,3 +717,51 @@ def api_start_processing(request, pk):
     booking.processing_status = 'procesando'
     booking.save(update_fields=['processing_status'])
     return JsonResponse({"status": "processing_started"})
+
+
+@login_required
+def participants_report_print(request, pk):
+    """Vista optimizada para impresión (PDF) de los participantes detectados."""
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    
+    # Seguridad: solo creador o staff (o RED)
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        if booking.booked_by != request.user:
+            return render(request, 'ai_modules/no_access.html')  # Usa template existente de acceso denegado
+            
+    participants = booking.detected_participants.all().order_by('joined_at')
+    
+    return render(request, 'meetings/participants_report_print.html', {
+        'booking': booking,
+        'participants': participants
+    })
+
+
+@login_required
+def acta_report_print(request, pk):
+    """Vista optimizada para impresión (PDF) del Acta de la Reunión."""
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    
+    # Seguridad: solo creador o staff (o RED)
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        if booking.booked_by != request.user:
+            return render(request, 'ai_modules/no_access.html')
+            
+    return render(request, 'meetings/acta_report_print.html', {
+        'booking': booking
+    })
+
+
+@login_required
+def acuerdos_report_print(request, pk):
+    """Vista optimizada para impresión (PDF) de los Acuerdos de la Reunión."""
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    
+    # Seguridad: solo creador o staff (o RED)
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        if booking.booked_by != request.user:
+            return render(request, 'ai_modules/no_access.html')
+            
+    return render(request, 'meetings/acuerdos_report_print.html', {
+        'booking': booking
+    })
