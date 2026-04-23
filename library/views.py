@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.management import call_command
 import logging
 
 logger = logging.getLogger(__name__)
@@ -123,3 +124,19 @@ def document_delete(request, pk):
         return redirect('library:document_list')
     
     return render(request, 'library/document_confirm_delete.html', {'doc': doc})
+
+
+@login_required
+def sync_r2(request):
+    if not request.user.is_staff:
+        messages.error(request, "No tienes permiso para sincronizar la base de conocimientos.")
+        return redirect('library:document_list')
+        
+    try:
+        call_command('sync_knowledge_base')
+        messages.success(request, "Sincronización de Base de Conocimientos desde R2 completada exitosamente.")
+    except Exception as e:
+        logger.error(f"Error sincronizando R2: {str(e)}")
+        messages.error(request, f"Error durante la sincronización: {e}")
+        
+    return redirect('library:document_list')

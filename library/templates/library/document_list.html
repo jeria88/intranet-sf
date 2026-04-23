@@ -26,9 +26,16 @@
         <h1>Biblioteca Digital</h1>
         <p>Repositorio central de documentos y recursos técnicos.</p>
     </div>
-    <a href="{% url 'library:document_upload' %}" class="button"
-        style="background: var(--accent); color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold;">+
-        Subir Documento</a>
+    <div style="display: flex; gap: 10px;">
+        {% if user.is_staff %}
+        <a href="{% url 'library:sync_r2' %}" class="button"
+            style="background: #0284c7; color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold; border: 1px solid #0369a1;">
+            🔄 Sincronizar Base R2</a>
+        {% endif %}
+        <a href="{% url 'library:document_upload' %}" class="button"
+            style="background: var(--accent); color: white; padding: 12px 25px; border-radius: 20px; text-decoration: none; font-weight: bold;">+
+            Subir Documento</a>
+    </div>
 </div>
 
 <!-- Search and Sort Bar -->

@@ -23,17 +23,21 @@ def generate_cycle_content_ai(goal):
     Debes responder ÚNICAMENTE con un objeto JSON con la siguiente estructura:
     {{
         "ruta_procesos": [
-            {{"title": "Nombre de la acción", "description": "Descripción detallada", "weight": 25}},
+            {{"title": "Nombre de la acción", "description": "Descripción detallada", "weight": 25, "tipo": "preventivo/formativo/reparativo"}},
             ...
         ],
         "indicadores": [
             {{"name": "Nombre del indicador", "target": "Meta cuantitativa"}},
             ...
         ],
+        "checklist": [
+            "Ítem de verificación 1",
+            "Ítem de verificación 2"
+        ],
         "proyeccion_esperada": "Breve descripción de la trayectoria esperada"
     }}
     
-    Genera al menos 3 acciones y 2 indicadores.
+    Genera al menos 3 acciones (una de cada tipo: preventivo, formativo, reparativo), 2 indicadores y un checklist de 4 puntos.
     """
 
     headers = {
@@ -58,6 +62,10 @@ def generate_cycle_content_ai(goal):
             # Guardar en el modelo
             goal.process_route = data.get('ruta_procesos', [])
             goal.indicators = data.get('indicadores', [])
+            # Inyectar checklist en la descripción o un campo si existiera (por ahora lo guardamos en la ruta)
+            if 'checklist' in data:
+                goal.process_route.append({"title": "CHECKLIST DE PROCESOS", "description": "\n".join(data['checklist']), "weight": 0, "tipo": "seguimiento"})
+            
             goal.save()
             
             # Crear las acciones en la base de datos

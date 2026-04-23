@@ -7,6 +7,25 @@ from notifications.models import Notification
 from .forms import AIQueryForm
 from .services import call_deepseek_ai
 from django.http import JsonResponse
+import re
+
+
+def _extract_case_components(text):
+    """Extrae las secciones A, B y C de la respuesta de la IA."""
+    sustento = ""
+    ruta = ""
+    checklist = ""
+    
+    # Buscar secciones usando Regex
+    a_match = re.search(r'#### A\) SUSTENTO NORMATIVO(.*?)(?=#### B|$)', text, re.DOTALL | re.IGNORECASE)
+    b_match = re.search(r'#### B\) PLAN DE ACCIÓN(.*?)(?=#### C|$)', text, re.DOTALL | re.IGNORECASE)
+    c_match = re.search(r'#### C\) CHECKLIST DE PROCESOS(.*?)$', text, re.DOTALL | re.IGNORECASE)
+    
+    if a_match: sustento = a_match.group(1).strip()
+    if b_match: ruta = b_match.group(1).strip()
+    if c_match: checklist = c_match.group(1).strip()
+    
+    return sustento, ruta, checklist
 
 
 @login_required
@@ -108,6 +127,21 @@ def nueva_consulta(request, slug):
                 )
                 query.ai_suggestion = suggestion
                 query.save(update_fields=['ai_suggestion'])
+
+                # --- AUTO-CASE GENERATION ---
+                sustento, ruta, checklist = _extract_case_components(suggestion)
+                if sustento or ruta:
+                    AICase.objects.create(
+                        user=request.user,
+                        assistant=assistant,
+                        title=f"Caso: {query.question[:50]}...",
+                        user_query=query.question,
+                        sustento=sustento,
+                        ruta=ruta,
+                        checklist=checklist,
+                        status='abierto'
+                    )
+                # ----------------------------
             
             # Notificar a todos los admins (staff)
             from users.models import User
@@ -240,6 +274,22 @@ def ai_chat(request, slug):
                 role='assistant',
                 content=ai_response
             )
+
+            # --- AUTO-CASE GENERATION ---
+            # Solo guardamos si la respuesta parece técnica (tiene secciones)
+            sustento, ruta, checklist = _extract_case_components(ai_response)
+            if sustento or ruta:
+                AICase.objects.create(
+                    user=request.user,
+                    assistant=assistant,
+                    title=f"Chat: {user_message[:50]}...",
+                    user_query=user_message,
+                    sustento=sustento,
+                    ruta=ruta,
+                    checklist=checklist,
+                    status='abierto'
+                )
+            # ----------------------------
             
             return JsonResponse({
                 'response': ai_response,

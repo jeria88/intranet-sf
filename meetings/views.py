@@ -651,6 +651,29 @@ def api_update_meeting(request, pk):
 
         booking.save()
 
+        # --- REPOSITORY INTEGRATION: Save deliverables as documents ---
+        from django.core.files.base import ContentFile
+        if booking.acta:
+            MeetingDocument.objects.get_or_create(
+                booking=booking,
+                title=f"Acta de Reunión - {booking.scheduled_at.date()}",
+                defaults={
+                    "uploaded_by": booking.booked_by,
+                    "file": ContentFile(booking.acta.encode('utf-8'), name=f"acta_{booking.id}.txt")
+                }
+            )
+        
+        if booking.acuerdos_text:
+            MeetingDocument.objects.get_or_create(
+                booking=booking,
+                title=f"Acuerdos y Compromisos - {booking.scheduled_at.date()}",
+                defaults={
+                    "uploaded_by": booking.booked_by,
+                    "file": ContentFile(booking.acuerdos_text.encode('utf-8'), name=f"acuerdos_{booking.id}.txt")
+                }
+            )
+        # -------------------------------------------------------------
+
         # Guardar participantes si vienen en el body
         participants = body.get('participants', [])
         for p in participants:
