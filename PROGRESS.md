@@ -45,11 +45,11 @@ Estandarización y despliegue de 5 asistentes especializados con motor RAG y acc
 ### Agentes Configurados
 | slug | Rol | Dominio Principal |
 |------|-----|-------------------|
-| `director` | DIRECTOR | Coordinación, Liderazgo, Matriz Eisenhower |
-| `utp` | UTP | Curricular, Pedagógico, Decreto 67/83/170 |
-| `representante` | REPRESENTANTE | Legal, Contratos, Recursos SEP/PIE, Ley 21809 |
-| `inspector` | INSPECTOR | RIOHS personal, Estatuto Docente, Sumarios |
-| `convivencia` | CONVIVENCIA | RICE, Ley 20536, Política Nacional de Convivencia |
+| `director-temuco` | DIRECTOR | Coordinación, Liderazgo, Matriz Eisenhower |
+| `utp-temuco` | UTP | Curricular, Pedagógico, Decreto 67/83/170 |
+| `representante-temuco` | REPRESENTANTE | Legal, Contratos, Recursos SEP/PIE, Ley 21809 |
+| `inspector-temuco` | INSPECTOR | RIOHS personal, Estatuto Docente, Sumarios |
+| `convivencia-temuco` | CONVIVENCIA | RICE, Ley 20536, Política Nacional de Convivencia |
 
 ### Capacidades Implementadas
 - ✅ **Motor RAG**: Inyección de contexto normativo (23k+ chunks) en DeepSeek.

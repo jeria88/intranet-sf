@@ -17,26 +17,14 @@ from library.models import Category
 
 User = get_user_model()
 
-print("🌱 Iniciando MEGA-SEED (Protocolo San Francisco de Asís)...")
-
-# ── Listas para generación aleatoria ─────────────────────────────────────────
-FIRST_NAMES = ['Ariel', 'Camila', 'Beatriz', 'Diego', 'Elena', 'Francisco', 'Gloria', 'Hugo', 'Isabel', 'Juan', 'Karla', 'Luis', 'María', 'Nicolás', 'Olga', 'Pablo', 'Rosa', 'Sergio', 'Teresa', 'Víctor']
-LAST_NAMES = ['Rosenmann', 'Jeria', 'Pérez', 'González', 'Muñoz', 'Rojas', 'Díaz', 'Soto', 'Silva', 'Sepúlveda', 'Morales', 'Fuentes', 'Valenzuela', 'Araya', 'Castillo', 'Tapia', 'Reyes', 'Gutiérrez', 'Castro', 'Pizarro']
-
-ESTABLISHMENTS = ['TEMUCO', 'LAUTARO', 'RENAICO', 'SANTIAGO', 'IMPERIAL', 'ERCILLA', 'ARAUCO', 'ANGOL']
-ROLES = ['REPRESENTANTE', 'UTP', 'DIRECTOR', 'INSPECTOR', 'CONVIVENCIA']
-
-# ── Superusuario ─────────────────────────────────────────────────────────────
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@sfared.cl', 'Admin1234!')
-    print("✅ Superusuario 'admin' creado (pass: Admin1234!)")
+print("🌱 Iniciando SEED (Exclusivo Temuco)...")
 
 # ── 1. Usuarios Demo ──────────────────────────────────────────────────────────
 DEMO_USERS = [
-    {'username': 'director.demo',     'role': 'DIRECTOR',     'establishment': 'ANGOL'},
-    {'username': 'utp.demo',          'role': 'UTP',          'establishment': 'ANGOL'},
-    {'username': 'inspector.demo',    'role': 'INSPECTOR',    'establishment': 'ANGOL'},
-    {'username': 'convivencia.demo', 'role': 'CONVIVENCIA', 'establishment': 'ANGOL'},
+    {'username': 'director.demo',     'role': 'DIRECTOR',     'establishment': 'TEMUCO'},
+    {'username': 'utp.demo',          'role': 'UTP',          'establishment': 'TEMUCO'},
+    {'username': 'inspector.demo',    'role': 'INSPECTOR',    'establishment': 'TEMUCO'},
+    {'username': 'convivencia.demo', 'role': 'CONVIVENCIA', 'establishment': 'TEMUCO'},
     {'username': 'red.demo',          'role': 'RED',          'establishment': 'RED'},
 ]
 
@@ -53,27 +41,16 @@ for ud in DEMO_USERS:
         }
     )
 
-# ── 2. Salas de Reunión ──────────────────────────────────────────────────────
-ROOMS = [
-    {'name': 'Sala Temuco', 'slug': 'daily-temuco', 'room_type': 'daily', 'daily_identifier': 'temuco', 'target_establishment': 'TEMUCO'},
-    {'name': 'Videollamada UTP', 'slug': 'daily-utp', 'room_type': 'daily', 'daily_identifier': 'utp', 'target_role': 'UTP'},
-]
-
-for r_data in ROOMS:
-    MeetingRoom.objects.get_or_create(
-        slug=r_data['slug'],
-        defaults={k: v for k, v in r_data.items() if k != 'slug'}
-    )
-
-# ── 3. Asistentes IA Oficiales (Protocolo Institucional) ───────────────────────
-print("\n🤖 Sincronizando Asistentes IA...")
+# ── 2. Asistentes IA Oficiales (Temuco) ───────────────────────────────────────
+print("\n🤖 Sincronizando Asistentes IA Temuco...")
 ASSISTANTS = [
     {
-        'name': 'Asistente Estratégico (Director)', 
-        'slug': 'director', 
+        'name': 'Asistente Estratégico (Director) - Temuco', 
+        'slug': 'director-temuco', 
         'profile_role': 'DIRECTOR', 
+        'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Gestión institucional y liderazgo.',
+        'description': 'Gestión institucional y liderazgo - Temuco.',
         'system_instruction': (
             "Área de Acción: Universal (aplica a cualquier situación).\n"
             "Funciones: Gestionar lo Urgente/Importante, delegar liderazgo, monitorear procesos.\n"
@@ -81,11 +58,12 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente Curricular (UTP)', 
-        'slug': 'utp', 
+        'name': 'Asistente IA UTP Temuco', 
+        'slug': 'utp-temuco', 
         'profile_role': 'UTP', 
+        'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Gestión curricular y pedagógica.',
+        'description': 'Gestión curricular y pedagógica - Temuco.',
         'system_instruction': (
             "Área de Acción: Técnico-Pedagógica (Curricular y Pedagógica).\n"
             "Documentos: Reglamento de Evaluación, Decretos 67, 83, 170 y PIE.\n"
@@ -93,11 +71,12 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente de Disciplina e Inspectoría', 
-        'slug': 'inspector', 
+        'name': 'Asistente de Disciplina e Inspectoría - Temuco', 
+        'slug': 'inspector-temuco', 
         'profile_role': 'INSPECTOR', 
+        'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Gestión de personal y normativa interna.',
+        'description': 'Gestión de personal y normativa interna - Temuco.',
         'system_instruction': (
             "Área de Acción: Gestión y Clima Escolar / Personal del establecimiento.\n"
             "Documento Base: RIOHS (Reglamento Interno de Orden, Higiene y Seguridad).\n"
@@ -105,11 +84,12 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente de Convivencia Escolar', 
-        'slug': 'convivencia', 
+        'name': 'Asistente de Convivencia Escolar - Temuco', 
+        'slug': 'convivencia-temuco', 
         'profile_role': 'CONVIVENCIA', 
+        'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Clima escolar y resolución de conflictos.',
+        'description': 'Clima escolar y resolución de conflictos - Temuco.',
         'system_instruction': (
             "Área de Acción: Gestión y Clima Escolar / Estudiantes y Apoderados.\n"
             "Documento Base: RICE (Reglamento Interno de Convivencia Escolar).\n"
@@ -117,11 +97,12 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente Representante Legal', 
-        'slug': 'representante', 
+        'name': 'Asistente Representante Legal (Temuco)', 
+        'slug': 'representante-temuco', 
         'profile_role': 'REPRESENTANTE', 
+        'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Gestión de recursos y contratos.',
+        'description': 'Gestión de recursos y contratos - Temuco.',
         'system_instruction': (
             "Área de Acción: Gestión de Contratos y Recursos.\n"
             "Foco: Normativa internacional, Ley 21809, recursos SEP/PIE.\n"
@@ -139,5 +120,11 @@ for data in ASSISTANTS:
         for key, value in data.items():
             setattr(assistant, key, value)
         assistant.save()
+    
+    # Sincronizar a la base de conocimiento si es necesario
+    try:
+        assistant.save(using='knowledge_base')
+    except:
+        pass
 
-print("\n🚀 SEED completado con éxito.")
+print("\n🚀 SEED Temuco completado con éxito.")
