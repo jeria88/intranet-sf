@@ -51,9 +51,8 @@ def meta_crear(request):
     ee_initial = request.GET.get('ee') or request.user.establishment
 
     if request.method == 'POST':
-        ee = request.POST.get('establishment')
-        target_val_str = request.POST.get('target_value', '0')
-        target_val = float(target_val_str) if target_val_str.strip() else 0.0
+        ee = request.user.establishment or ''
+        target_val = 100.0  # Default value as we removed it from UI
         
         objectives = request.POST.getlist('strategic_objectives[]')
         # Limpiar objetivos vacíos
@@ -61,14 +60,14 @@ def meta_crear(request):
 
         goal = ImprovementGoal.objects.create(
             establishment=ee,
-            profile_role=request.POST.get('profile_role', ''),
-            subvention_type=request.POST.get('subvention_type', 'SEP'),
+            profile_role=request.user.role or '',
+            subvention_type='SEP',  # Default since we removed it
             title=request.POST.get('title', ''),
             description=request.POST.get('description', ''),
             strategic_objectives=objectives,
             is_meeting_cycle=request.POST.get('is_meeting_cycle') == 'on',
             target_value=target_val,
-            measurement_unit=request.POST.get('measurement_unit', ''),
+            measurement_unit='%',
             deadline=request.POST.get('deadline'),
             created_by=request.user,
         )
@@ -98,6 +97,26 @@ def goal_detail(request, pk):
         'goal': goal,
         'actions': actions,
         'can_edit': can_edit,
+    })
+
+@login_required
+def goal_edit(request, pk):
+    goal = get_object_or_404(ImprovementGoal, pk=pk)
+    if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == 'POST':
+        goal.title = request.POST.get('title', goal.title)
+        goal.description = request.POST.get('description', goal.description)
+        if request.POST.get('deadline'):
+            goal.deadline = request.POST.get('deadline')
+        goal.save()
+        messages.success(request, "Meta de mejora actualizada correctamente.")
+        return redirect('improvement_cycle:goal_detail', pk=goal.pk)
+
+    return render(request, 'improvement_cycle/meta_edit.html', {
+        'goal': goal,
     })
 
 
@@ -136,14 +155,22 @@ def action_create(request, goal_pk):
 def action_toggle(request, pk):
     action = get_object_or_404(ImprovementAction, pk=pk)
     if not (request.user == action.responsible or request.user == action.goal.created_by or request.user.is_staff):
-        messages.error(request, "No tienes permiso para cambiar el estado de esta acción.")
-        return redirect('improvement_cycle:goal_detail', pk=action.goal.pk)
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'No tienes permiso'}, status=403)
     
     if action.status == 'completado':
         action.status = 'pendiente'
     else:
         action.status = 'completado'
     action.save()
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        from django.http import JsonResponse
+        return JsonResponse({
+            'status': action.status, 
+            'new_progress': action.goal.progress_pct,
+            'summary': action.goal.actions_summary
+        })
     
     messages.success(request, f"Estado de '{action.title}' actualizado.")
     return redirect('improvement_cycle:goal_detail', pk=action.goal.pk)

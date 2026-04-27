@@ -11,9 +11,14 @@
             <p style="margin:8px 0 0; color:var(--contrast-2);">{{ goal.get_subvention_type_display }} · {{ goal.establishment }} · Plazo: {{ goal.deadline|date:"d M Y" }}</p>
         </div>
         {% if can_edit %}
-        <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="background:var(--accent); color:white; text-decoration:none; padding:10px 20px; border-radius:30px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">
-            <span>+</span> Añadir Acción/Hito
-        </a>
+        <div style="display:flex; gap:10px;">
+            <a href="{% url 'improvement_cycle:goal_edit' goal.pk %}" style="background:white; color:var(--contrast); border:1px solid #f0f0f0; text-decoration:none; padding:10px 20px; border-radius:30px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">
+                <span>✏️</span> Editar
+            </a>
+            <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="background:var(--accent); color:white; text-decoration:none; padding:10px 20px; border-radius:30px; font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px;">
+                <span>+</span> Añadir Acción/Hito
+            </a>
+        </div>
         {% endif %}
     </div>
 
@@ -58,9 +63,9 @@
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:8px;">
-                            <form method="post" action="{% url 'improvement_cycle:action_toggle' action.pk %}">
+                            <form class="action-toggle-form" data-url="{% url 'improvement_cycle:action_toggle' action.pk %}">
                                 {% csrf_token %}
-                                <button type="submit" style="width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; 
+                                <button type="button" class="toggle-btn" style="width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.3s;
                                     {% if action.status == 'completado' %}background:#198754; color:white;{% else %}background:#f0f0f0; color:#b2b2be;{% endif %}" 
                                     title="Marcar como {% if action.status == 'completado' %}pendiente{% else %}completado{% endif %}">
                                     ✓
@@ -79,12 +84,12 @@
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <h3 style="margin:0 0 20px; font-size:18px;">📈 Progreso General</h3>
                 <div style="text-align:center; margin-bottom:20px;">
-                    <span style="font-size:48px; font-weight:800; color:var(--accent);">{{ goal.progress_pct }}%</span>
+                    <span id="progress-text" style="font-size:48px; font-weight:800; color:var(--accent);">{{ goal.progress_pct }}%</span>
                 </div>
                 <div style="height:12px; background:#f0f0f0; border-radius:6px; overflow:hidden; margin-bottom:12px;">
-                    <div style="height:100%; width:{{ goal.progress_pct }}%; background:var(--accent); transition:width 0.5s ease-out;"></div>
+                    <div id="progress-bar" style="height:100%; width:{{ goal.progress_pct }}%; background:var(--accent); transition:width 0.5s ease-out;"></div>
                 </div>
-                <p style="font-size:14px; text-align:center; color:var(--contrast-2);">{{ goal.actions_summary }}</p>
+                <p id="progress-summary" style="font-size:14px; text-align:center; color:var(--contrast-2);">{{ goal.actions_summary }}</p>
             </div>
 
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
@@ -129,4 +134,49 @@
         </div>
     </div>
 </div>
+
+<script>
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const form = this.closest('form');
+        const url = form.getAttribute('data-url');
+        const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                // Actualizar botón
+                if (data.status === 'completado') {
+                    this.style.background = '#198754';
+                    this.style.color = 'white';
+                } else {
+                    this.style.background = '#f0f0f0';
+                    this.style.color = '#b2b2be';
+                }
+                
+                // Actualizar barra de progreso
+                document.getElementById('progress-text').innerText = data.new_progress + '%';
+                document.getElementById('progress-bar').style.width = data.new_progress + '%';
+                document.getElementById('progress-summary').innerText = data.summary;
+                
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    });
+});
+</script>
 {% endblock %}

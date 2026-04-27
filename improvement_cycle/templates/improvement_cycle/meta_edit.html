@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Editar Meta | Ciclo de Mejora{% endblock %}
+{% block content %}
+<div style="max-width:600px; margin:0 auto;">
+    <h2 style="margin-bottom:20px;">✏️ Editar Meta de Mejora</h2>
+    <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Título de
+                    la Meta *</label>
+                <input type="text" name="title" required value="{{ goal.title }}"
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label
+                    style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Descripción</label>
+                <textarea name="description" rows="5"
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ goal.description }}</textarea>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo
+                    *</label>
+                <input type="date" name="deadline" required value="{{ goal.deadline|date:'Y-m-d' }}"
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div style="display:flex;gap:12px;">
+                <button type="submit"
+                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Guardar
+                    Cambios</button>
+                <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}"
+                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

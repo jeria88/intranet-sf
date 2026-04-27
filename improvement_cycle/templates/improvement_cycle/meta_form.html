@@ -4,41 +4,8 @@
 <div style="max-width:600px; margin:0 auto;">
     <h2 style="margin-bottom:20px;">📊 Crear Meta de Mejora</h2>
     <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-        <form method="post">
+        <form method="post" onsubmit="document.getElementById('submit-btn').disabled = true; document.getElementById('submit-btn').innerText = 'Creando Meta...';">
             {% csrf_token %}
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                <div>
-                    <label
-                        style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Establecimiento
-                        *</label>
-                    <select name="establishment" required
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                        {% for val, label in establishments %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label
-                        style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Perfil</label>
-                    <select name="profile_role"
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                        <option value="">Todos</option>
-                        {% for val, label in roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div style="grid-column: span 2;">
-                    <label
-                        style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Tipo de Subvención</label>
-                    <select name="subvention_type"
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                        <option value="SEP">SEP</option>
-                        <option value="PIE">PIE</option>
-                        <option value="MANTENCION">Mantención</option>
-                        <option value="PRO_RETENCION">Pro-Retención</option>
-                        <option value="NO_CORRESPONDE">No corresponde</option>
-                        <option value="OTRO">Otro</option>
-                    </select>
-                </div>
-            </div>
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Título de
                     la Meta *</label>
@@ -51,25 +18,11 @@
                 <textarea name="description" rows="3"
                     style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ initial_description|default:'' }}</textarea>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
-                <div>
-                    <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Meta
-                        (valor)</label>
-                    <input type="number" name="target_value" step="0.1" placeholder="100"
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                </div>
-                <div>
-                    <label
-                        style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Unidad</label>
-                    <input type="text" name="measurement_unit" placeholder="%, puntos, etc."
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                </div>
-                <div>
-                    <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo
-                        *</label>
-                    <input type="date" name="deadline" required
-                        style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo
+                    *</label>
+                <input type="date" name="deadline" required
+                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
             </div>
 
             <div style="margin-bottom:20px;">
@@ -121,7 +74,7 @@
             </div>
 
             <div style="display:flex;gap:12px;">
-                <button type="submit"
+                <button type="submit" id="submit-btn"
                     style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Crear
                     Meta</button>
                 <a href="{% url 'improvement_cycle:dashboard_red' %}"

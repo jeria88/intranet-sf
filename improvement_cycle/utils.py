@@ -15,9 +15,17 @@ def generate_cycle_content_ai(goal):
         return False
 
     objectives_text = "\n".join(goal.strategic_objectives) if isinstance(goal.strategic_objectives, list) else goal.strategic_objectives
+    
+    import time
+    import random
+    seed = f"{int(time.time())}-{random.randint(1000, 9999)}"
+
     prompt = f"""
     Como experto en gestión escolar y mejora continua, analiza los siguientes OBJETIVOS ESTRATÉGICOS y genera un plan de acción detallado.
     
+    SEED DE VARIABILIDAD: {seed}
+    Asegúrate de generar una ruta de procesos adaptada específicamente a estos objetivos, evitando repetir sugerencias genéricas.
+
     OBJETIVOS ESTRATÉGICOS:
     {objectives_text}
     
@@ -51,11 +59,12 @@ def generate_cycle_content_ai(goal):
             {"role": "system", "content": "Eres un consultor experto en mejora educativa. Responde solo en JSON."},
             {"role": "user", "content": prompt}
         ],
-        "response_format": {"type": "json_object"}
+        "response_format": {"type": "json_object"},
+        "temperature": 0.8
     }
 
     try:
-        response = requests.post(f"{DEEPSEEK_BASE_URL}/chat/completions", headers=headers, json=payload, timeout=30)
+        response = requests.post(f"{DEEPSEEK_BASE_URL}/chat/completions", headers=headers, json=payload, timeout=45)
         if response.status_code == 200:
             result = response.json()['choices'][0]['message']['content']
             data = json.loads(result)
