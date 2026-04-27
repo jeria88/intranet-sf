@@ -70,10 +70,12 @@ def meeting_list(request):
         rooms_est = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_establishment=''))
         rooms_role = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_role=''))
     else:
+        # Solo ve salas globales (sin est y rol), salas de su establecimiento, y salas de su rol
         rooms_est = list(MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily'))
         rooms_role = list(MeetingRoom.objects.filter(target_role=user.role, room_type='daily'))
+        rooms_global = list(MeetingRoom.objects.filter(target_establishment='', target_role='', room_type='daily'))
 
-    all_rooms = rooms_est + rooms_role
+    all_rooms = rooms_est + rooms_role + (rooms_global if 'rooms_global' in locals() else [])
     room_ids = [r.id for r in all_rooms]
 
     # ── Pre-load TODOS los bookings relevantes en UNA SOLA QUERY (fix N+1) ───
@@ -187,24 +189,18 @@ def meeting_room(request, slug):
                 processing_status='sin_grabacion'  # Solo cambia a 'pendiente' al llegar el webhook
             )
 
-    # Redirección a Daily.co
-    if room.room_type == 'daily':
-        daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
-        token = _generate_daily_token(
-            room.daily_identifier,
-            request.user.get_full_name() or request.user.username,
-            is_owner=(request.user.is_staff or (booking and booking.booked_by == request.user))
-        )
-        if token:
-            daily_url = f"{daily_url}?t={token}"
-        if booking:
-            MeetingAttendance.objects.get_or_create(booking=booking, user=request.user)
-        return redirect(daily_url)
-
-    # Jitsi fallback
+    # Redirección a Daily.co siempre
+    daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
+    token = _generate_daily_token(
+        room.daily_identifier,
+        request.user.get_full_name() or request.user.username,
+        is_owner=(request.user.is_staff or (booking and booking.booked_by == request.user))
+    )
+    if token:
+        daily_url = f"{daily_url}?t={token}"
     if booking:
         MeetingAttendance.objects.get_or_create(booking=booking, user=request.user)
-    return render(request, 'meetings/meeting_room.html', {'room': room, 'booking': booking})
+    return redirect(daily_url)
 
 
 @login_required
