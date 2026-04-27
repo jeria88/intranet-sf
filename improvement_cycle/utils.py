@@ -69,9 +69,14 @@ def generate_cycle_content_ai(goal):
             result = response.json()['choices'][0]['message']['content']
             data = json.loads(result)
             
+            if not isinstance(data, dict):
+                print(f"Error AI Cycle: La respuesta no es un diccionario JSON válido.")
+                return False
+
             # Guardar en el modelo
             goal.process_route = data.get('ruta_procesos', [])
             goal.indicators = data.get('indicadores', [])
+
             # Inyectar checklist en la descripción o un campo si existiera (por ahora lo guardamos en la ruta)
             if 'checklist' in data:
                 goal.process_route.append({"title": "CHECKLIST DE PROCESOS", "description": "\n".join(data['checklist']), "weight": 0, "tipo": "seguimiento"})
