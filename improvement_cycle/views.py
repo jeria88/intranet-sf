@@ -72,12 +72,15 @@ def meta_crear(request):
             created_by=request.user,
         )
         
-        # Disparar generación por IA en segundo plano (aquí síncrono por simplicidad, idealmente Celery)
+        # Disparar generación por IA en segundo plano para evitar 502 por timeout
         if goal.strategic_objectives:
-            generate_cycle_content_ai(goal)
-            messages.success(request, "Ciclo de mejora creado y procesado por IA.")
+            import threading
+            thread = threading.Thread(target=generate_cycle_content_ai, args=(goal,))
+            thread.start()
+            messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
         
         return redirect(f'/mejora/?ee={ee}')
+
     return render(request, 'improvement_cycle/meta_form.html', {
         'establishments': User.ESTABLISHMENT_CHOICES,
         'roles': User.ROLE_CHOICES,
