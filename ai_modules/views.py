@@ -47,16 +47,13 @@ def ai_list(request):
             return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
     # 3. Redirección dinámica para todos los roles con agente
-    allowed_roles = ['DIRECTOR', 'UTP', 'INSPECTOR', 'CONVIVENCIA']
-    if request.user.role in allowed_roles:
-        # Buscar asistente que coincida con rol y (establecimiento o sin establecimiento)
-        from django.db import models
-        assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).filter(
-            models.Q(establishment=request.user.establishment) | models.Q(establishment='')
-        ).order_by('-establishment').first() # Priorizar el que tiene establecimiento definido
-        
-        if assistant:
-            return redirect('ai_modules:ai_chat', slug=assistant.slug)
+    from django.db import models
+    assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).filter(
+        models.Q(establishment=request.user.establishment) | models.Q(establishment='')
+    ).order_by('-establishment').first() # Priorizar el que tiene establecimiento definido
+    
+    if assistant:
+        return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
     # 4. Resto de perfiles van a la vista de NotebookLM
     return redirect('ai_modules:notebooklm_instruction')
@@ -268,10 +265,10 @@ def ai_chat(request, slug):
                 history.append({'role': h.role, 'content': h.content})
             
             # 3. Llamar a la IA
-            attached_file = request.FILES.get('attachment')
+            attached_files = request.FILES.getlist('attachment')
             attached_text = ""
-            if attached_file:
-                attached_text = extract_text_from_file(attached_file)
+            for attached_file in attached_files:
+                attached_text += extract_text_from_file(attached_file) + "\n\n"
             
             ai_response = call_deepseek_ai(
                 assistant,

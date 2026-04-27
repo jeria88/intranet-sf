@@ -11,15 +11,42 @@ _VECTOR_RESOURCES = {}
 
 import docx
 
-def extract_text_from_pdf(file_path):
-    """Extrae el texto de un archivo PDF usando pypdf."""
+def extract_text_from_pdf(file_input):
+    """Extrae el texto de un archivo PDF usando pypdf, con fallback a OCR para escaneados."""
     text = ""
     try:
-        reader = PdfReader(file_path)
+        if hasattr(file_input, 'seek'):
+            file_input.seek(0)
+            
+        reader = PdfReader(file_input)
         for page in reader.pages:
             content = page.extract_text()
             if content:
                 text += content + "\n"
+                
+        # Fallback a OCR si el texto es muy corto (probablemente escaneado)
+        if len(text.strip()) < 50:
+            try:
+                import pdf2image
+                import pytesseract
+                
+                if hasattr(file_input, 'seek'):
+                    file_input.seek(0)
+                    pdf_bytes = file_input.read()
+                else:
+                    with open(file_input, 'rb') as f:
+                        pdf_bytes = f.read()
+                        
+                images = pdf2image.convert_from_bytes(pdf_bytes, dpi=150)
+                ocr_text = ""
+                for img in images:
+                    ocr_text += pytesseract.image_to_string(img, lang='spa') + "\n"
+                    
+                if len(ocr_text.strip()) > len(text.strip()):
+                    return ocr_text
+            except Exception as ocr_e:
+                print(f"Error en OCR fallback: {ocr_e}")
+                
     except Exception as e:
         print(f"Error extrayendo texto de PDF: {e}")
     return text

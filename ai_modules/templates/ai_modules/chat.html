@@ -175,6 +175,7 @@
                 <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para {{ assistant.name }}</h2>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
+                <input type="text" id="search-chat" placeholder="Buscar en la conversación..." style="padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 12px; outline: none; width: 180px;">
                 <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
                 <div class="font-controls" style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">
                     <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-right: 5px;">Zoom</span>
@@ -202,11 +203,11 @@
         </div>
 
         <div class="chat-input-area">
-            <!-- Input de Archivo Oculto -->
-            <input type="file" id="chat-file-input" style="display: none;" accept=".pdf,.docx,.txt,.md">
+            <!-- Input de Archivos Oculto -->
+            <input type="file" id="chat-file-input" style="display: none;" accept=".pdf,.docx,.txt,.md" multiple>
             
-            <div id="file-preview" style="display: none; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 15px; border-radius: 10px; margin-bottom: 5px; border: 1px dashed #cbd5e0;">
-                <span style="font-size: 12px; color: #475569; font-weight: 600;">📎 <span id="file-name">archivo.pdf</span></span>
+            <div id="file-preview" style="display: none; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 15px; border-radius: 10px; margin-bottom: 5px; border: 1px dashed #cbd5e0; flex-wrap: wrap;">
+                <span style="font-size: 12px; color: #475569; font-weight: 600;" id="file-name">📎 archivo.pdf</span>
                 <button onclick="clearFile()" style="background: none; border: none; color: #ef4444; font-weight: 800; cursor: pointer; font-size: 14px;">&times;</button>
             </div>
 
@@ -500,8 +501,13 @@
 
     document.getElementById('chat-file-input').addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            document.getElementById('file-name').innerText = file.name;
+            if (e.target.files.length > 3) {
+                alert("Puede adjuntar un máximo de 3 archivos a la vez.");
+                clearFile();
+                return;
+            }
+            const fileNames = Array.from(e.target.files).map(f => f.name).join(', ');
+            document.getElementById('file-name').innerText = `📎 ${fileNames}`;
             document.getElementById('file-preview').style.display = 'flex';
         }
     });
@@ -509,14 +515,15 @@
     async function sendMessage() {
         const text = chatInput.value.trim();
         const fileInput = document.getElementById('chat-file-input');
-        const file = fileInput.files[0];
+        const files = fileInput.files;
 
-        if (!text && !file) return;
+        if (!text && files.length === 0) return;
         
         chatInput.value = '';
         let displayMsg = text;
-        if (file) {
-            displayMsg = (text ? text + "\n\n" : "") + `📎 *Archivo adjunto: ${file.name}*`;
+        if (files.length > 0) {
+            const fileNames = Array.from(files).map(f => f.name).join(', ');
+            displayMsg = (text ? text + "\n\n" : "") + `📎 *Archivos adjuntos: ${fileNames}*`;
         }
         
         appendMsg('user', displayMsg);
@@ -526,15 +533,17 @@
         appendLoading(tid);
 
         // Limpiar adjunto del UI inmediatamente para evitar re-envíos
-        const currentFile = file;
+        const currentFiles = Array.from(files);
         clearFile();
 
         try {
             const formData = new FormData();
             formData.append('message', text);
             formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-            if (currentFile) {
-                formData.append('attachment', currentFile);
+            if (currentFiles.length > 0) {
+                currentFiles.forEach(file => {
+                    formData.append('attachment', file);
+                });
             }
 
             const r = await fetch(`/ia/${assistantSlug}/chat/`, {
@@ -548,7 +557,8 @@
             if (d.status === 'success') {
                 appendMsg('assistant', d.response);
                 updateReport(d.response);
-                autoSaveCase(text || `Consulta con archivo: ${currentFile ? currentFile.name : ''}`, d.response);
+                const queryInfo = text || `Consulta con archivos: ${currentFiles.length > 0 ? currentFiles.map(f => f.name).join(', ') : ''}`;
+                autoSaveCase(queryInfo, d.response);
             } else {
                 appendMsg('assistant', "⚠️ Error del servidor: " + (d.response || "No se pudo procesar la respuesta."));
             }
@@ -646,5 +656,20 @@
         document.documentElement.style.setProperty('--chat-font-size', '15px');
         localStorage.removeItem('chatFontSize');
     }
+
+    // Búsqueda en el chat
+    document.getElementById('search-chat').addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.message-row');
+        rows.forEach(row => {
+            if (row.id && row.id.startsWith('load-')) return;
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = 'flex';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
 </script>
 {% endblock %}
