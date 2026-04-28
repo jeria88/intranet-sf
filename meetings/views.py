@@ -762,3 +762,82 @@ def acuerdos_report_print(request, pk):
     return render(request, 'meetings/acuerdos_report_print.html', {
         'booking': booking
     })
+
+@login_required
+def meeting_edit(request, pk):
+    """Edita una reunión existente (Solo Admin/Staff)."""
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        messages.error(request, "No tienes permiso para editar reuniones.")
+        return redirect('meetings:recording_list')
+
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    if request.method == 'POST':
+        booking.agenda = request.POST.get('agenda', booking.agenda)
+        booking.status = request.POST.get('status', booking.status)
+        booking.recording_url = request.POST.get('recording_url', booking.recording_url)
+        booking.save()
+        messages.success(request, "Reunión actualizada correctamente.")
+        return redirect('meetings:recording_list')
+    
+    return render(request, 'meetings/meeting_form_edit.html', {'booking': booking})
+
+
+@login_required
+def meeting_delete(request, pk):
+    """Elimina una reunión y sus entregables (Solo Admin/Staff)."""
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        messages.error(request, "No tienes permiso para eliminar reuniones.")
+        return redirect('meetings:recording_list')
+
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    if request.method == 'POST':
+        booking.delete()
+        messages.success(request, "Reunión eliminada correctamente.")
+        return redirect('meetings:recording_list')
+    
+    return render(request, 'meetings/meeting_confirm_delete.html', {'booking': booking})
+
+
+@login_required
+def meeting_create_manual(request):
+    """Crea una reunión manualmente sin pasar por Daily (Solo Admin/Staff)."""
+    if not request.user.is_staff and not getattr(request.user, 'is_red_team', False):
+        messages.error(request, "No tienes permiso para crear reuniones manuales.")
+        return redirect('meetings:recording_list')
+
+    if request.method == 'POST':
+        room_id = request.POST.get('room')
+        room = get_object_or_404(MeetingRoom, id=room_id)
+        
+        from datetime import datetime
+        scheduled_at = datetime.fromisoformat(request.POST.get('scheduled_at'))
+        scheduled_at = timezone.make_aware(scheduled_at)
+
+        booking = MeetingBooking.objects.create(
+            room=room,
+            booked_by=request.user,
+            scheduled_at=scheduled_at,
+            agenda=request.POST.get('agenda', ''),
+            recording_url=request.POST.get('recording_url', ''),
+            status='cerrada',
+            processing_status='completado'
+        )
+        # Sincronizar con Calendario
+        from calendar_red.models import CalendarEvent
+        CalendarEvent.objects.create(
+            title=f"Reunión: {booking.room.name}",
+            description=f"Agenda: {booking.agenda}",
+            event_date=booking.scheduled_at.date(),
+            event_time=booking.scheduled_at.time(),
+            event_type='interno',
+            applies_to_roles=[request.user.role],
+            applies_to_establishments=[request.user.establishment],
+            created_by=request.user
+        )
+
+        messages.success(request, "Reunión manual registrada correctamente.")
+
+        return redirect('meetings:recording_list')
+
+    rooms = MeetingRoom.objects.all()
+    return render(request, 'meetings/meeting_form_manual.html', {'rooms': rooms})

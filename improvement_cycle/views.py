@@ -207,7 +207,7 @@ def goal_delete(request, pk):
     if request.method == 'POST':
         ee = goal.establishment
         goal.delete()
-        messages.success(request, \"Meta de mejora eliminada correctamente.\")
+        messages.success(request, "Meta de mejora eliminada correctamente.")
         return redirect(f'/mejora/?ee={ee}')
     
     return render(request, 'improvement_cycle/goal_confirm_delete.html', {'goal': goal})
