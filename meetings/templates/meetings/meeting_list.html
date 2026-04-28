@@ -199,20 +199,9 @@
 <!-- Room Cards Grid -->
 <div style="display: grid; grid-template-columns: 1fr; gap: 40px;">
 
-    {% if rooms_est %}
-    <section>
-        <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🏢 Mi Establecimiento</h2>
-        <div class="rooms-grid">
-            {% for room in rooms_est %}
-                {% include 'meetings/_room_card.html' with room=room icon="🏫" %}
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
     {% if rooms_role %}
     <section>
-        <h2 style="font-size: 18px; border-left: 4px solid #007bff; padding-left: 12px; margin-bottom: 20px;">👤 Mi Perfil / Cargo</h2>
+        <h2 style="font-size: 18px; border-left: 4px solid #007bff; padding-left: 12px; margin-bottom: 20px;">👤 Salas por Rol / Cargo</h2>
         <div class="rooms-grid">
             {% for room in rooms_role %}
                 {% include 'meetings/_room_card.html' with room=room icon="💼" %}
@@ -220,6 +209,18 @@
         </div>
     </section>
     {% endif %}
+
+    {% if rooms_global %}
+    <section>
+        <h2 style="font-size: 18px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 20px;">🌐 Salas Generales / Test</h2>
+        <div class="rooms-grid">
+            {% for room in rooms_global %}
+                {% include 'meetings/_room_card.html' with room=room icon="🏢" %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
 
 </div>
 {% endblock %}

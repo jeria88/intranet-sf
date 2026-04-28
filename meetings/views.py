@@ -67,16 +67,16 @@ def meeting_list(request):
 
     # ── Salas visibles ────────────────────────────────────────────────────────
     if user.is_staff:
-        rooms_est = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_establishment=''))
         rooms_role = list(MeetingRoom.objects.filter(room_type='daily').exclude(target_role=''))
+        rooms_global = list(MeetingRoom.objects.filter(target_establishment='', target_role='', room_type='daily'))
     else:
-        # Solo ve salas globales (sin est y rol), salas de su establecimiento, y salas de su rol
-        rooms_est = list(MeetingRoom.objects.filter(target_establishment=user.establishment, room_type='daily'))
+        # Solo ve salas de su rol y salas globales
         rooms_role = list(MeetingRoom.objects.filter(target_role=user.role, room_type='daily'))
         rooms_global = list(MeetingRoom.objects.filter(target_establishment='', target_role='', room_type='daily'))
 
-    all_rooms = rooms_est + rooms_role + (rooms_global if 'rooms_global' in locals() else [])
+    all_rooms = rooms_role + rooms_global
     room_ids = [r.id for r in all_rooms]
+
 
     # ── Pre-load TODOS los bookings relevantes en UNA SOLA QUERY (fix N+1) ───
     since = now - timezone.timedelta(hours=8)  # Margen para reuniones en curso
@@ -137,11 +137,12 @@ def meeting_list(request):
     quota_remaining = None if user.is_red_team else max(0, MONTHLY_QUOTA - user_count)
 
     return render(request, 'meetings/meeting_list.html', {
-        'rooms_est': rooms_est,
         'rooms_role': rooms_role,
+        'rooms_global': rooms_global,
         'upcoming_bookings': upcoming_bookings,
         'quota_remaining': quota_remaining,
     })
+
 
 
 @login_required
