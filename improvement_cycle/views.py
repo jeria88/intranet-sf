@@ -121,12 +121,62 @@ def goal_edit(request, pk):
 
 
     if request.method == 'POST':
-        goal.title = request.POST.get('title', goal.title)
-        goal.description = request.POST.get('description', goal.description)
+        from django.utils import timezone
+        import json
+        
+        changes = []
+        old_title = goal.title
+        old_desc = goal.description
+        
+        # Procesar Título y Descripción
+        new_title = request.POST.get('title')
+        new_desc = request.POST.get('description')
+        if new_title != old_title:
+            changes.append(f"Título: '{old_title}' → '{new_title}'")
+            goal.title = new_title
+        if new_desc != old_desc:
+            changes.append("Descripción general modificada")
+            goal.description = new_desc
+            
         if request.POST.get('deadline'):
             goal.deadline = request.POST.get('deadline')
+
+        # Procesar Etapas (Ruta de Proceso)
+        etapas_titulos = request.POST.getlist('etapa_titulo[]')
+        etapas_descripciones = request.POST.getlist('etapa_descripcion[]')
+        new_route = []
+        for t, d in zip(etapas_titulos, etapas_descripciones):
+            if t.strip():
+                new_route.append({'etapa': t, 'descripcion': d})
+        
+        if json.dumps(new_route) != json.dumps(goal.process_route):
+            changes.append("Estrategia del Ciclo (etapas) modificada")
+            goal.process_route = new_route
+
+        # Procesar Indicadores
+        ind_names = request.POST.getlist('indicator_name[]')
+        ind_targets = request.POST.getlist('indicator_target[]')
+        new_indicators = []
+        for n, t in zip(ind_names, ind_targets):
+            if n.strip():
+                new_indicators.append({'name': n, 'target': t})
+        
+        if json.dumps(new_indicators) != json.dumps(goal.indicators):
+            changes.append("Indicadores de logro modificados")
+            goal.indicators = new_indicators
+
+        if changes:
+            history_entry = {
+                'user': request.user.get_full_name() or request.user.username,
+                'date': timezone.now().strftime("%d/%m/%Y %H:%M"),
+                'changes': changes
+            }
+            if not goal.edit_history:
+                goal.edit_history = []
+            goal.edit_history.append(history_entry)
+            
         goal.save()
-        messages.success(request, "Meta de mejora actualizada correctamente.")
+        messages.success(request, "Meta de mejora y estrategia actualizadas correctamente.")
         return redirect('improvement_cycle:goal_detail', pk=goal.pk)
 
     return render(request, 'improvement_cycle/meta_edit.html', {

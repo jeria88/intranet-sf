@@ -134,6 +134,30 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+
+                <!-- Historial de Ediciones -->
+                {% if goal.edit_history %}
+                <div style="margin-top:40px; padding-top:24px; border-top:1px solid #f1f5f9;">
+                    <h3 style="margin:0 0 16px; font-size:16px; color:var(--contrast); display:flex; align-items:center; gap:8px;">
+                        🕒 Historial de Modificaciones
+                    </h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        {% for entry in goal.edit_history reversed %}
+                        <div style="background:#f8fafc; border-radius:10px; padding:12px; border:1px solid #f1f5f9; font-size:13px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                <strong style="color:var(--contrast);">{{ entry.user }}</strong>
+                                <span style="color:var(--contrast-3); font-size:11px;">{{ entry.date }}</span>
+                            </div>
+                            <ul style="margin:0; padding-left:18px; color:var(--contrast-2);">
+                                {% for change in entry.changes %}
+                                <li>{{ change }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 

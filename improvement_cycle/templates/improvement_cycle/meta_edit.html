@@ -19,16 +19,51 @@
                     style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ goal.description }}</textarea>
             </div>
             <div style="margin-bottom:20px;">
-                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo
-                    *</label>
+                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo *</label>
                 <input type="date" name="deadline" required value="{{ goal.deadline|date:'Y-m-d' }}"
                     style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
             </div>
 
+            <!-- Edición de Estrategia (Etapas) -->
+            <div style="margin-bottom:24px; padding-top:16px; border-top:1px solid #f0f0f0;">
+                <h4 style="font-size:14px; color:var(--contrast); margin-bottom:12px;">🛠️ Estrategia del Ciclo (Etapas)</h4>
+                <div id="etapas-container">
+                    {% for step in goal.process_route %}
+                    <div style="background:#f8fafc; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #e2e8f0;">
+                        <input type="text" name="etapa_titulo[]" value="{{ step.etapa }}" placeholder="Nombre de la etapa"
+                            style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-bottom:8px; font-size:13px; font-weight:700;">
+                        <textarea name="etapa_descripcion[]" placeholder="Descripción de lo que se hace en esta etapa" rows="2"
+                            style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:12px; resize:vertical;">{{ step.descripcion }}</textarea>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Edición de Indicadores -->
+            <div style="margin-bottom:24px;">
+                <h4 style="font-size:14px; color:var(--contrast); margin-bottom:12px;">📊 Indicadores de Logro</h4>
+                <div id="indicators-container">
+                    {% for indicator in goal.indicators %}
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <input type="text" name="indicator_name[]" value="{{ indicator.name }}" placeholder="Nombre del indicador"
+                            style="flex:2; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                        <input type="text" name="indicator_target[]" value="{{ indicator.target }}" placeholder="Meta (ej: 90%)"
+                            style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                    </div>
+                    {% endfor %}
+                    <!-- Campos extra para añadir nuevos -->
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <input type="text" name="indicator_name[]" placeholder="Nuevo indicador..."
+                            style="flex:2; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                        <input type="text" name="indicator_target[]" placeholder="Meta"
+                            style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                    </div>
+                </div>
+            </div>
+
             <div style="display:flex;gap:12px;">
                 <button type="submit"
-                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Guardar
-                    Cambios</button>
+                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Guardar Todo</button>
                 <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}"
                     style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
             </div>
