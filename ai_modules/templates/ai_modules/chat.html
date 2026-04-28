@@ -164,7 +164,16 @@
     
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    .chat-search-highlight {
+        background-color: #fef08a !important;
+        color: #854d0e !important;
+        padding: 0 2px !important;
+        border-radius: 2px !important;
+        font-weight: bold !important;
+    }
 </style>
+
 {% endblock %}
 
 {% block content %}
@@ -666,16 +675,63 @@
         localStorage.removeItem('chatFontSize');
     }
 
-    // Búsqueda en el chat optimizada
+    // Búsqueda en el chat con resaltado
     document.getElementById('search-chat').addEventListener('input', function(e) {
-        const query = e.target.value.toLowerCase();
+        const query = e.target.value.toLowerCase().trim();
         const rows = document.querySelectorAll('.message-row');
+        
         rows.forEach(row => {
             if (row.id && row.id.startsWith('load-')) return;
-            const text = row.textContent.toLowerCase();
-            row.classList.toggle('hidden-row', query !== '' && !text.includes(query));
+            
+            const bubble = row.querySelector('.bubble');
+            const renderTarget = bubble.querySelector('.render-target') || bubble;
+            
+            // 1. Restaurar original antes de volver a filtrar
+            if (renderTarget.hasAttribute('data-original-html')) {
+                renderTarget.innerHTML = renderTarget.getAttribute('data-original-html');
+            } else {
+                renderTarget.setAttribute('data-original-html', renderTarget.innerHTML);
+            }
+            
+            if (query === '') {
+                row.classList.remove('hidden-row');
+                return;
+            }
+            
+            const text = renderTarget.textContent.toLowerCase();
+            const matches = text.includes(query);
+            row.classList.toggle('hidden-row', !matches);
+            
+            if (matches) {
+                highlightElement(renderTarget, query);
+            }
         });
     });
+
+    function highlightElement(element, query) {
+        const regex = new RegExp(`(${query})`, 'gi');
+        
+        // Función recursiva para buscar en nodos de texto
+        function walk(node) {
+            if (node.nodeType === 3) { // Texto
+                const parent = node.parentNode;
+                if (parent.tagName === 'MARK' || parent.classList.contains('chat-search-highlight')) return;
+                
+                const val = node.nodeValue;
+                if (val.toLowerCase().includes(query)) {
+                    const span = document.createElement('span');
+                    span.innerHTML = val.replace(regex, '<mark class="chat-search-highlight">$1</mark>');
+                    parent.replaceChild(span, node);
+                }
+            } else if (node.nodeType === 1 && node.childNodes && !/(script|style)/i.test(node.tagName)) {
+                for (let i = 0; i < node.childNodes.length; i++) {
+                    walk(node.childNodes[i]);
+                }
+            }
+        }
+        walk(element);
+    }
+
 
 </script>
 {% endblock %}
