@@ -1,71 +1,86 @@
 {% extends 'base.html' %}
 {% block title %}Editar Meta | Ciclo de Mejora{% endblock %}
 {% block content %}
-<div style="max-width:600px; margin:0 auto;">
-    <h2 style="margin-bottom:20px;">✏️ Editar Meta de Mejora</h2>
-    <div style="background:white;border-radius:14px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+<div style="max-width:900px; margin:0 auto;">
+    <h2 style="margin-bottom:24px; color:var(--contrast);">✏️ Editar Ciclo de Mejora</h2>
+    <div style="background:white; border-radius:16px; padding:32px; box-shadow:0 4px 20px rgba(0,0,0,0.08);">
         <form method="post">
             {% csrf_token %}
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Título de
-                    la Meta *</label>
-                <input type="text" name="title" required value="{{ goal.title }}"
-                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-            </div>
-            <div style="margin-bottom:16px;">
-                <label
-                    style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Descripción</label>
-                <textarea name="description" rows="5"
-                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ goal.description }}</textarea>
-            </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-size:13px;font-weight:600;color:#575760;margin-bottom:6px;">Plazo *</label>
-                <input type="date" name="deadline" required value="{{ goal.deadline|date:'Y-m-d' }}"
-                    style="width:100%;padding:10px 14px;border:1px solid #f0f0f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+            
+            <!-- Cabecera de la Meta -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:32px;">
+                <div style="grid-column: span 2;">
+                    <label style="display:block; font-size:13px; font-weight:700; color:var(--contrast-2); margin-bottom:8px;">Título de la Meta</label>
+                    <input type="text" name="title" required value="{{ goal.title }}"
+                        style="width:100%; padding:12px; border:1px solid #e2e8f0; border-radius:10px; font-size:15px; box-sizing:border-box; font-weight:600;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:700; color:var(--contrast-2); margin-bottom:8px;">Descripción General</label>
+                    <textarea name="description" rows="3"
+                        style="width:100%; padding:12px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; box-sizing:border-box; resize:vertical;">{{ goal.description }}</textarea>
+                </div>
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:700; color:var(--contrast-2); margin-bottom:8px;">Plazo Final *</label>
+                    <input type="date" name="deadline" required value="{{ goal.deadline|date:'Y-m-d' }}"
+                        style="width:100%; padding:12px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; box-sizing:border-box;">
+                </div>
             </div>
 
             <!-- Edición de Estrategia (Etapas) -->
-            <div style="margin-bottom:24px; padding-top:16px; border-top:1px solid #f0f0f0;">
-                <h4 style="font-size:14px; color:var(--contrast); margin-bottom:12px;">🛠️ Estrategia del Ciclo (Etapas)</h4>
-                <div id="etapas-container">
+            <div style="margin-bottom:32px; padding-top:24px; border-top:1px solid #f1f5f9;">
+                <h4 style="font-size:16px; color:var(--contrast); margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+                    <span style="background:var(--accent); color:white; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px;">1</span>
+                    Estrategia del Ciclo (Fases del Reporte)
+                </h4>
+                <div style="display:flex; flex-direction:column; gap:16px;">
                     {% for step in goal.process_route %}
-                    <div style="background:#f8fafc; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #e2e8f0;">
-                        <input type="text" name="etapa_titulo[]" value="{{ step.etapa }}" placeholder="Nombre de la etapa"
-                            style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-bottom:8px; font-size:13px; font-weight:700;">
-                        <textarea name="etapa_descripcion[]" placeholder="Descripción de lo que se hace en esta etapa" rows="2"
-                            style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:12px; resize:vertical;">{{ step.descripcion }}</textarea>
+                    <div style="border-radius:14px; padding:20px; border:1px solid rgba(0,0,0,0.05); 
+                        {% if forloop.counter == 1 %}background:#f0f7ff; border-left:5px solid #007bff;
+                        {% elif forloop.counter == 2 %}background:#f0fff4; border-left:5px solid #28a745;
+                        {% elif forloop.counter == 3 %}background:#fff9f0; border-left:5px solid #ff9800;
+                        {% else %}background:#fcf0ff; border-left:5px solid #9c27b0;{% endif %}">
+                        
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                            <span style="font-size:11px; font-weight:800; color:rgba(0,0,0,0.4);">FASE {{ forloop.counter }}</span>
+                            <input type="text" name="etapa_titulo[]" value="{{ step.etapa }}" placeholder="Nombre de la etapa"
+                                style="flex:1; background:transparent; border:none; border-bottom:1px dashed rgba(0,0,0,0.1); padding:4px 0; font-size:15px; font-weight:700; color:var(--contrast);">
+                        </div>
+                        <textarea name="etapa_descripcion[]" placeholder="Descripción de la fase" rows="3"
+                            style="width:100%; background:rgba(255,255,255,0.7); padding:12px; border-radius:8px; border:1px solid rgba(0,0,0,0.05); font-size:13px; line-height:1.5; resize:vertical; box-sizing:border-box;">{{ step.descripcion }}</textarea>
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- Edición de Indicadores -->
-            <div style="margin-bottom:24px;">
-                <h4 style="font-size:14px; color:var(--contrast); margin-bottom:12px;">📊 Indicadores de Logro</h4>
-                <div id="indicators-container">
+            <div style="margin-bottom:32px; padding-top:24px; border-top:1px solid #f1f5f9;">
+                <h4 style="font-size:16px; color:var(--contrast); margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+                    <span style="background:#6c757d; color:white; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px;">2</span>
+                    Indicadores de Logro
+                </h4>
+                <div id="indicators-container" style="display:flex; flex-direction:column; gap:10px;">
                     {% for indicator in goal.indicators %}
-                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div style="display:flex; gap:12px; background:#f8f9fa; padding:12px; border-radius:10px;">
                         <input type="text" name="indicator_name[]" value="{{ indicator.name }}" placeholder="Nombre del indicador"
-                            style="flex:2; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
-                        <input type="text" name="indicator_target[]" value="{{ indicator.target }}" placeholder="Meta (ej: 90%)"
-                            style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                            style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;">
+                        <input type="text" name="indicator_target[]" value="{{ indicator.target }}" placeholder="Meta"
+                            style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;">
                     </div>
                     {% endfor %}
-                    <!-- Campos extra para añadir nuevos -->
-                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div style="display:flex; gap:12px; background:#fff; padding:12px; border-radius:10px; border:1px dashed #e2e8f0;">
                         <input type="text" name="indicator_name[]" placeholder="Nuevo indicador..."
-                            style="flex:2; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                            style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;">
                         <input type="text" name="indicator_target[]" placeholder="Meta"
-                            style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:13px;">
+                            style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px;">
                     </div>
                 </div>
             </div>
 
-            <div style="display:flex;gap:12px;">
+            <div style="display:flex; gap:16px; margin-top:40px; padding-top:24px; border-top:1px solid #f1f5f9;">
                 <button type="submit"
-                    style="background:#1e73be;color:white;border:none;padding:12px 28px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;">Guardar Todo</button>
+                    style="background:var(--accent); color:white; border:none; padding:14px 40px; border-radius:30px; font-weight:700; font-size:15px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.1);">Guardar Todos los Cambios</button>
                 <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}"
-                    style="padding:12px 28px;border-radius:20px;text-decoration:none;color:#575760;font-size:14px;border:1px solid #f0f0f0;">Cancelar</a>
+                    style="padding:14px 30px; border-radius:30px; text-decoration:none; color:var(--contrast-2); font-size:15px; font-weight:600; border:1px solid #e2e8f0;">Cancelar</a>
             </div>
         </form>
     </div>
