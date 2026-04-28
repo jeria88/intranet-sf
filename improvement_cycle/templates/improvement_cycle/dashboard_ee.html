@@ -83,7 +83,7 @@
             <div class="goal-header">
                 <div>
                     <p style="font-size:15px;font-weight:700;color:#222;margin:0 0 3px;">{{ g.title }}</p>
-                    <p style="font-size:12px;color:#575760;margin:0 0 6px;">{{ g.get_profile_role_display|default:"Todos los perfiles" }} · Plazo: {{ g.deadline|date:"d/m/Y" }} · <span style="font-weight:600;color:var(--accent);">{{ g.get_subvention_type_display|default:"SEP" }}</span></p>
+                    <p style="font-size:12px;color:#575760;margin:0 0 6px;">{{ g.get_profile_role_display|default:"Todos los perfiles" }} · Plazo: {{ g.deadline|date:"d/m/Y" }}</p>
                     <p style="font-size:12px;color:#b2b2be;margin:0 0 10px;line-height:1.4;">{{ g.description|truncatechars:100 }}</p>
                     <p style="font-size:11px;color:var(--accent);font-weight:700;margin:0;">{{ g.actions_summary }}</p>
                 </div>

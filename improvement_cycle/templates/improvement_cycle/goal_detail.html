@@ -10,7 +10,7 @@
             <h1 style="margin:0; font-size:28px; color:var(--contrast);">{{ goal.title }}</h1>
             <p style="margin:8px 0 0; color:var(--contrast-2);">
                 <span style="background:#cff4fc; color:#0c5460; padding:2px 8px; border-radius:4px; font-weight:700; font-size:12px; margin-right:8px;">{{ goal.get_status_display|upper }}</span>
-                📅 Plazo: {{ goal.deadline|date:"d/m/Y" }} · {{ goal.get_subvention_type_display }} · {{ goal.establishment }}
+                📅 Plazo: {{ goal.deadline|date:"d/m/Y" }} · {{ goal.establishment }}
             </p>
         </div>
 
