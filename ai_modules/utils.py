@@ -24,28 +24,57 @@ def extract_text_from_pdf(file_input):
             if content:
                 text += content + "\n"
                 
-        # Fallback a OCR si el texto es muy corto (probablemente escaneado)
+    # Fallback a OCR si el texto es muy corto (probablemente escaneado)
         if len(text.strip()) < 50:
             try:
                 import pdf2image
                 import pytesseract
+                import tempfile
+                from PIL import Image
                 
-                if hasattr(file_input, 'seek'):
-                    file_input.seek(0)
-                    pdf_bytes = file_input.read()
-                else:
-                    with open(file_input, 'rb') as f:
-                        pdf_bytes = f.read()
-                        
-                images = pdf2image.convert_from_bytes(pdf_bytes, dpi=150)
-                ocr_text = ""
-                for img in images:
-                    ocr_text += pytesseract.image_to_string(img, lang='spa') + "\n"
+                # Para ahorrar RAM, guardamos a un archivo temporal en lugar de bytes en memoria
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
+                    if hasattr(file_input, 'seek'):
+                        file_input.seek(0)
+                        temp_pdf.write(file_input.read())
+                    else:
+                        with open(file_input, 'rb') as f:
+                            temp_pdf.write(f.read())
+                    temp_path = temp_pdf.name
+
+                try:
+                    # Obtenemos info del PDF sin cargarlo todo
+                    info = pdf2image.pdfinfo_from_path(temp_path)
+                    max_pages = info.get("Pages", 0)
                     
-                if len(ocr_text.strip()) > len(text.strip()):
-                    return ocr_text
+                    ocr_text = ""
+                    # Procesamos página por página para no saturar los 512MB de RAM
+                    for i in range(1, max_pages + 1):
+                        # 120 DPI es suficiente para OCR y consume menos RAM que 150/300
+                        page_images = pdf2image.convert_from_path(
+                            temp_path, 
+                            first_page=i, 
+                            last_page=i, 
+                            dpi=120
+                        )
+                        if page_images:
+                            ocr_text += pytesseract.image_to_string(page_images[0], lang='spa') + "\n"
+                            # Liberar memoria explícitamente
+                            page_images[0].close()
+                            del page_images
+                            import gc
+                            gc.collect()
+                            
+                    if len(ocr_text.strip()) > len(text.strip()):
+                        text = ocr_text
+                finally:
+                    # Siempre limpiar el archivo temporal
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                        
             except Exception as ocr_e:
                 print(f"Error en OCR fallback: {ocr_e}")
+
                 
     except Exception as e:
         print(f"Error extrayendo texto de PDF: {e}")
