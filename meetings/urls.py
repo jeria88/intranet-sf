@@ -13,8 +13,12 @@ urlpatterns = [
     path('<slug:slug>/', views.meeting_room, name='meeting_room'),
     path('<slug:slug>/reservar/', views.booking_crear, name='booking_crear'),
     path('reserva/<int:pk>/', views.booking_detalle, name='booking_detalle'),
+    path('reserva/<int:pk>/editar/', views.meeting_edit, name='meeting_edit'),
+    path('reserva/<int:pk>/eliminar/', views.meeting_delete, name='meeting_delete'),
+    path('manual/nueva/', views.meeting_create_manual, name='meeting_create_manual'),
     path('reserva/<int:pk>/grabar/', views.start_recording, name='start_recording'),
     path('recording/<int:pk>/download/', views.download_recording, name='download_recording'),
+
     
     # API para GitHub Actions
     path('api/pending/', views.api_pending_meetings, name='api_pending_meetings'),

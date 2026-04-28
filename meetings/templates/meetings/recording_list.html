@@ -117,19 +117,17 @@
     </div>
     <div style="display: flex; gap: 12px; align-items: center;">
         {% if user.is_staff or user.is_red_team %}
+        <a href="{% url 'meetings:meeting_create_manual' %}" style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none;">
+            <span>+</span> Nueva Reunión Manual
+        </a>
         <form action="{% url 'meetings:sync_daily_recordings' %}" method="post">
             {% csrf_token %}
             <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                🔄 Sincronizar Manual
-            </button>
-        </form>
-        <form action="{% url 'meetings:register_daily_webhook' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" style="background: #1e73be; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;" title="Configura el webhook automáticamente en Daily.co">
-                🔗 Activar Webhook Automático
+                🔄 Sincronizar
             </button>
         </form>
         {% endif %}
+
         <a href="{% url 'meetings:meeting_list' %}"
             style="text-decoration: none; color: var(--contrast-2); font-weight: 600;">← Volver a Salas</a>
     </div>
@@ -194,6 +192,14 @@
             </div>
 
             <a href="{% url 'meetings:download_recording' booking.id %}" target="_blank" class="btn-watch">Descargar Grabación 📥</a>
+            
+            {% if user.is_staff or user.is_red_team %}
+            <div style="display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+                <a href="{% url 'meetings:meeting_edit' booking.id %}" style="flex: 1; text-align: center; font-size: 11px; text-decoration: none; color: var(--contrast-2); font-weight: 600;">✏️ Editar</a>
+                <a href="{% url 'meetings:meeting_delete' booking.id %}" style="flex: 1; text-align: center; font-size: 11px; text-decoration: none; color: #dc3545; font-weight: 600;">🗑️ Eliminar</a>
+            </div>
+            {% endif %}
+
         </div>
     </div>
     {% endfor %}

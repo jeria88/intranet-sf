@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Meta | Intranet{% endblock %}
+{% block content %}
+<div style="max-width: 500px; margin: 60px auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+    <h2 style="margin-top: 0; color: #dc3545;">¿Eliminar esta meta?</h2>
+    <p style="color: var(--contrast-2); line-height: 1.6; margin-bottom: 30px;">
+        Estás a punto de eliminar la meta: <br>
+        <strong>{{ goal.title }}</strong> <br><br>
+        Esta acción eliminará permanentemente todas las acciones, seguimientos y evidencias registradas.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="submit" style="background: #dc3545; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 700; cursor: pointer;">Sí, Eliminar Definitivamente</button>
+            <a href="{% url 'improvement_cycle:dashboard_ee' %}?ee={{ goal.establishment }}" style="text-decoration: none; color: var(--contrast-2); font-weight: 600; padding: 12px;">Cancelar y Volver</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

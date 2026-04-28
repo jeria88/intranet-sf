@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Editar Reunión | Intranet{% endblock %}
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+    <h2 style="margin-top: 0;">✏️ Editar Reunión</h2>
+    <p style="color: var(--contrast-2); margin-bottom: 24px;">Actualiza los detalles de la reunión del {{ booking.scheduled_at|date:"d/m/Y" }}.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Agenda / Título</label>
+            <textarea name="agenda" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 100px;">{{ booking.agenda }}</textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Estado</label>
+            <select name="status" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                {% for code, label in booking.STATUS_CHOICES %}
+                <option value="{{ code }}" {% if booking.status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">URL de Grabación</label>
+            <input type="text" name="recording_url" value="{{ booking.recording_url }}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <p style="font-size: 11px; color: var(--contrast-3); margin-top: 4px;">Enlace externo o 'daily_id:XXXX'</p>
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+            <button type="submit" style="flex: 1; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer;">Guardar Cambios</button>
+            <a href="{% url 'meetings:recording_list' %}" style="flex: 1; text-align: center; text-decoration: none; color: var(--contrast-2); border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; font-weight: 600;">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -153,5 +153,45 @@ if os.path.exists(json_path):
 else:
     print("⚠️ No se encontró scratch/library_data.json. Saltando enriquecimiento.")
 
+# ── 4. Calendario (Eventos Iniciales) ─────────────────────────────────────────
+print("\n📅 Sincronizando eventos del calendario...")
+from calendar_red.models import CalendarEvent
+
+CALENDAR_EVENTS = [
+    {
+        'title': 'Plazo Carga PME - MINEDUC',
+        'description': 'Fecha límite para subir el Plan de Mejoramiento Educativo.',
+        'event_date': timezone.now().date() + timedelta(days=15),
+        'event_type': 'mineduc',
+        'is_critical': True
+    },
+    {
+        'title': 'Reunión de Red Mensual',
+        'description': 'Coordinación entre directores de la red.',
+        'event_date': timezone.now().date() + timedelta(days=5),
+        'event_type': 'congregacional',
+        'is_critical': False
+    },
+    {
+        'title': 'Cierre de Ciclo de Mejora - Abril',
+        'description': 'Verificación de indicadores de abril.',
+        'event_date': timezone.now().date() + timedelta(days=20),
+        'event_type': 'interno',
+        'is_critical': False
+    },
+]
+
+for ev_data in CALENDAR_EVENTS:
+    CalendarEvent.objects.get_or_create(
+        title=ev_data['title'],
+        event_date=ev_data['event_date'],
+        defaults={
+            'description': ev_data['description'],
+            'event_type': ev_data['event_type'],
+            'is_critical': ev_data['is_critical']
+        }
+    )
+
 print("\n🚀 SEED Temuco completado con éxito.")
+
 
