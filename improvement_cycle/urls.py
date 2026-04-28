@@ -5,7 +5,6 @@ app_name = 'improvement_cycle'
 
 urlpatterns = [
     path('', views.dashboard_ee, name='dashboard_ee'),
-    path('red/', views.dashboard_red, name='dashboard_red'),
     path('alertas/', views.alertas_activas, name='alertas_activas'),
     path('meta/nueva/', views.meta_crear, name='meta_crear'),
     path('meta/<int:pk>/', views.goal_detail, name='goal_detail'),

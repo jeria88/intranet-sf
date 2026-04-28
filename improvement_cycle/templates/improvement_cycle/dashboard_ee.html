@@ -66,21 +66,9 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
     <h2 style="margin:0;">📊 Ciclo de Mejora — {{ establishment }}</h2>
     <div style="display:flex;gap:10px;align-items:center;">
-        <form method="get" style="display:flex;gap:8px;">
-            <select name="ee" onchange="this.form.submit()"
-                style="padding:8px 12px;border:1px solid #f0f0f0;border-radius:8px;font-size:13px;">
-                {% for val, label in establishments %}
-                <option value="{{ val }}" {% if val == establishment %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </form>
         {% if user.can_approve_circulars or user.is_staff %}
-        <a href="{% url 'improvement_cycle:meta_crear' %}?ee={{ establishment }}"
+        <a href="{% url 'improvement_cycle:meta_crear' %}"
             style="background:var(--accent); color:white; padding:8px 16px; border-radius:20px; text-decoration:none; font-size:13px; font-weight:600;">+ Agregar Ciclo de Mejora</a>
-        {% endif %}
-        {% if user.is_staff %}
-        <a href="{% url 'improvement_cycle:dashboard_red' %}"
-            style="font-size:13px;color:#1e73be;text-decoration:none;">Ver Red Completa →</a>
         {% endif %}
     </div>
 </div>

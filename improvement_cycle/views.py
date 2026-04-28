@@ -9,31 +9,19 @@ from .utils import generate_cycle_content_ai
 
 @login_required
 def dashboard_ee(request):
-    """Dashboard del establecimiento del usuario autenticado."""
-    establishment = request.GET.get('ee') or request.user.establishment
-    goals = ImprovementGoal.objects.filter(establishment=establishment)
-    # SQLite no soporta JSONField __contains → filtramos en Python
+    """Dashboard universal para ver todas las metas de mejora."""
+    goals = ImprovementGoal.objects.all()
     all_alerts = RiskAlert.objects.filter(is_active=True)
-    alerts = [a for a in all_alerts if not a.affected_establishments or establishment in a.affected_establishments]
+    # Por ahora mostramos todas las alertas
+    alerts = all_alerts
     return render(request, 'improvement_cycle/dashboard_ee.html', {
         'goals': goals,
         'alerts': alerts,
-        'establishment': establishment,
-        'establishments': User.ESTABLISHMENT_CHOICES,
+        'establishment': 'Todos los Establecimientos',
     })
 
 
-@login_required
-def dashboard_red(request):
-    """Dashboard consolidado de toda la Red Congregacional."""
-    all_goals = ImprovementGoal.objects.all().order_by('establishment', 'deadline')
-    all_alerts = RiskAlert.objects.filter(is_active=True).order_by('-triggered_at')
-    stats = ImprovementGoal.objects.values('status').annotate(count=Count('id'))
-    return render(request, 'improvement_cycle/dashboard_red.html', {
-        'all_goals': all_goals,
-        'all_alerts': all_alerts,
-        'stats': {s['status']: s['count'] for s in stats},
-    })
+# dashboard_red eliminado según requerimiento
 
 
 @login_required
@@ -48,10 +36,10 @@ def meta_crear(request):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden()
     
-    ee_initial = request.GET.get('ee') or request.user.establishment
+    ee_initial = request.user.establishment or 'RED'
 
     if request.method == 'POST':
-        ee = request.user.establishment or ''
+        ee = request.user.establishment or 'RED'
         target_val = 100.0  # Default value as we removed it from UI
         
         objectives = request.POST.getlist('strategic_objectives[]')
