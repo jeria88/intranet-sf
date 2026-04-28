@@ -30,8 +30,31 @@
         <!-- Left: Actions List -->
         <div>
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                <h3 style="margin:0 0 20px; font-size:18px;">📋 Acciones y Seguimiento</h3>
+                <h3 style="margin:0 0 24px; font-size:18px; color:var(--contrast);">📋 Plan de Mejora Continua</h3>
+
+                <!-- Etapas del Ciclo (Ruta de Proceso) -->
+                {% if goal.process_route %}
+                <div style="display:flex; justify-content:space-between; margin-bottom:40px; position:relative; padding:0 10px;">
+                    <div style="position:absolute; top:12px; left:40px; right:40px; height:2px; background:#e2e8f0; z-index:1;"></div>
+                    {% for step in goal.process_route %}
+                    <div style="flex:1; text-align:center; position:relative; z-index:2;">
+                        <div style="width:26px; height:26px; background:white; border:3px solid {% if forloop.last %}var(--accent){% else %}#cbd5e1{% endif %}; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:{% if forloop.last %}var(--accent){% else %}#64748b{% endif %}; transition: transform 0.3s;">
+                            {{ forloop.counter }}
+                        </div>
+                        <p style="font-size:12px; font-weight:700; color:{% if forloop.last %}var(--accent){% else %}var(--contrast){% endif %}; margin:0; line-height:1.2;">{{ step.etapa }}</p>
+                        <p style="font-size:10px; color:var(--contrast-3); margin:4px 0 0; line-height:1.3; padding:0 8px;">{{ step.descripcion|truncatechars:50 }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 
+                <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">
+                    <h4 style="margin:0; font-size:15px; color:var(--contrast-2); display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:8px; height:8px; background:var(--accent); border-radius:50%;"></span>
+                        Etapa Final: Checklist de Verificación y Acciones
+                    </h4>
+                </div>
+
                 {% if goal.is_generating %}
                 <div id="ai-loading-box" style="text-align:center; padding:40px; background:#f8fafc; border-radius:12px; border:2px dashed var(--accent); margin-bottom:20px;">
                     <div class="spinner" style="width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid var(--accent); border-radius:50%; margin:0 auto 15px; animation:spin 1s linear infinite;"></div>
@@ -67,54 +90,28 @@
                 {% if not actions and not goal.is_generating %}
                 <div style="text-align:center; padding:40px; color:var(--contrast-3);">
                     <p style="font-size:16px; margin-bottom:12px;">No hay acciones registradas para esta meta.</p>
-                    {% if can_edit %}
-                    <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="color:var(--accent); font-weight:600;">Crea la primera acción</a>
-                    {% endif %}
+                    <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="color:var(--accent); font-weight:600; text-decoration:none;">Crea la primera acción manual →</a>
                 </div>
                 {% elif actions %}
 
-                <div style="display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; flex-direction:column; gap:12px;">
                     {% for action in actions %}
-                    <div style="border:1px solid #f0f0f0; border-radius:12px; padding:16px; display:flex; gap:16px; align-items:flex-start;">
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                                <h4 style="margin:0; font-size:16px;">{{ action.title }}</h4>
-                                <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:12px; 
-                                    {% if action.status == 'completado' %}background:#d1e7dd; color:#0f5132;
-                                    {% elif action.status == 'en_progreso' %}background:#fff3cd; color:#856404;
-                                    {% else %}background:#e9ecef; color:#495057;{% endif %}">
-                                    {{ action.get_status_display|upper }}
-                                </span>
-                            </div>
-                            <p style="margin:0 0 10px; font-size:13px; color:var(--contrast-2); line-height:1.4;">{{ action.description }}</p>
-                            {% if action.evidence %}
-                            <div style="background:#f8f9fa; border-left:3px solid #6c757d; padding:10px; margin-bottom:12px; border-radius:4px;">
-                                <p style="font-size:11px; font-weight:700; color:#495057; margin:0 0-4px; text-transform:uppercase;">Evidencia / Observaciones:</p>
-                                <p style="font-size:12px; color:#212529; margin:6px 0 0; line-height:1.4; font-style:italic;">{{ action.evidence }}</p>
-                            </div>
-                            {% endif %}
-                            <div style="display:flex; gap:16px; font-size:12px; color:var(--contrast-3);">
-                                <span>👤 <strong>Responsable:</strong> 
-                                    {% if action.responsible %}
-                                        {{ action.responsible.get_full_name|default:action.responsible.username }}
-                                    {% else %}
-                                        No asignado
-                                    {% endif %}
-                                </span>
-
-                                <span>📅 <strong>Plazo:</strong> {{ action.deadline|date:"d/m/Y" }}</span>
-                                <span>⚖️ <strong>Peso:</strong> {{ action.weight }}%</span>
-                            </div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="border:1px solid #f1f5f9; border-radius:12px; padding:18px; display:flex; gap:16px; align-items:center; transition: all 0.2s; {% if action.status == 'completado' %}background:#fafafa; opacity:0.8;{% endif %}" class="action-card">
+                        <div style="display:flex; align-items:center;">
                             <form class="action-toggle-form" data-url="{% url 'improvement_cycle:action_toggle' action.pk %}">
                                 {% csrf_token %}
-                                <button type="button" class="toggle-btn" style="width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.3s;
-                                    {% if action.status == 'completado' %}background:#198754; color:white;{% else %}background:#f0f0f0; color:#b2b2be;{% endif %}" 
+                                <button type="button" class="toggle-btn" style="width:28px; height:28px; border-radius:6px; border:2px solid {% if action.status == 'completado' %}#198754{% else %}#e2e8f0{% endif %}; cursor:pointer; display:flex; align-items:center; justify-content:center; background:{% if action.status == 'completado' %}#198754{% else %}white{% endif %}; color:white; transition: all 0.2s;" 
                                     title="Marcar como {% if action.status == 'completado' %}pendiente{% else %}completado{% endif %}">
-                                    ✓
+                                    {% if action.status == 'completado' %}✓{% endif %}
                                 </button>
                             </form>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="margin:0; font-size:15px; color:var(--contrast); {% if action.status == 'completado' %}text-decoration:line-through; color:#94a3b8;{% endif %}">{{ action.title }}</h4>
+                                <span style="font-size:11px; font-weight:600; color:var(--contrast-3); background:#f8f9fa; padding:2px 8px; border-radius:4px;">{{ action.weight|floatformat:0 }}%</span>
+                            </div>
+                            <p style="margin:4px 0 0; font-size:13px; color:var(--contrast-2); line-height:1.4;">{{ action.description }}</p>
                         </div>
                     </div>
                     {% endfor %}

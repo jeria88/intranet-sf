@@ -21,32 +21,38 @@ def generate_cycle_content_ai(goal):
     seed = f"{int(time.time())}-{random.randint(1000, 9999)}"
 
     prompt = f"""
-    Como experto en gestión escolar y mejora continua, analiza los siguientes OBJETIVOS ESTRATÉGICOS y genera un plan de acción detallado.
+    Como experto en gestión escolar y mejora continua, analiza los siguientes OBJETIVOS ESTRATÉGICOS y genera un plan de acción dividido en el CICLO DE MEJORA (4 etapas).
     
     SEED DE VARIABILIDAD: {seed}
-    Asegúrate de generar una ruta de procesos adaptada específicamente a estos objetivos, evitando repetir sugerencias genéricas.
+
+    ESTRUCTURA DEL CICLO:
+    Etapa 1: Análisis (Diagnóstico inicial)
+    Etapa 2: Planificación (Diseño de la estrategia)
+    Etapa 3: Implementación (Ejecución de las tareas clave)
+    Etapa 4: Checklist de Acciones (Hitos concretos que miden el avance)
 
     OBJETIVOS ESTRATÉGICOS:
     {objectives_text}
     
     Debes responder ÚNICAMENTE con un objeto JSON con la siguiente estructura:
     {{
-        "ruta_procesos": [
-            {{"title": "Nombre de la acción", "description": "Descripción detallada", "weight": 25, "tipo": "preventivo/formativo/reparativo"}},
+        "etapas": [
+            {{"etapa": "Análisis", "descripcion": "..."}},
+            {{"etapa": "Planificación", "descripcion": "..."}},
+            {{"etapa": "Implementación", "descripcion": "..."}},
+            {{"etapa": "Checklist de Acciones", "descripcion": "Hitos de cumplimiento para medir el progreso"}}
+        ],
+        "acciones": [
+            {{"titulo": "Hito 1", "descripcion": "...", "peso": 20}},
+            {{"titulo": "Hito 2", "descripcion": "...", "peso": 20}},
             ...
         ],
         "indicadores": [
-            {{"name": "Nombre del indicador", "target": "Meta cuantitativa"}},
-            ...
-        ],
-        "checklist": [
-            "Ítem de verificación 1",
-            "Ítem de verificación 2"
-        ],
-        "proyeccion_esperada": "Breve descripción de la trayectoria esperada"
+            {{"name": "...", "target": "..."}}
+        ]
     }}
     
-    Genera al menos 3 acciones (una de cada tipo: preventivo, formativo, reparativo), 2 indicadores y un checklist de 4 puntos.
+    Genera 5 a 8 acciones concretas en el array "acciones". La suma de los pesos de las acciones debe ser 100.
     """
 
     headers = {
@@ -70,24 +76,18 @@ def generate_cycle_content_ai(goal):
             data = json.loads(result)
             
             if not isinstance(data, dict):
-                print(f"Error AI Cycle: La respuesta no es un diccionario JSON válido.")
                 return False
 
             # Guardar en el modelo
-            goal.process_route = data.get('ruta_procesos', [])
+            goal.process_route = data.get('etapas', [])
             goal.indicators = data.get('indicadores', [])
-
-            # Inyectar checklist en la descripción o un campo si existiera (por ahora lo guardamos en la ruta)
-            if 'checklist' in data:
-                goal.process_route.append({"title": "CHECKLIST DE PROCESOS", "description": "\n".join(data['checklist']), "weight": 0, "tipo": "seguimiento"})
-            
             goal.save()
             
-            # Crear las acciones en la base de datos
-            for action_data in data.get('ruta_procesos', []):
-                title = action_data.get('title') or action_data.get('titulo') or "Acción sugerida por IA"
-                description = action_data.get('description') or action_data.get('descripcion') or ""
-                weight = action_data.get('weight') or action_data.get('peso') or 10.0
+            # Crear las acciones de mejora (el verdadero checklist que mide %)
+            for action_data in data.get('acciones', []):
+                title = action_data.get('titulo') or action_data.get('title')
+                description = action_data.get('descripcion') or action_data.get('description') or ""
+                weight = action_data.get('peso') or action_data.get('weight') or 10.0
                 
                 ImprovementAction.objects.create(
                     goal=goal,
