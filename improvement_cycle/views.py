@@ -10,17 +10,23 @@ from .utils import generate_cycle_content_ai
 @login_required
 def dashboard_ee(request):
     """Dashboard del establecimiento del usuario autenticado."""
-    establishment = request.GET.get('ee') or request.user.establishment
-    goals = ImprovementGoal.objects.filter(establishment=establishment)
-    # SQLite no soporta JSONField __contains → filtramos en Python
-    all_alerts = RiskAlert.objects.filter(is_active=True)
-    alerts = [a for a in all_alerts if not a.affected_establishments or establishment in a.affected_establishments]
-    return render(request, 'improvement_cycle/dashboard_ee.html', {
-        'goals': goals,
-        'alerts': alerts,
-        'establishment': establishment,
-        'establishments': User.ESTABLISHMENT_CHOICES,
-    })
+    try:
+        establishment = request.GET.get('ee') or request.user.establishment
+        goals = ImprovementGoal.objects.filter(establishment=establishment)
+        # SQLite no soporta JSONField __contains → filtramos en Python
+        all_alerts = RiskAlert.objects.filter(is_active=True)
+        alerts = [a for a in all_alerts if not a.affected_establishments or establishment in a.affected_establishments]
+        return render(request, 'improvement_cycle/dashboard_ee.html', {
+            'goals': goals,
+            'alerts': alerts,
+            'establishment': establishment,
+            'establishments': User.ESTABLISHMENT_CHOICES,
+        })
+    except Exception as e:
+        import traceback
+        error_msg = f"Error en dashboard_ee: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        return render(request, 'ai_modules/error_debug.html', {'error': error_msg})
 
 
 @login_required
@@ -44,68 +50,74 @@ def alertas_activas(request):
 
 @login_required
 def meta_crear(request):
-    if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden()
-    
-    ee_initial = request.GET.get('ee') or request.user.establishment
-
-    if request.method == 'POST':
-        ee = request.user.establishment or ''
-        target_val = 100.0  # Default value as we removed it from UI
+    try:
+        if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff):
+            from django.http import HttpResponseForbidden
+            return HttpResponseForbidden()
         
-        objectives = request.POST.getlist('strategic_objectives[]')
-        # Limpiar objetivos vacíos
-        objectives = [obj.strip() for obj in objectives if obj.strip()]
+        ee_initial = request.GET.get('ee') or request.user.establishment
 
-        goal = ImprovementGoal.objects.create(
-            establishment=ee,
-            profile_role=request.user.role or '',
-            subvention_type='SEP',  # Default since we removed it
-            title=request.POST.get('title', ''),
-            description=request.POST.get('description', ''),
-            strategic_objectives=objectives,
-            is_meeting_cycle=request.POST.get('is_meeting_cycle') == 'on',
-            target_value=target_val,
-            measurement_unit='%',
-            deadline=request.POST.get('deadline'),
-            created_by=request.user,
-            is_generating=True,
-        )
+        if request.method == 'POST':
+            ee = request.user.establishment or ''
+            target_val = 100.0  # Default value as we removed it from UI
+            
+            objectives = request.POST.getlist('strategic_objectives[]')
+            # Limpiar objetivos vacíos
+            objectives = [obj.strip() for obj in objectives if obj.strip()]
 
-        
-        # Disparar generación por IA en segundo plano para evitar 502 por timeout
-        if goal.strategic_objectives:
-            import threading
-            thread = threading.Thread(target=generate_cycle_content_ai, args=(goal,))
-            thread.start()
-            messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
-        
-        # Sincronizar con Calendario
-        try:
-            from calendar_red.models import CalendarEvent
-            CalendarEvent.objects.create(
-                title=f"Meta: {goal.title}",
-                description=f"Plazo para cumplir meta de mejora: {goal.description}",
-                event_date=goal.deadline,
-                event_type='interno',
-                applies_to_roles=[goal.profile_role] if goal.profile_role else [],
-                applies_to_establishments=[goal.establishment] if goal.establishment else [],
-                created_by=request.user
+            goal = ImprovementGoal.objects.create(
+                establishment=ee,
+                profile_role=request.user.role or '',
+                subvention_type='SEP',  # Default since we removed it
+                title=request.POST.get('title', ''),
+                description=request.POST.get('description', ''),
+                strategic_objectives=objectives,
+                is_meeting_cycle=request.POST.get('is_meeting_cycle') == 'on',
+                target_value=target_val,
+                measurement_unit='%',
+                deadline=request.POST.get('deadline'),
+                created_by=request.user,
+                is_generating=True,
             )
-        except Exception as e:
-            print(f"Error sincronizando calendario: {e}")
-        
-        return redirect(f'/mejora/?ee={ee or "RED"}')
+
+            
+            # Disparar generación por IA en segundo plano para evitar 502 por timeout
+            if goal.strategic_objectives:
+                import threading
+                thread = threading.Thread(target=generate_cycle_content_ai, args=(goal,))
+                thread.start()
+                messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
+            
+            # Sincronizar con Calendario
+            try:
+                from calendar_red.models import CalendarEvent
+                CalendarEvent.objects.create(
+                    title=f"Meta: {goal.title}",
+                    description=f"Plazo para cumplir meta de mejora: {goal.description}",
+                    event_date=goal.deadline,
+                    event_type='interno',
+                    applies_to_roles=[goal.profile_role] if goal.profile_role else [],
+                    applies_to_establishments=[goal.establishment] if goal.establishment else [],
+                    created_by=request.user
+                )
+            except Exception as e:
+                print(f"Error sincronizando calendario: {e}")
+            
+            return redirect(f'/mejora/?ee={ee or "RED"}')
 
 
-    return render(request, 'improvement_cycle/meta_form.html', {
-        'establishments': User.ESTABLISHMENT_CHOICES,
-        'roles': User.ROLE_CHOICES,
-        'ee_initial': ee_initial,
-        'initial_title': request.GET.get('title', ''),
-        'initial_description': request.GET.get('description', ''),
-    })
+        return render(request, 'improvement_cycle/meta_form.html', {
+            'establishments': User.ESTABLISHMENT_CHOICES,
+            'roles': User.ROLE_CHOICES,
+            'ee_initial': ee_initial,
+            'initial_title': request.GET.get('title', ''),
+            'initial_description': request.GET.get('description', ''),
+        })
+    except Exception as e:
+        import traceback
+        error_msg = f"Error en meta_crear: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        return render(request, 'ai_modules/error_debug.html', {'error': error_msg})
 
 
 @login_required

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Error Debug{% endblock %}
+{% block content %}
+<div style="max-width:800px; margin:40px auto; padding:40px; background:white; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); border-left:8px solid #d93025;">
+    <h2 style="color:#d93025; margin-bottom:20px;">🕵️ Error de Depuración Detectado</h2>
+    <p style="font-size:16px; color:#555; margin-bottom:24px;">Se ha capturado el siguiente error técnico para ayudar a resolver el problema del Error 500:</p>
+    
+    <div style="background:#f8f9fa; padding:24px; border-radius:12px; border:1px solid #e9ecef; font-family:monospace; font-size:13px; color:#333; overflow-x:auto; line-height:1.5;">
+        <pre>{{ error }}</pre>
+    </div>
+    
+    <div style="margin-top:32px; display:flex; gap:16px;">
+        <a href="javascript:history.back()" style="background:#1e73be; color:white; padding:12px 24px; border-radius:30px; text-decoration:none; font-weight:600; font-size:14px;">← Volver</a>
+        <a href="/" style="background:#f8f9fa; color:#555; padding:12px 24px; border-radius:30px; text-decoration:none; font-weight:600; font-size:14px; border:1px solid #ddd;">Ir al Inicio</a>
+    </div>
+</div>
+{% endblock %}
