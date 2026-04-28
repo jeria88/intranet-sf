@@ -90,7 +90,14 @@
                             </div>
                             {% endif %}
                             <div style="display:flex; gap:16px; font-size:12px; color:var(--contrast-3);">
-                                <span>👤 <strong>Responsable:</strong> {{ action.responsible.get_full_name|default:action.responsible.username|default:"No asignado" }}</span>
+                                <span>👤 <strong>Responsable:</strong> 
+                                    {% if action.responsible %}
+                                        {{ action.responsible.get_full_name|default:action.responsible.username }}
+                                    {% else %}
+                                        No asignado
+                                    {% endif %}
+                                </span>
+
                                 <span>📅 <strong>Plazo:</strong> {{ action.deadline|date:"d/m/Y" }}</span>
                                 <span>⚖️ <strong>Peso:</strong> {{ action.weight }}%</span>
                             </div>
@@ -160,7 +167,14 @@
                 <h4 style="margin:0 0-12px; font-size:15px; color:var(--contrast-2);">Descripción de la Meta</h4>
                 <p style="font-size:14px; line-height:1.6; color:var(--contrast); margin-top:20px;">{{ goal.description|default:"Sin descripción detallada." }}</p>
                 <div style="margin-top:20px; padding-top:20px; border-top:1px solid #f0f0f0;">
-                    <p style="font-size:13px; margin:0;"><strong>Creado por:</strong> {{ goal.created_by.get_full_name|default:goal.created_by.username }}</p>
+                    <p style="font-size:13px; margin:0;"><strong>Creado por:</strong> 
+                        {% if goal.created_by %}
+                            {{ goal.created_by.get_full_name|default:goal.created_by.username }}
+                        {% else %}
+                            Sistema
+                        {% endif %}
+                    </p>
+
                     <p style="font-size:13px; margin:5px 0 0;"><strong>Fecha:</strong> {{ goal.created_at|date:"d/m/Y" }}</p>
                 </div>
             </div>
