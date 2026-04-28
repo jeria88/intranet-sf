@@ -82,18 +82,21 @@ def meta_crear(request):
             messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
         
         # Sincronizar con Calendario
-        from calendar_red.models import CalendarEvent
-        CalendarEvent.objects.create(
-            title=f"Meta: {goal.title}",
-            description=f"Plazo para cumplir meta de mejora: {goal.description}",
-            event_date=goal.deadline,
-            event_type='interno',
-            applies_to_roles=[goal.profile_role] if goal.profile_role else [],
-            applies_to_establishments=[goal.establishment] if goal.establishment else [],
-            created_by=request.user
-        )
+        try:
+            from calendar_red.models import CalendarEvent
+            CalendarEvent.objects.create(
+                title=f"Meta: {goal.title}",
+                description=f"Plazo para cumplir meta de mejora: {goal.description}",
+                event_date=goal.deadline,
+                event_type='interno',
+                applies_to_roles=[goal.profile_role] if goal.profile_role else [],
+                applies_to_establishments=[goal.establishment] if goal.establishment else [],
+                created_by=request.user
+            )
+        except Exception as e:
+            print(f"Error sincronizando calendario: {e}")
         
-        return redirect(f'/mejora/?ee={ee}')
+        return redirect(f'/mejora/?ee={ee or "RED"}')
 
 
     return render(request, 'improvement_cycle/meta_form.html', {
@@ -176,9 +179,7 @@ def action_create(request, goal_pk):
 @login_required
 def action_toggle(request, pk):
     action = get_object_or_404(ImprovementAction, pk=pk)
-    if not (request.user == action.responsible or request.user == action.goal.created_by or request.user.is_staff):
-        from django.http import JsonResponse
-        return JsonResponse({'error': 'No tienes permiso'}, status=403)
+    # Permiso universal para todos los usuarios autenticados
     
     if action.status == 'completado':
         action.status = 'pendiente'
@@ -208,6 +209,6 @@ def goal_delete(request, pk):
         ee = goal.establishment
         goal.delete()
         messages.success(request, "Meta de mejora eliminada correctamente.")
-        return redirect(f'/mejora/?ee={ee}')
+        return redirect(f'/mejora/?ee={ee or "RED"}')
     
     return render(request, 'improvement_cycle/goal_confirm_delete.html', {'goal': goal})

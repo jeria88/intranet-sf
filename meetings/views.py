@@ -809,9 +809,13 @@ def meeting_create_manual(request):
         room_id = request.POST.get('room')
         room = get_object_or_404(MeetingRoom, id=room_id)
         
-        from datetime import datetime
-        scheduled_at = datetime.fromisoformat(request.POST.get('scheduled_at'))
-        scheduled_at = timezone.make_aware(scheduled_at)
+        try:
+            from datetime import datetime
+            scheduled_at = datetime.fromisoformat(request.POST.get('scheduled_at'))
+            scheduled_at = timezone.make_aware(scheduled_at)
+        except (ValueError, TypeError) as e:
+            messages.error(request, f"Fecha inválida: {e}")
+            return redirect('meetings:recording_list')
 
         booking = MeetingBooking.objects.create(
             room=room,
@@ -823,17 +827,20 @@ def meeting_create_manual(request):
             processing_status='completado'
         )
         # Sincronizar con Calendario
-        from calendar_red.models import CalendarEvent
-        CalendarEvent.objects.create(
-            title=f"Reunión: {booking.room.name}",
-            description=f"Agenda: {booking.agenda}",
-            event_date=booking.scheduled_at.date(),
-            event_time=booking.scheduled_at.time(),
-            event_type='interno',
-            applies_to_roles=[request.user.role],
-            applies_to_establishments=[request.user.establishment],
-            created_by=request.user
-        )
+        try:
+            from calendar_red.models import CalendarEvent
+            CalendarEvent.objects.create(
+                title=f"Reunión: {booking.room.name}",
+                description=f"Agenda: {booking.agenda}",
+                event_date=booking.scheduled_at.date(),
+                event_time=booking.scheduled_at.time(),
+                event_type='interno',
+                applies_to_roles=[request.user.role],
+                applies_to_establishments=[request.user.establishment],
+                created_by=request.user
+            )
+        except Exception as e:
+            print(f"Error sincronizando calendario (reunión): {e}")
 
         messages.success(request, "Reunión manual registrada correctamente.")
 
