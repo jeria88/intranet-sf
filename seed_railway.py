@@ -127,4 +127,31 @@ for data in ASSISTANTS:
     except:
         pass
 
+# ── 3. Enriquecimiento de Biblioteca (Descripciones IA) ────────────────────────
+print("\n📚 Enriqueciendo descripciones de la biblioteca...")
+from library.models import Document
+json_path = os.path.join(settings.BASE_DIR, 'library', 'data', 'library_data.json')
+
+
+if os.path.exists(json_path):
+    with open(json_path, 'r', encoding='utf-8') as f:
+        enrichment_data = json.load(f)
+    
+    count = 0
+    # Intentamos emparejar por título (insensible a mayúsculas/minúsculas y espacios)
+    for doc in Document.objects.all():
+        # Si tiene la descripción genérica, intentamos mejorarla
+        if 'Documento importado automáticamente' in doc.description:
+            # Buscamos el título exacto o similar en nuestro JSON
+            improved_desc = enrichment_data.get(doc.title)
+            if improved_desc:
+                doc.description = improved_desc
+                doc.save()
+                count += 1
+    
+    print(f"✅ Se actualizaron {count} descripciones en la biblioteca.")
+else:
+    print("⚠️ No se encontró scratch/library_data.json. Saltando enriquecimiento.")
+
 print("\n🚀 SEED Temuco completado con éxito.")
+
