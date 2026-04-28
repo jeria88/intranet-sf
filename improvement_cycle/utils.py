@@ -85,13 +85,18 @@ def generate_cycle_content_ai(goal):
             
             # Crear las acciones en la base de datos
             for action_data in data.get('ruta_procesos', []):
+                title = action_data.get('title') or action_data.get('titulo') or "Acción sugerida por IA"
+                description = action_data.get('description') or action_data.get('descripcion') or ""
+                weight = action_data.get('weight') or action_data.get('peso') or 10.0
+                
                 ImprovementAction.objects.create(
                     goal=goal,
-                    title=action_data.get('title'),
-                    description=action_data.get('description'),
-                    weight=action_data.get('weight', 1.0),
-                    deadline=goal.deadline # Usamos el plazo de la meta como base
+                    title=str(title)[:200],
+                    description=str(description),
+                    weight=float(weight),
+                    deadline=goal.deadline
                 )
+
             
             # Si es para una reunión, añadir las metas automáticas
             if goal.is_meeting_cycle:

@@ -68,13 +68,16 @@ class ImprovementGoal(models.Model):
         """Calcula el progreso basado en las acciones si existen, si no usa current_value."""
         actions = self.actions.all()
         if actions.exists():
-            total_weight = sum(a.weight for a in actions)
+            total_weight = sum(a.weight for a in actions if a.weight is not None)
             if total_weight == 0: return 0
-            completed_weight = sum(a.weight for a in actions if a.status == 'completado')
+            completed_weight = sum(a.weight for a in actions if a.status == 'completado' and a.weight is not None)
             return round((completed_weight / total_weight) * 100, 1)
         
         if self.target_value == 0: return 0
-        return min(100, round((self.current_value / self.target_value) * 100, 1))
+        current = self.current_value or 0
+        target = self.target_value or 1
+        return min(100, round((current / target) * 100, 1))
+
 
     def __str__(self):
         return f"{self.establishment} — {self.title} ({self.progress_pct}%)"

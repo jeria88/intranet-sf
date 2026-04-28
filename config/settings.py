@@ -218,7 +218,11 @@ if DATABASE_URL:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     
-    CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if not h.startswith('*')] + ['https://*.railway.app']
+    CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if not h.startswith('*')] + [
+        'https://*.railway.app',
+        'https://*.up.railway.app'
+    ]
+
 
     # 3. Logs de producción
     LOGGING['root']['level'] = 'WARNING'

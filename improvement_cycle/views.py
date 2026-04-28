@@ -94,15 +94,20 @@ def meta_crear(request):
 
 @login_required
 def goal_detail(request, pk):
-    goal = get_object_or_404(ImprovementGoal, pk=pk)
-    actions = goal.actions.all()
-    can_edit = request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by
-    
-    return render(request, 'improvement_cycle/goal_detail.html', {
-        'goal': goal,
-        'actions': actions,
-        'can_edit': can_edit,
-    })
+    try:
+        goal = get_object_or_404(ImprovementGoal, pk=pk)
+        actions = goal.actions.all()
+        can_edit = request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by
+        
+        return render(request, 'improvement_cycle/goal_detail.html', {
+            'goal': goal,
+            'actions': actions,
+            'can_edit': can_edit,
+        })
+    except Exception as e:
+        messages.error(request, f"Error al cargar el detalle: {str(e)}")
+        return redirect('improvement_cycle:dashboard_ee')
+
 
 @login_required
 def goal_edit(request, pk):
