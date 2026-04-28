@@ -81,7 +81,20 @@ def meta_crear(request):
             thread.start()
             messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
         
+        # Sincronizar con Calendario
+        from calendar_red.models import CalendarEvent
+        CalendarEvent.objects.create(
+            title=f"Meta: {goal.title}",
+            description=f"Plazo para cumplir meta de mejora: {goal.description}",
+            event_date=goal.deadline,
+            event_type='interno',
+            applies_to_roles=[goal.profile_role] if goal.profile_role else [],
+            applies_to_establishments=[goal.establishment] if goal.establishment else [],
+            created_by=request.user
+        )
+        
         return redirect(f'/mejora/?ee={ee}')
+
 
     return render(request, 'improvement_cycle/meta_form.html', {
         'establishments': User.ESTABLISHMENT_CHOICES,
@@ -97,7 +110,8 @@ def goal_detail(request, pk):
     try:
         goal = get_object_or_404(ImprovementGoal, pk=pk)
         actions = goal.actions.all()
-        can_edit = request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by
+        can_edit = True # Habilitado para todos los usuarios según requerimiento
+
         
         return render(request, 'improvement_cycle/goal_detail.html', {
             'goal': goal,
@@ -112,9 +126,8 @@ def goal_detail(request, pk):
 @login_required
 def goal_edit(request, pk):
     goal = get_object_or_404(ImprovementGoal, pk=pk)
-    if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden()
+    # Permiso universal para todos los usuarios autenticados
+
 
     if request.method == 'POST':
         goal.title = request.POST.get('title', goal.title)
@@ -133,9 +146,8 @@ def goal_edit(request, pk):
 @login_required
 def action_create(request, goal_pk):
     goal = get_object_or_404(ImprovementGoal, pk=goal_pk)
-    if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff or request.user == goal.created_by):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden()
+    # Permiso universal para todos los usuarios autenticados
+
 
     if request.method == 'POST':
         responsible_id = request.POST.get('responsible')
@@ -184,3 +196,18 @@ def action_toggle(request, pk):
     
     messages.success(request, f"Estado de '{action.title}' actualizado.")
     return redirect('improvement_cycle:goal_detail', pk=action.goal.pk)
+
+@login_required
+def goal_delete(request, pk):
+    """Elimina una meta de mejora (Permiso universal)."""
+    goal = get_object_or_404(ImprovementGoal, pk=pk)
+    # Habilitado para todos los usuarios según requerimiento
+
+
+    if request.method == 'POST':
+        ee = goal.establishment
+        goal.delete()
+        messages.success(request, \"Meta de mejora eliminada correctamente.\")
+        return redirect(f'/mejora/?ee={ee}')
+    
+    return render(request, 'improvement_cycle/goal_confirm_delete.html', {'goal': goal})
