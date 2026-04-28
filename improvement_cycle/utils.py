@@ -100,7 +100,11 @@ def generate_cycle_content_ai(goal):
             return True
     except Exception as e:
         print(f"Error AI Cycle: {e}")
+    finally:
+        goal.is_generating = False
+        goal.save(update_fields=['is_generating'])
     return False
+
 
 def create_meeting_default_actions(goal):
     """Añade las acciones estándar para ciclos de reuniones."""

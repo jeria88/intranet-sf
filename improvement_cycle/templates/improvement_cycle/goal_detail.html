@@ -28,14 +28,47 @@
             <div style="background:white; border-radius:16px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <h3 style="margin:0 0 20px; font-size:18px;">📋 Acciones y Seguimiento</h3>
                 
-                {% if not actions %}
+                {% if goal.is_generating %}
+                <div id="ai-loading-box" style="text-align:center; padding:40px; background:#f8fafc; border-radius:12px; border:2px dashed var(--accent); margin-bottom:20px;">
+                    <div class="spinner" style="width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid var(--accent); border-radius:50%; margin:0 auto 15px; animation:spin 1s linear infinite;"></div>
+                    <p style="font-size:16px; font-weight:700; color:var(--contrast); margin-bottom:8px;">🤖 La IA está redactando el plan de acción...</p>
+                    <p style="font-size:13px; color:var(--contrast-2);">Esto puede tardar unos 30-40 segundos. La página se actualizará automáticamente.</p>
+                    <div style="width:100%; background:#e2e8f0; height:8px; border-radius:4px; margin-top:20px; overflow:hidden;">
+                        <div id="ai-progress-sim" style="width:10%; height:100%; background:var(--accent); transition:width 30s linear;"></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+                <script>
+                    // Simulación visual de progreso
+                    setTimeout(() => { document.getElementById('ai-progress-sim').style.width = '95%'; }, 100);
+                    
+                    // Polling para detectar cuando termine
+                    async function checkAIStatus() {
+                        try {
+                            const res = await fetch(window.location.href);
+                            const text = await res.text();
+                            if (!text.includes('ai-loading-box')) {
+                                location.reload();
+                            } else {
+                                setTimeout(checkAIStatus, 5000);
+                            }
+                        } catch (e) { setTimeout(checkAIStatus, 5000); }
+                    }
+                    setTimeout(checkAIStatus, 5000);
+                </script>
+                {% endif %}
+
+                {% if not actions and not goal.is_generating %}
                 <div style="text-align:center; padding:40px; color:var(--contrast-3);">
                     <p style="font-size:16px; margin-bottom:12px;">No hay acciones registradas para esta meta.</p>
                     {% if can_edit %}
                     <a href="{% url 'improvement_cycle:action_create' goal.pk %}" style="color:var(--accent); font-weight:600;">Crea la primera acción</a>
                     {% endif %}
                 </div>
-                {% else %}
+                {% elif actions %}
+
                 <div style="display:flex; flex-direction:column; gap:16px;">
                     {% for action in actions %}
                     <div style="border:1px solid #f0f0f0; border-radius:12px; padding:16px; display:flex; gap:16px; align-items:flex-start;">

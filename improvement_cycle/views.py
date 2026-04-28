@@ -70,7 +70,9 @@ def meta_crear(request):
             measurement_unit='%',
             deadline=request.POST.get('deadline'),
             created_by=request.user,
+            is_generating=True,
         )
+
         
         # Disparar generación por IA en segundo plano para evitar 502 por timeout
         if goal.strategic_objectives:

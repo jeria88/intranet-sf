@@ -47,7 +47,9 @@ class ImprovementGoal(models.Model):
     )
     process_route = models.JSONField(default=list, blank=True, verbose_name='Ruta de Procesos (IA)')
     indicators = models.JSONField(default=list, blank=True, verbose_name='Indicadores de Logro (IA)')
+    is_generating = models.BooleanField(default=False, verbose_name='IA Redactando')
     # ----------------------------------------
+
 
 
     class Meta:

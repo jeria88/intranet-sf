@@ -100,12 +100,14 @@
                     <p style="font-size:11px;color:var(--accent);font-weight:700;margin:0;">{{ g.actions_summary }}</p>
                 </div>
                 <span class="status-badge-goal" style="
-                    {% if g.status == 'cumplido' %}background:#d1e7dd;color:#0f5132;
+                    {% if g.is_generating %}background:#fff3cd;color:#856404;
+                    {% elif g.status == 'cumplido' %}background:#d1e7dd;color:#0f5132;
                     {% elif g.status == 'en_riesgo' %}background:#fdf0f0;color:#842029;
                     {% elif g.status == 'en_progreso' %}background:#cff4fc;color:#0c5460;
                     {% else %}background:#f0f0f0;color:#575760;{% endif %}">
-                    {{ g.get_status_display }}
+                    {% if g.is_generating %}🤖 IA Redactando...{% else %}{{ g.get_status_display }}{% endif %}
                 </span>
+
             </div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:#575760;margin-bottom:6px;">
                 <span>{{ g.current_value|floatformat:1 }} / {{ g.target_value|floatformat:1 }} {{ g.measurement_unit
