@@ -123,10 +123,10 @@
 <div class="repo-container">
     <div class="repo-header">
         <div>
-            <h1 style="font-size: 24px; font-weight: 800; color: var(--primary);">Repositorio de Casos Normativos</h1>
+            <h1 style="font-size: 24px; font-weight: 800; color: var(--primary);">Mi Repositorio Personal</h1>
             <p style="color: #64748b;">{{ subtitle }}</p>
         </div>
-        <a href="{% url 'ai_modules:ai_chat' assistant.slug %}" class="btn-action">← Volver al Asistente</a>
+        <a href="{% url 'ai_modules:ai_chat' assistant.slug %}" class="btn-action">← Volver al Chat ({{ assistant.name }})</a>
     </div>
 
     <div class="repo-list">
