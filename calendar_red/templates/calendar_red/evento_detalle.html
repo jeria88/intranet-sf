@@ -32,7 +32,7 @@
         {% if event.applies_to_establishments %}
         <p style="font-size:14px;color:#222;"><strong>Establecimientos:</strong> {{ event.applies_to_establishments|join:", " }}</p>
         {% endif %}
-        <p style="font-size:12px;color:#b2b2be;margin-top:16px;">Creado por {{ event.created_by.get_full_name|default:event.created_by.username|default:"Sistema" }} · {{ event.created_at|date:"d/m/Y" }}</p>
+        <p style="font-size:12px;color:#b2b2be;margin-top:16px;">Creado por {% firstof event.created_by.get_full_name event.created_by.username "Sistema" %} · {{ event.created_at|date:"d/m/Y" }}</p>
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px; justify-content: flex-end;">
             <a href="{% url 'calendar_red:evento_editar' event.pk %}" 
