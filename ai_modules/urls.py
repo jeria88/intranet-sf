@@ -9,14 +9,9 @@ urlpatterns = [
     path('mis-consultas/<int:pk>/', views.consulta_detalle, name='consulta_detalle'),
     path('admin/cola/', views.cola_consultas, name='cola_consultas'),
     path('admin/consulta/<int:pk>/', views.responder_consulta, name='responder_consulta'),
-    path('<slug:slug>/', views.ai_detail, name='ai_detail'),
-    path('<slug:slug>/consultar/', views.nueva_consulta, name='nueva_consulta'),
-    path('<slug:slug>/chat/', views.ai_chat, name='ai_chat'),
     
-    
-    # Repositorio de Casos
+    # Repositorio de Casos (Debe ir antes de <slug:slug>/ para evitar colisiones)
     path('repositorio/', views.case_repository, name='case_repository_general'),
-    path('<slug:slug>/repositorio/', views.case_repository, name='case_repository'),
     path('casos/guardar/', views.save_as_case, name='save_as_case'),
     path('casos/<int:pk>/cambiar-estado/', views.toggle_case_status, name='toggle_case_status'),
     path('casos/<int:pk>/actualizar/', views.update_case, name='update_case'),
@@ -25,4 +20,9 @@ urlpatterns = [
     path('casos/<int:pk>/reporte/', views.case_report_print, name='case_report_print'),
     path('casos/<int:pk>/reporte-defensa/', views.case_defense_print, name='case_defense_print'),
     path('casos/<int:pk>/generar-descargos/', views.generate_case_defense, name='generate_case_defense'),
+
+    path('<slug:slug>/', views.ai_detail, name='ai_detail'),
+    path('<slug:slug>/consultar/', views.nueva_consulta, name='nueva_consulta'),
+    path('<slug:slug>/chat/', views.ai_chat, name='ai_chat'),
+    path('<slug:slug>/repositorio/', views.case_repository, name='case_repository'),
 ]
