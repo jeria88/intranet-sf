@@ -135,7 +135,10 @@
             <div>
                 <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--primary);">{{ case.title }}</h3>
                 <p style="margin: 3px 0 0; font-size: 11px; color: #64748b;">
-                    Establecimiento: {{ case.assistant.establishment }} | Creado: {{ case.created_at|date:"d/m/Y" }}
+                    {% if request.user.is_staff %}
+                    Usuario: <strong>{{ case.user.get_full_name|default:case.user.username }}</strong> | 
+                    {% endif %}
+                    Establecimiento: <strong>{{ case.user.establishment }}</strong> | Creado: {{ case.created_at|date:"d/m/Y" }}
                 </p>
             </div>
             
