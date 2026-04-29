@@ -15,6 +15,7 @@ urlpatterns = [
     
     
     # Repositorio de Casos
+    path('repositorio/', views.case_repository, name='case_repository_general'),
     path('<slug:slug>/repositorio/', views.case_repository, name='case_repository'),
     path('casos/guardar/', views.save_as_case, name='save_as_case'),
     path('casos/<int:pk>/cambiar-estado/', views.toggle_case_status, name='toggle_case_status'),
