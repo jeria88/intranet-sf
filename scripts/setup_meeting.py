@@ -41,7 +41,7 @@ def setup_users():
     admin_user, created = User.objects.get_or_create(username='director.admin')
     admin_user.role = 'DIRECTOR'
     admin_user.establishment = 'RED'
-    admin_user.is_staff = True
+    admin_user.is_staff = False
     admin_user.set_password(password)
     admin_user.is_active = True
     admin_user.save()
