@@ -190,7 +190,7 @@ def meeting_room(request, slug):
                 processing_status='sin_grabacion'  # Solo cambia a 'pendiente' al llegar el webhook
             )
 
-    # Redirección a Daily.co siempre
+    # Redirección a Daily.co
     daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
     token = _generate_daily_token(
         room.daily_identifier,
@@ -299,19 +299,6 @@ def booking_detalle(request, pk):
     })
 
 
-@login_required
-def start_recording(request, pk):
-    """
-    Simula el inicio/fin de grabación en Jitsi.
-    En un entorno real se comunicaría con la API de Jitsi (Jibri).
-    Aquí solo marcaremos la reserva con una URL de video simulada.
-    """
-    booking = get_object_or_404(MeetingBooking, pk=pk)
-    if request.method == 'POST':
-        # Simular URL de grabación guardada
-        booking.recording_url = f"https://sfared.cl/recordings/jitsi_{booking.room.slug}_{booking.pk}.mp4"
-        booking.save(update_fields=['recording_url'])
-    return redirect('meetings:meeting_room', slug=booking.room.slug)
 
 
 @login_required

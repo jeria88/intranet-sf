@@ -8,7 +8,6 @@ class AIAssistant(models.Model):
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=100)
     profile_role = models.CharField(max_length=20, verbose_name='Rol objetivo')
-    notebook_url = models.URLField(verbose_name='URL NotebookLM')
     description = models.TextField(blank=True)
     use_cases = models.TextField(blank=True, verbose_name='Casos de uso (uno por línea)')
     image_name = models.CharField(max_length=100, verbose_name='Nombre de imagen')

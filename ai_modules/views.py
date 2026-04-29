@@ -55,30 +55,11 @@ def ai_list(request):
     if assistant:
         return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
-    # 4. Resto de perfiles van a la vista de NotebookLM
-    return redirect('ai_modules:notebooklm_instruction')
+    # 4. Resto de perfiles van a la lista general (que filtrará lo que pueden ver)
+    assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
+    return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
 
 
-@login_required
-def notebooklm_instruction(request):
-    """Vista de instrucciones para NotebookLM (usuarios no-UTP Temuco)."""
-    # Buscamos el asistente que corresponde al rol del usuario para sacar su notebook_url
-    assistant = AIAssistant.objects.filter(
-        profile_role=request.user.role,
-        establishment=request.user.establishment,
-        is_active=True
-    ).first()
-    
-    if not assistant:
-        # Fallback a asistente por rol genérico
-        assistant = AIAssistant.objects.filter(
-            profile_role=request.user.role,
-            is_active=True
-        ).first()
-
-    return render(request, 'ai_modules/notebooklm_instruction.html', {
-        'assistant': assistant
-    })
 
 @login_required
 def ai_detail(request, slug):

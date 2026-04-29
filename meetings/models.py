@@ -4,13 +4,12 @@ from django.conf import settings
 
 class MeetingRoom(models.Model):
     ROOM_TYPES = [
-        ('jitsi', 'Jitsi Meet (Clásico)'),
-        ('daily', 'Daily.co (Nuevo)'),
+        ('daily', 'Daily.co (Videollamadas)'),
     ]
     name = models.CharField(max_length=100, verbose_name='Nombre de la Sala')
     slug = models.SlugField(unique=True, verbose_name='Slug Identificador')
     description = models.TextField(blank=True)
-    room_type = models.CharField(max_length=10, choices=ROOM_TYPES, default='jitsi')
+    room_type = models.CharField(max_length=10, choices=ROOM_TYPES, default='daily')
     daily_identifier = models.CharField(max_length=100, blank=True, help_text='ID al final de la URL de Daily')
 
     # Para segmentación automática
