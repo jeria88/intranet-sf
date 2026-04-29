@@ -290,7 +290,7 @@ def ai_chat(request, slug):
     # Obtener la última respuesta de la IA (para el Canvas)
     last_ai_response = messages.filter(role='assistant').last()
     
-    repo_case_count = AICase.objects.filter(user=request.user, assistant=assistant, is_active=True).count()
+    repo_case_count = AICase.objects.filter(user=request.user, is_active=True).count()
     
     return render(request, 'ai_modules/chat.html', {
         'assistant': assistant,
@@ -300,33 +300,41 @@ def ai_chat(request, slug):
     })
 
 @login_required
-def case_repository(request, slug):
-    """Listado de casos guardados con filtrado por actividad."""
-    assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
+def case_repository(request, slug=None):
+    """Listado de casos guardados centrado en el usuario autenticado."""
     
-    # Verificación de seguridad estricta
-    has_access = request.user.is_staff
-    if not has_access:
-        if request.user.role == 'DIRECTOR' and slug == 'director-general':
-            has_access = True
-        else:
-            role_match = (request.user.role == assistant.profile_role)
-            establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
-            if role_match and establishment_match:
-                has_access = True
-                
-    if not has_access:
-        return render(request, 'ai_modules/no_access.html')
-
-    cases = AICase.objects.filter(assistant=assistant).select_related('assistant', 'user').prefetch_related('obs_log__user')
-    
-    # Lógica de filtrado para el Piloto:
-    if request.user.role == 'DIRECTOR':
-        cases = cases.filter(user=request.user, is_active=True)
-    elif not request.user.is_staff:
-        cases = cases.filter(user=request.user, is_active=True)
+    # 1. Determinar el asistente de contexto para la interfaz (Botón Volver, Títulos)
+    if slug:
+        assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
+    else:
+        # Buscar el asistente primario del usuario (Lógica idéntica a ai_list)
+        from django.db import models
+        assistant = AIAssistant.objects.filter(
+            profile_role=request.user.role, 
+            is_active=True
+        ).filter(
+            models.Q(establishment=request.user.establishment) | models.Q(establishment='')
+        ).order_by('-establishment').first()
         
-    role = assistant.profile_role
+        # Fallback para directores (Piloto)
+        if not assistant and request.user.role == 'DIRECTOR':
+            assistant = AIAssistant.objects.filter(slug='director-general').first()
+            
+        # Si aún no hay asistente (ej. Admin sin rol asignado), tomar el primero activo
+        if not assistant:
+            assistant = AIAssistant.objects.filter(is_active=True).first()
+
+    # 2. Verificación de seguridad (Staff puede ver todo si hay slug, si no, solo lo suyo)
+    if slug and request.user.is_staff:
+        # Supervisión administrativa: Ver todos los casos de este asistente
+        cases = AICase.objects.filter(assistant=assistant, is_active=True)
+    else:
+        # Repositorio Personal: Ver solo mis casos (de cualquier asistente)
+        cases = AICase.objects.filter(user=request.user, is_active=True)
+
+    cases = cases.select_related('assistant', 'user').prefetch_related('obs_log__user').order_by('-created_at')
+    
+    role = assistant.profile_role if assistant else 'GENERAL'
     if role == 'UTP': subtitle = 'Gestión y seguimiento de asesorías técnico-pedagógicas.'
     elif role == 'DIRECTOR': subtitle = 'Gestión y seguimiento de casos directivos y normativos.'
     elif role == 'CONVIVENCIA': subtitle = 'Gestión y seguimiento de casos de convivencia escolar.'
