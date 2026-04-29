@@ -42,26 +42,41 @@
     /* Variables de UX Dinámicas */
     :root { --chat-font-size: 15px; }
 
-    /* Aplicación Full-Screen con Scroll Interno y Márgenes Laterales (5%) */
-    html, body { height: 100vh !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #f1f5f9 !important; }
-    .container { 
-        max-width: 90% !important; 
-        width: 90% !important;
-        height: 100vh !important; 
+    /* Aplicación Full-Screen con Scroll Interno y Márgenes (5% por cada lado) */
+    html, body { 
+        height: 100% !important; 
+        width: 100% !important;
+        overflow: hidden !important; 
+        margin: 0 !important; 
         padding: 0 !important; 
-        margin: 0 5% !important; 
+        background: #f1f5f9 !important; 
+    }
+    body { 
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
+        padding-top: 0 !important; 
+    }
+    .container { 
+        width: 90% !important; 
+        max-width: 100% !important;
+        height: 90% !important; 
+        max-height: 90% !important;
+        padding: 0 !important; 
+        margin: 0 !important; 
         display: flex !important; 
         flex-direction: column !important; 
         overflow: hidden !important; 
-        background: #fff;
-        box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        background: #fff !important;
+        border-radius: 16px !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+        box-sizing: border-box !important;
     }
-    body { padding-top: 0 !important; display: flex; flex-direction: column; }
 
     /* Layout Split View Aplicación */
-    .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100%; }
-    .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; overflow: hidden; }
-    .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; border-left: 1px solid #e2e8f0; box-shadow: -10px 0 30px rgba(0,0,0,0.05); overflow: hidden; }
+    .split-container { display: flex; flex: 1; overflow: hidden; background: #f8fafc; gap: 0; width: 100%; box-sizing: border-box; }
+    .chat-column { flex: 1; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #e2e8f0; overflow: hidden; box-sizing: border-box; }
+    .editor-column { flex: 1; background: #fff; display: none; flex-direction: column; border-left: 1px solid #e2e8f0; box-shadow: -10px 0 30px rgba(0,0,0,0.05); overflow: hidden; box-sizing: border-box; }
     .editor-column.active { display: flex; }
 
     /* Áreas de Scroll Independiente */
@@ -78,9 +93,9 @@
     .editor-body { flex: 1 !important; overflow-y: auto !important; padding: 30px !important; }
 
     /* Cabeceras y Pies de Columna Fijos */
-    .chat-header, .editor-header { flex-shrink: 0 !important; border-bottom: 1px solid #e2e8f0; background: #fff; z-index: 10; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
-    .chat-input-area { flex-shrink: 0 !important; padding: 20px; background: white; border-top: 1px solid #f1f5f9; z-index: 10; display: flex; flex-direction: column; gap: 15px; }
-    .editor-footer { flex-shrink: 0 !important; padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; }
+    .chat-header, .editor-header { flex-shrink: 0 !important; border-bottom: 1px solid #e2e8f0; background: #fff; z-index: 10; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+    .chat-input-area { flex-shrink: 0 !important; padding: 20px; background: white; border-top: 1px solid #f1f5f9; z-index: 10; display: flex; flex-direction: column; gap: 15px; box-sizing: border-box; }
+    .editor-footer { flex-shrink: 0 !important; padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; box-sizing: border-box; }
 
     /* Estilo de Mensajes */
     .message-row { display: flex; width: 100%; margin-bottom: 5px; }
