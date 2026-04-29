@@ -360,7 +360,25 @@ def save_as_case(request):
         checklist = request.POST.get('checklist', '')
         observations = request.POST.get('observations', '')
         
-        assistant = get_object_or_404(AIAssistant, slug=assistant_slug)
+        # 1. Intentar obtener el asistente por slug enviado
+        assistant = AIAssistant.objects.filter(slug=assistant_slug, is_active=True).first()
+        
+        # 2. Si falla, buscar el asistente que coincide con el perfil y establecimiento del usuario
+        if not assistant:
+            from django.db import models
+            assistant = AIAssistant.objects.filter(
+                profile_role=request.user.role, 
+                is_active=True
+            ).filter(
+                models.Q(establishment=request.user.establishment) | models.Q(establishment='')
+            ).order_by('-establishment').first()
+            
+        # 3. Último recurso: Asistente director-general
+        if not assistant:
+            assistant = AIAssistant.objects.filter(slug='director-general', is_active=True).first()
+            
+        if not assistant:
+            return JsonResponse({'status': 'error', 'message': 'No se encontró un asistente válido'}, status=404)
         
         # Priorizar query del POST, si no viene, usar lo que sea que ayude a la trazabilidad
         user_query = request.POST.get('query', '').strip()

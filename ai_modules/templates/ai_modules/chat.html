@@ -376,100 +376,22 @@
     function extractSections(text) {
         if (!text) return null;
 
-        // --- NUEVA ESTRUCTURA UNIVERSAL ---
-        const regexA_uni = /A\.-?\s+SUSTENTO/i;
-        const regexB_uni = /B\.-?\s+PLAN/i;
-        const regexC_uni = /C\.-?\s+CHECK/i;
+        // Regex ultra-flexible: Detecta A, B y C seguidos de palabras clave, con cualquier prefijo (#, **, etc)
+        const regexA = /(?:#+\s*|\**|__*)?\s*A[\.\-\)\s:]+(?:SUSTENTO|NORMATIVA|FUNDAMENTOS)/i;
+        const regexB = /(?:#+\s*|\**|__*)?\s*B[\.\-\)\s:]+(?:PLAN|HOJA|RUTA|ACCIÓN)/i;
+        const regexC = /(?:#+\s*|\**|__*)?\s*C[\.\-\)\s:]+(?:CHECKLIST|LISTA|COTEJO|SEGUIMIENTO)/i;
 
-        if (text.match(regexA_uni) && text.match(regexB_uni)) {
-            const partsB = text.split(regexB_uni);
-            const partA = (partsB[0] || '').replace(regexA_uni, '').trim();
+        if (text.match(regexA) && text.match(regexB)) {
+            const partsB = text.split(regexB);
+            const partA = partsB[0].replace(regexA, '').trim();
             
             const remainBC = partsB[1] || '';
-            const partsC = remainBC.split(regexC_uni);
-            const partB = (partsC[0] || '').trim();
+            const partsC = remainBC.split(regexC);
+            const partB = partsC[0].trim();
             const partC = (partsC[1] || '').trim();
 
             return { a: partA, b: partB, c: partC };
         }
-
-        // --- Patrones para UTP (Legacy) ---
-        const regexA_utp = /A\.\s+SUSTENTO/i;
-        const regexB_utp = /B\.\s+RUTA/i;
-        const regexC_utp = /C\.\s+CHECKLIST/i;
-
-        // --- Patrones para REPRESENTANTE (Legacy) ---
-        const regexA_rep = /A\.-?\s+BIENESTAR/i;
-        const regexB_rep = /B\.-?\s+RECURSOS/i;
-        const regexC_rep = /C\.-?\s+ESCALAMIENTO/i;
-        const regexD_rep = /D\.-?\s+CHECK\s*LIST/i;
-
-        // --- Patrones para DIRECTOR (Legacy) ---
-        const regexA_dir = /1\.\s+Matriz/i;
-        const regexB_dir = /2\.\s+Mapa/i;
-        const regexC_dir = /3\.\s+Estrategia/i;
-        const regexD_dir = /4\.\s+Ruta/i;
-        const regexE_dir = /5\.\s+Operacionalizaci[oó]n|Lista\s+de\s+Cotejo/i;
-
-        // 1. Intentar match con Estructura Representante (A, B, C, D)
-        if (text.match(regexA_rep) && text.match(regexB_rep)) {
-            const partsB = text.split(regexB_rep);
-            const partA = (partsB[0] || '').replace(regexA_rep, '').trim();
-            
-            const remainBCD = partsB[1] || '';
-            const partsC = remainBCD.split(regexC_rep);
-            const partB = (partsC[0] || '').trim();
-            
-            const remainD = partsC[1] || '';
-            const partsD = remainD.split(regexD_rep);
-            const partC_esc = (partsD[0] || '').trim();
-            const partD_chk = (partsD[1] || '').trim();
-
-            return { 
-                a: partA, 
-                b: partB, 
-                c: (partC_esc ? "ESCALAMIENTO:\n" + partC_esc + "\n\n" : "") + "CHECKLIST:\n" + partD_chk 
-            };
-        }
-
-        // 2. Intentar match con Estructura Director (1, 2, 3, 4, 5)
-        if (text.match(regexA_dir) && text.match(regexB_dir)) {
-            const partsB = text.split(regexB_dir);
-            const partA = (partsB[0] || '').replace(regexA_dir, '').trim();
-            
-            const remainCDE = partsB[1] || '';
-            const partsC = remainCDE.split(regexC_dir);
-            const partB_map = (partsC[0] || '').trim();
-            
-            const remainDE = partsC[1] || '';
-            const partsD = remainDE.split(regexD_dir);
-            const partC_est = (partsD[0] || '').trim();
-            
-            const remainE = partsD[1] || '';
-            const partsE = remainE.split(regexE_dir);
-            const partD_ruta = (partsE[0] || '').trim();
-            const partE_chk = (partsE[1] || '').trim();
-
-            return { 
-                a: "MATRIZ Y DERIVACIÓN:\n" + partA + "\n\n" + partB_map, 
-                b: "ESTRATEGIA Y BLINDAJE:\n" + partC_est + "\n\n" + partD_ruta, 
-                c: "LCU-CE (LISTA DE COTEJO):\n" + partE_chk 
-            };
-        }
-
-        // 3. Intentar match con Estructura UTP (A, B, C)
-        if (text.match(regexA_utp) && text.match(regexB_utp)) {
-            const partsB = text.split(regexB_utp);
-            const partA = (partsB[0] || '').replace(regexA_utp, '').trim();
-            
-            const remainBC = partsB[1] || '';
-            const partsC = remainBC.split(regexC_utp);
-            const partB = (partsC[0] || '').trim();
-            const partC = (partsC[1] || '').trim();
-
-            return { a: partA, b: partB, c: partC };
-        }
-
         return null;
     }
 
@@ -636,7 +558,10 @@
         try {
             const r = await fetch('{% url "ai_modules:save_as_case" %}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
                 body: data
             });
             const d = await r.json();
