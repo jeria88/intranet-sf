@@ -77,6 +77,8 @@ Migración de archivos multimedia a almacenamiento compatible con S3 para optimi
 
 ### Estabilización y Optimización
 - [x] **Consolidación Temuco**: Eliminados todos los asistentes que no pertenecían a la sede Temuco.
+- [x] **Restauración de Prompts**: Recuperado el prompt detallado ("spectacular tips") para el asistente `director-general` y añadido como migración persistente.
+- [x] **Protocolo Global IA**: Integrado el Protocolo Institucional estricto (Regla de Derivación, Enfoque Triple y Blindaje Legal) a todos los asistentes.
 - [ ] **Migración a PostgreSQL**: Configurar base de datos relacional robusta en Railway para reemplazar SQLite.
 - [ ] **Litestream (Opcional)**: Si se mantiene SQLite, implementar replicación a R2.
 - [ ] **Test Pipeline**: Realizar una prueba completa de videollamada -> grabación -> procesamiento -> IA -> R2.
