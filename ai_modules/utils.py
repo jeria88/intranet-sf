@@ -7,7 +7,9 @@ import json
 import gc
 
 # Caché en memoria para evitar recargas constantes en servidores con RAM limitada
+# Caché en memoria limitada para evitar saturar los 512MB de Railway
 _VECTOR_RESOURCES = {}
+MAX_CACHE_SIZE = 3 # Máximo 3 asistentes en RAM simultáneamente
 
 import docx
 
@@ -194,25 +196,28 @@ def get_relevant_chunks(assistant, query, top_n=10):
     # 2. Intentar cargar desde caché (Memoria RAM persistente en el proceso)
     cached = _VECTOR_RESOURCES.get(assistant.slug)
     
-    # Si es un asistente específico (ej. utp-temuco), consultamos la base global filtrada
-    is_specific = assistant.slug != 'global-knowledge'
+    # Lógica de filtros jerárquicos: 
+    # Si el slug es 'global-knowledge' o termina en '-general' o '-global', permitimos acceso total
+    is_global = assistant.slug == 'global-knowledge' or \
+                assistant.slug.endswith(('-general', '-global')) or \
+                not '-' in assistant.slug
     
     # Filtro base para la base de datos
     from django.db.models import Q
     
-    # Lógica de filtros jerárquicos según INSTRUCCIONES_IA_RAG.md
-    if is_specific:
-        # Extraer rol y establecimiento del slug (asumimos formato: rol-establecimiento)
-        # O mejor aún, usamos los campos del asistente si están disponibles
-        rol_obj = assistant.slug.split('-')[0] # ej: 'utp' o 'representante'
-        est_obj = assistant.slug.split('-')[1] if '-' in assistant.slug else 'temuco'
+    if not is_global:
+        # Extraer rol y establecimiento del slug (ej: utp-temuco)
+        slug_parts = assistant.slug.split('-')
+        rol_obj = slug_parts[0]
+        est_obj = slug_parts[1] if len(slug_parts) > 1 else 'temuco'
         
         # El filtro recupera: Nacional + Institucional (del establecimiento) + Rol (del establecimiento)
         filter_q = Q(metadata__nivel__in=['nacional', 'congregacional']) | \
                    (Q(metadata__establecimiento=est_obj) & Q(metadata__nivel='institucional')) | \
                    (Q(metadata__establecimiento=est_obj) & Q(metadata__rol=rol_obj))
     else:
-        filter_q = Q() # Sin filtro para el global
+        # Global ve TODO (Requerimiento piloto: Todos los directores ven toda la base de Temuco/Nacional)
+        filter_q = Q()
 
     # Conteo para trigger de caché
     db_count_trigger = AIKnowledgeChunk.objects.using('knowledge_base').filter(filter_q).exclude(embedding__isnull=True).count()
@@ -257,6 +262,16 @@ def get_relevant_chunks(assistant, query, top_n=10):
             print(f"Error cargando caché: {e}")
             if assistant.slug in _VECTOR_RESOURCES:
                 del _VECTOR_RESOURCES[assistant.slug]
+            import gc
+            gc.collect()
+
+    # 3. Control de Limpieza de Caché (LRU básico)
+    if not cache_ready:
+        if len(_VECTOR_RESOURCES) >= MAX_CACHE_SIZE:
+            print("Limpiando caché de vectores para liberar RAM...")
+            _VECTOR_RESOURCES.clear()
+            import gc
+            gc.collect()
 
     # 3. Si no hay caché o está desactualizado, reconstruir desde BD
     if not cache_ready:
@@ -273,8 +288,8 @@ def get_relevant_chunks(assistant, query, top_n=10):
         if db_count == 0:
             return "!!! ERROR !!!\nLa base de datos no tiene fragmentos procesados."
 
-        # Pre-asignar memoria para la matriz y listas (más eficiente que append dinámico)
-        matrix = np.zeros((db_count, 1536), dtype=np.float32)
+        # Usar memmap para reconstruir la matriz directamente en disco sin saturar la RAM
+        matrix = np.memmap(matrix_path, dtype='float32', mode='w+', shape=(db_count, 1536))
         ids = [None] * db_count
         doc_names = [None] * db_count
         indices = [None] * db_count
@@ -296,7 +311,8 @@ def get_relevant_chunks(assistant, query, top_n=10):
 
         # Guardar caché para la próxima vez
         try:
-            np.save(matrix_path, matrix)
+            matrix.flush()
+            del matrix # Liberar puntero de memmap
             meta_payload = {
                 'count': db_count,
                 'ids': ids,

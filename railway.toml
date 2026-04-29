@@ -2,4 +2,4 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate && python seed_railway.py && gunicorn config.wsgi --timeout 120 --log-file -"
+startCommand = "python manage.py migrate && gunicorn config.wsgi --workers 1 --timeout 120 --log-file -"

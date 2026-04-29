@@ -14,7 +14,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # ── Seguridad ──────────────────────────────────────────────────────────────
 SECRET_KEY = 'django-insecure-dev-key-change-in-production-intranet-sfa-2026'
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 # ── Apps ───────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600
+        conn_max_age=60
     )
 }
 
@@ -100,7 +100,7 @@ KNOWLEDGE_BASE_URL = os.environ.get('KNOWLEDGE_BASE_URL')
 if KNOWLEDGE_BASE_URL:
     DATABASES['knowledge_base'] = dj_database_url.config(
         default=KNOWLEDGE_BASE_URL,
-        conn_max_age=600
+        conn_max_age=60
     )
 else:
     # Fallback a la base por defecto si no hay URL dedicada
@@ -202,7 +202,7 @@ if DATABASE_URL:
     # 1. Base de datos PostgreSQL
     DATABASES['default'] = dj_database_url.config(
         default=DATABASE_URL,
-        conn_max_age=600,
+        conn_max_age=60,
         conn_health_checks=True,
     )
 

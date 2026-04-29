@@ -32,32 +32,31 @@ def _extract_case_components(text):
 @login_required
 def ai_list(request):
     """Redirige automáticamente según el rol y establecimiento del usuario."""
-    # 1. Admins y Equipo Red ven la lista completa
-    if request.user.is_staff or getattr(request.user, 'is_red_team', False):
+    # 1. Redirección prioritaria para el Piloto: 
+    # Todos los directores (8 directores + presentador director.admin) usan el mismo modelo general.
+    # Esto asegura el "un solo clic" incluso para el presentador si tiene rol DIRECTOR.
+    if request.user.role == 'DIRECTOR':
+        return redirect('ai_modules:ai_chat', slug='director-general')
+
+    # 2. Admins ven la lista completa (Petición del usuario: "el único que puede verlos todos es el admin")
+    if request.user.is_staff:
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
     
-    # 2. Excepción para representantes específicos
-    if request.user.role == 'REPRESENTANTE' or request.user.username in ['representante.temuco', 'representante.utp']:
-        # Buscar el específico primero, si no el general
-        assistant = AIAssistant.objects.filter(profile_role='REPRESENTANTE', is_active=True).filter(
-            models.Q(establishment=request.user.establishment) | models.Q(establishment='')
-        ).first()
-        if assistant:
-            return redirect('ai_modules:ai_chat', slug=assistant.slug)
-
-    # 3. Redirección dinámica para todos los roles con agente
+    # 3. Redirección dinámica para otros roles con agente (UTP, Representante, etc.)
     from django.db import models
-    assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).filter(
+    assistant = AIAssistant.objects.filter(
+        profile_role=request.user.role, 
+        is_active=True
+    ).filter(
         models.Q(establishment=request.user.establishment) | models.Q(establishment='')
     ).order_by('-establishment').first() # Priorizar el que tiene establecimiento definido
     
     if assistant:
         return redirect('ai_modules:ai_chat', slug=assistant.slug)
 
-    # 4. Resto de perfiles van a la lista general (que filtrará lo que pueden ver)
-    assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
-    return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
+    # 4. Si no tiene asistente asignado, no mostrar nada más por seguridad
+    return render(request, 'ai_modules/no_access.html')
 
 
 
@@ -65,15 +64,18 @@ def ai_list(request):
 def ai_detail(request, slug):
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
     
-    # 3. Verificación de seguridad: solo puede ver su propio asistente o uno de su establecimiento
+    # 3. Verificación de seguridad estricta
     if not request.user.is_staff:
-        # Si el asistente es de rol distinto, denegar
-        if assistant.profile_role != request.user.role:
-            return render(request, 'ai_modules/no_access.html')
-        
-        # Si el asistente es de un establecimiento distinto al del usuario, denegar
-        if assistant.establishment and assistant.establishment != request.user.establishment:
-            return render(request, 'ai_modules/no_access.html')
+        # Si es director, tiene acceso al director-general
+        if request.user.role == 'DIRECTOR' and slug == 'director-general':
+            pass
+        else:
+            # Solo puede ver su propio asistente asignado
+            role_match = (assistant.profile_role == request.user.role)
+            establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
+            
+            if not (role_match and establishment_match):
+                return render(request, 'ai_modules/no_access.html')
 
     user_queries = AIQuery.objects.filter(
         user=request.user, assistant=assistant
@@ -205,18 +207,18 @@ def ai_chat(request, slug):
     """Vista de chat tipo ChatGPT para asistentes internos."""
     assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True, is_chat_enabled=True)
     
-    # Verificación de seguridad básica
-    has_access = request.user.is_staff or getattr(request.user, 'is_red_team', False)
+    # Verificación de seguridad estricta
+    has_access = request.user.is_staff
     if not has_access:
-        role_match = (request.user.role == assistant.profile_role)
-        establishment_match = True
-        if assistant.establishment:
-            establishment_match = (request.user.establishment == assistant.establishment)
-        
-        is_representante_exception = (assistant.profile_role == 'REPRESENTANTE' and request.user.username in ['representante.temuco', 'representante.utp'])
-        
-        if (role_match and establishment_match) or is_representante_exception:
+        # Los directores tienen acceso al modelo general
+        if request.user.role == 'DIRECTOR' and slug == 'director-general':
             has_access = True
+        else:
+            role_match = (request.user.role == assistant.profile_role)
+            establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
+            
+            if role_match and establishment_match:
+                has_access = True
 
     if not has_access:
         return render(request, 'ai_modules/no_access.html')
