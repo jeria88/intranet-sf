@@ -38,6 +38,19 @@
         <p style="font-size:12px;color:#b2b2be;margin-top:16px;">Creado por {{
             event.created_by.get_full_name|default:event.created_by.username|default:"Sistema" }} · {{
             event.created_at|date:"d/m/Y" }}</p>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px; justify-content: flex-end;">
+            {% if user == event.created_by or user.is_staff %}
+            <a href="{% url 'calendar_red:evento_editar' event.pk %}" 
+               style="padding: 10px 20px; border-radius: 10px; background: #f8fafc; color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #e2e8f0;">
+               ✏️ Editar
+            </a>
+            <a href="{% url 'calendar_red:evento_eliminar' event.pk %}" 
+               style="padding: 10px 20px; border-radius: 10px; background: #fff1f2; color: #e11d48; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #fecdd3;">
+               🗑️ Eliminar
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

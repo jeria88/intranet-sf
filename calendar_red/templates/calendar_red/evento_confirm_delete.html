@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Evento | {{ event.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width:600px; margin: 40px auto; text-align: center;">
+    <div style="background:white; border-radius:24px; padding:40px; box-shadow:0 10px 40px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+        <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+        <h1 style="margin:0 0 15px; font-size: 24px; font-weight: 800;">¿Eliminar este evento?</h1>
+        <p style="color: var(--contrast-2); margin-bottom: 30px;">
+            Estás a punto de eliminar el evento <strong>"{{ event.title }}"</strong>.<br>
+            Esta acción quedará registrada en el historial de trazabilidad.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div style="display:flex; justify-content: center; gap:16px;">
+                <a href="{% url 'calendar_red:evento_detalle' event.pk %}"
+                    style="padding:14px 30px; border-radius:15px; text-decoration:none; color:var(--contrast-2); font-size:15px; font-weight:600; background: #f1f5f9; transition: all 0.2s;">
+                    Cancelar
+                </a>
+                <button type="submit"
+                    style="background:#dc3545; color:white; border:none; padding:14px 45px; border-radius:15px; font-weight:700; font-size:15px; cursor:pointer; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); transition: transform 0.2s;">
+                    Confirmar Eliminación
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

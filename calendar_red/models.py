@@ -20,10 +20,17 @@ class CalendarEvent(models.Model):
     applies_to_roles = models.JSONField(default=list, blank=True, verbose_name='Roles')
     applies_to_establishments = models.JSONField(default=list, blank=True, verbose_name='Establecimientos')
     is_critical = models.BooleanField(default=False, verbose_name='Crítico')
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='calendar_events'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Trazabilidad de eliminación
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='deleted_calendar_events'
+    )
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['event_date', 'event_time']

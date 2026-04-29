@@ -8,7 +8,7 @@ from users.models import User
 @login_required
 def calendario(request):
     now = timezone.now().date()
-    events = CalendarEvent.objects.all()
+    events = CalendarEvent.objects.filter(is_active=True)
     user = request.user
     
     # Filtros del tablero
@@ -107,3 +107,38 @@ def evento_crear(request):
         'initial_title': request.GET.get('title', ''),
         'initial_description': request.GET.get('description', ''),
     })
+
+
+@login_required
+def evento_editar(request, pk):
+    event = get_object_or_404(CalendarEvent, pk=pk, is_active=True)
+    if request.method == 'POST':
+        event.title = request.POST.get('title', '')
+        event.description = request.POST.get('description', '')
+        event.event_date = request.POST.get('event_date')
+        event.event_type = request.POST.get('event_type', 'interno')
+        event.applies_to_roles = request.POST.getlist('applies_to_roles')
+        event.applies_to_establishments = request.POST.getlist('applies_to_establishments')
+        event.is_critical = bool(request.POST.get('is_critical'))
+        event.save()
+        return redirect('calendar_red:calendario')
+    
+    return render(request, 'calendar_red/evento_form.html', {
+        'event': event,
+        'roles': User.ROLE_CHOICES,
+        'establishments': User.ESTABLISHMENT_CHOICES,
+        'event_types': CalendarEvent.EVENT_TYPE_CHOICES,
+    })
+
+
+@login_required
+def evento_eliminar(request, pk):
+    event = get_object_or_404(CalendarEvent, pk=pk, is_active=True)
+    if request.method == 'POST':
+        event.is_active = False
+        event.deleted_by = request.user
+        event.deleted_at = timezone.now()
+        event.save()
+        return redirect('calendar_red:calendario')
+    
+    return render(request, 'calendar_red/evento_confirm_delete.html', {'event': event})

@@ -1,6 +1,19 @@
 {% extends 'base.html' %}
 {% block title %}Nuevo Evento | Calendario SFA{% endblock %}
 
+{% block extra_js %}
+<script>
+    function selectAll(id) {
+        const select = document.getElementById(id);
+        if (select) {
+            for (let i = 0; i < select.options.length; i++) {
+                select.options[i].selected = true;
+            }
+        }
+    }
+</script>
+{% endblock %}
+
 {% block content %}
 <div style="max-width:800px; margin:0 auto; padding-bottom: 40px;">
     <div style="margin-bottom: 30px;">
@@ -17,20 +30,20 @@
             
             <div style="margin-bottom:28px;">
                 <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Título del Evento *</label>
-                <input type="text" name="title" required value="{{ initial_title|default:'' }}" placeholder="Ej: Plazo entrega PME, Reunión de Directores..."
+                <input type="text" name="title" required value="{{ event.title|default:initial_title|default:'' }}" placeholder="Ej: Plazo entrega PME, Reunión de Directores..."
                     style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe;">
             </div>
 
             <div style="margin-bottom:28px;">
                 <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Descripción (Opcional)</label>
                 <textarea name="description" rows="4" placeholder="Detalles, enlaces o instrucciones relevantes..."
-                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; resize: vertical;">{{ initial_description|default:'' }}</textarea>
+                    style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; resize: vertical;">{{ event.description|default:initial_description|default:'' }}</textarea>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
                 <div>
                     <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Fecha del Evento *</label>
-                    <input type="date" name="event_date" required
+                    <input type="date" name="event_date" required value="{{ event.event_date|date:'Y-m-d' }}"
                         style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe;">
                 </div>
                 <div>
@@ -38,7 +51,7 @@
                     <select name="event_type"
                         style="width:100%; padding:14px 18px; border:2px solid #f1f5f9; border-radius:12px; font-size:15px; outline:none; transition: border-color 0.2s; background: #fcfdfe; cursor: pointer;">
                         {% for val, label in event_types %}
-                        <option value="{{ val }}">{{ label }}</option>
+                        <option value="{{ val }}" {% if event.event_type == val %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -46,21 +59,27 @@
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
                 <div>
-                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Roles Destinatarios</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="font-size:14px; font-weight:700; color:var(--contrast); margin:0;">Roles Destinatarios</label>
+                        <button type="button" onclick="selectAll('roles_select')" style="font-size:11px; background:#e2e8f0; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-weight:700;">Seleccionar Todos</button>
+                    </div>
                     <select name="applies_to_roles" multiple id="roles_select"
                         style="width:100%; padding:14px; border:2px solid #f1f5f9; border-radius:12px; font-size:14px; height:120px; background: #fcfdfe;">
                         {% for val, label in roles %}
-                        <option value="{{ val }}">{{ label }}</option>
+                        <option value="{{ val }}" {% if val in event.applies_to_roles %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                     <p style="font-size:11px; color:var(--contrast-3); margin-top:5px;">Deja vacío para todos los roles. Ctrl+Click para seleccionar varios.</p>
                 </div>
                 <div>
-                    <label style="display:block; font-size:14px; font-weight:700; color:var(--contrast); margin-bottom:10px;">Establecimientos</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="font-size:14px; font-weight:700; color:var(--contrast); margin:0;">Establecimientos</label>
+                        <button type="button" onclick="selectAll('ee_select')" style="font-size:11px; background:#e2e8f0; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-weight:700;">Seleccionar Todos</button>
+                    </div>
                     <select name="applies_to_establishments" multiple id="ee_select"
                         style="width:100%; padding:14px; border:2px solid #f1f5f9; border-radius:12px; font-size:14px; height:120px; background: #fcfdfe;">
                         {% for val, label in establishments %}
-                        <option value="{{ val }}">{{ label }}</option>
+                        <option value="{{ val }}" {% if val in event.applies_to_establishments %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                     <p style="font-size:11px; color:var(--contrast-3); margin-top:5px;">Deja vacío para toda la Red SFA.</p>
@@ -68,7 +87,7 @@
             </div>
 
             <div style="background: #fff9db; border: 1px solid #ffe066; border-radius: 16px; padding: 20px; margin-bottom: 35px; display: flex; align-items: flex-start; gap: 15px;">
-                <input type="checkbox" name="is_critical" id="is_critical" style="width:20px; height:20px; cursor:pointer; margin-top: 3px;">
+                <input type="checkbox" name="is_critical" id="is_critical" style="width:20px; height:20px; cursor:pointer; margin-top: 3px;" {% if event.is_critical %}checked{% endif %}>
                 <label for="is_critical" style="cursor:pointer; flex: 1;">
                     <span style="display:block; font-size:15px; font-weight:700; color:#856404; margin-bottom: 4px;">⚠️ Marcar como evento CRÍTICO</span>
                     <span style="display:block; font-size:13px; color:#92791e;">Esto generará una notificación roja y alertas preventivas en el dashboard de los destinatarios.</span>
@@ -82,7 +101,7 @@
                 </a>
                 <button type="submit"
                     style="background:var(--accent); color:white; border:none; padding:14px 45px; border-radius:15px; font-weight:700; font-size:15px; cursor:pointer; box-shadow: 0 4px 15px rgba(30, 115, 190, 0.3); transition: transform 0.2s;">
-                    Guardar Evento
+                    {% if event %}Actualizar Evento{% else %}Guardar Evento{% endif %}
                 </button>
             </div>
         </form>
