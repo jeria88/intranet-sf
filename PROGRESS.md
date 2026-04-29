@@ -79,7 +79,7 @@ Migración de archivos multimedia a almacenamiento compatible con S3 para optimi
 - [x] **Consolidación Temuco**: Eliminados todos los asistentes que no pertenecían a la sede Temuco.
 - [x] **Restauración de Prompts**: Recuperado el prompt detallado ("spectacular tips") para el asistente `director-general` y añadido como migración persistente.
 - [x] **Protocolo Global IA**: Integrado el Protocolo Institucional estricto (Regla de Derivación, Enfoque Triple y Blindaje Legal) a todos los asistentes.
-- [x] **Acceso Director.Admin**: Normalizado el acceso de `director.admin` (removido staff) para asegurar redirección directa al chat y repositorio privado, cumpliendo con la vista estándar de director.
+- [x] **Acceso Director.Admin**: Normalizado el acceso de `director.admin` (removido staff) mediante migración de datos (`0020`) para asegurar persistencia en producción (Railway).
 - [ ] **Migración a PostgreSQL**: Configurar base de datos relacional robusta en Railway para reemplazar SQLite.
 - [ ] **Litestream (Opcional)**: Si se mantiene SQLite, implementar replicación a R2.
 - [ ] **Test Pipeline**: Realizar una prueba completa de videollamada -> grabación -> procesamiento -> IA -> R2.
