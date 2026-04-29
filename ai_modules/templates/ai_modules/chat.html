@@ -182,10 +182,16 @@
     <div id="chat-column" class="chat-column">
         <div class="chat-header">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto;">
+                <a href="/" style="color: #64748b; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s; display: flex; align-items: center; gap: 5px;" title="Volver al Inicio">
+                    ⬅️ Volver
+                </a>
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 32px; height: auto; margin-left: 10px;">
                 <h2 style="font-size: 13px; margin: 0; font-weight: 800; color: #0f172a;">Inteligencia Artificial para {{ assistant.name }}</h2>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
+                <a href="{% url 'ai_modules:case_repository' %}" style="color: #1e73be; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #1e73be; background: #e0f2fe; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
+                    📁 Repositorio de Casos
+                </a>
                 <input type="text" id="search-chat" placeholder="Buscar en la conversación..." style="padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 12px; outline: none; width: 180px;">
                 <div id="auto-save-status" style="font-size: 10px; color: #64748b; font-weight: 600; font-style: italic;"></div>
                 <div class="font-controls" style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">
@@ -233,15 +239,6 @@
                         <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
                     </svg>
                 </button>
-            </div>
-            <div id="chat-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; width: 100%;">
-                <a href="/" style="color: #64748b; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #e2e8f0; background: #f8fafc; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                    ⬅️ Volver
-                </a>
-                <a href="{% url 'ai_modules:case_repository' %}" style="color: #1e73be; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid #1e73be; background: #fff; transition: all 0.2s; display: flex; align-items: center; gap: 5px;">
-                    📁 Ir al Repositorio de Casos
-                </a>
-            </div>
         </div>
     </div>
 
