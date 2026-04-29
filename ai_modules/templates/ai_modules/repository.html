@@ -124,9 +124,9 @@
     <div class="repo-header">
         <div>
             <h1 style="font-size: 24px; font-weight: 800; color: var(--primary);">Repositorio de Casos Normativos</h1>
-            <p style="color: #64748b;">Gestión y seguimiento de asesorías técnico-pedagógicas.</p>
+            <p style="color: #64748b;">{{ subtitle }}</p>
         </div>
-        <a href="{% url 'ai_modules:ai_list' %}" class="btn-action">← Volver al Asistente</a>
+        <a href="{% url 'ai_modules:ai_chat' assistant.slug %}" class="btn-action">← Volver al Asistente</a>
     </div>
 
     <div class="repo-list">
@@ -416,19 +416,16 @@
 
     async function updateCaseLogic() {
         const pk = document.getElementById('edit-case-pk').value;
+        const title = document.getElementById('edit-title').value;
+        const status = document.getElementById('edit-status').value;
         const btn = document.getElementById('btn-update-case');
         
         btn.innerHTML = "⌛ Guardando...";
         btn.disabled = true;
 
         const data = new URLSearchParams({
-            'assistant_slug': assistantSlug,
             'title': title,
-            'query': document.getElementById('chat-input').value || "Consulta manual",
-            'sustento': document.getElementById('modal-sustento').value,
-            'ruta': document.getElementById('modal-ruta').value,
-            'checklist': document.getElementById('modal-checklist').value,
-            'observations': document.getElementById('modal-observations').value,
+            'status': status,
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         });
 

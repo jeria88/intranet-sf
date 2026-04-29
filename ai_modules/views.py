@@ -268,21 +268,7 @@ def ai_chat(request, slug):
                 content=ai_response
             )
 
-            # --- AUTO-CASE GENERATION ---
-            # Solo guardamos si la respuesta parece técnica (tiene secciones)
-            sustento, ruta, checklist = _extract_case_components(ai_response)
-            if sustento or ruta:
-                AICase.objects.create(
-                    user=request.user,
-                    assistant=assistant,
-                    title=f"Chat: {user_message[:50]}...",
-                    user_query=user_message,
-                    sustento=sustento,
-                    ruta=ruta,
-                    checklist=checklist,
-                    status='abierto'
-                )
-            # ----------------------------
+            # (El auto-guardado ahora se maneja exclusivamente en el frontend vía JS para evitar casos duplicados)
             
             return JsonResponse({
                 'response': ai_response,
@@ -304,27 +290,54 @@ def ai_chat(request, slug):
     # Obtener la última respuesta de la IA (para el Canvas)
     last_ai_response = messages.filter(role='assistant').last()
     
+    repo_case_count = AICase.objects.filter(user=request.user, assistant=assistant, is_active=True).count()
+    
     return render(request, 'ai_modules/chat.html', {
         'assistant': assistant,
         'chat_messages': messages,
-        'last_ai_response': last_ai_response.content if last_ai_response else None
+        'last_ai_response': last_ai_response.content if last_ai_response else None,
+        'repo_case_count': repo_case_count
     })
 
 @login_required
-def case_repository(request):
+def case_repository(request, slug):
     """Listado de casos guardados con filtrado por actividad."""
-    cases = AICase.objects.all().select_related('assistant', 'user').prefetch_related('obs_log__user')
+    assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
+    
+    # Verificación de seguridad estricta
+    has_access = request.user.is_staff
+    if not has_access:
+        if request.user.role == 'DIRECTOR' and slug == 'director-general':
+            has_access = True
+        else:
+            role_match = (request.user.role == assistant.profile_role)
+            establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
+            if role_match and establishment_match:
+                has_access = True
+                
+    if not has_access:
+        return render(request, 'ai_modules/no_access.html')
+
+    cases = AICase.objects.filter(assistant=assistant).select_related('assistant', 'user').prefetch_related('obs_log__user')
     
     # Lógica de filtrado para el Piloto:
-    # Si es director, solo ve sus propios casos (independiente de si es staff)
     if request.user.role == 'DIRECTOR':
         cases = cases.filter(user=request.user, is_active=True)
-    # Para otros roles, si no es staff, filtrar sus propios casos
     elif not request.user.is_staff:
         cases = cases.filter(user=request.user, is_active=True)
+        
+    role = assistant.profile_role
+    if role == 'UTP': subtitle = 'Gestión y seguimiento de asesorías técnico-pedagógicas.'
+    elif role == 'DIRECTOR': subtitle = 'Gestión y seguimiento de casos directivos y normativos.'
+    elif role == 'CONVIVENCIA': subtitle = 'Gestión y seguimiento de casos de convivencia escolar.'
+    elif role == 'INSPECTOR': subtitle = 'Gestión y seguimiento de disciplina e inspectoría general.'
+    elif role == 'REPRESENTANTE': subtitle = 'Gestión y seguimiento legal y representación institucional.'
+    else: subtitle = 'Gestión y seguimiento de casos normativos institucionales.'
     
     return render(request, 'ai_modules/repository.html', {
-        'cases': cases
+        'cases': cases,
+        'assistant': assistant,
+        'subtitle': subtitle
     })
 
 
