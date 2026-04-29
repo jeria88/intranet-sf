@@ -255,8 +255,17 @@
                     </svg>
                 </button>
             </div>
-            <div style="text-align: center; font-size: 11px; color: #64748b; margin-top: -5px; padding: 0 10px; line-height: 1.4;">
-                <em>*La Inteligencia Artificial es un asesor que operacionaliza los procesos en pos de la optimización de los tiempos para promover el análisis y reflexión de los equipos*</em>
+            <style>
+                @keyframes pulse-disclaimer {
+                    0% { opacity: 1; text-shadow: 0 0 2px rgba(220, 38, 38, 0.5); }
+                    50% { opacity: 0.6; text-shadow: 0 0 8px rgba(220, 38, 38, 0.8); }
+                    100% { opacity: 1; text-shadow: 0 0 2px rgba(220, 38, 38, 0.5); }
+                }
+            </style>
+            <div style="text-align: center; margin-top: 5px; padding: 0 10px;">
+                <div style="display: inline-block; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #b91c1c; background: #fef2f2; border: 1px solid #f87171; padding: 6px 14px; border-radius: 12px; letter-spacing: 0.5px; animation: pulse-disclaimer 2s infinite ease-in-out; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    *LA INTELIGENCIA ARTIFICIAL ES UN ASESOR QUE OPERACIONALIZA LOS PROCESOS EN POS DE LA OPTIMIZACIÓN DE LOS TIEMPOS PARA PROMOVER EL ANÁLISIS Y REFLEXIÓN DE LOS EQUIPOS*
+                </div>
             </div>
         </div>
     </div>
