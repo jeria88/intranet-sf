@@ -11,7 +11,7 @@ def setup_users():
     establishments = [
         'TEMUCO', 'LAUTARO', 'RENAICO', 'SANTIAGO', 'IMPERIAL', 'ERCILLA', 'ARAUCO', 'ANGOL'
     ]
-    password = "Directivas2024*"
+    password = "Admin.1234"
     
     # 1. Crear/Habilitar 8 Directores
     for ee in establishments:
