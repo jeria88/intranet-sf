@@ -314,8 +314,13 @@ def ai_chat(request, slug):
 def case_repository(request):
     """Listado de casos guardados con filtrado por actividad."""
     cases = AICase.objects.all().select_related('assistant', 'user').prefetch_related('obs_log__user')
-    # Si no es staff, filtrar sus propios casos y solo los ACTIVOS
-    if not request.user.is_staff:
+    
+    # Lógica de filtrado para el Piloto:
+    # Si es director, solo ve sus propios casos (independiente de si es staff)
+    if request.user.role == 'DIRECTOR':
+        cases = cases.filter(user=request.user, is_active=True)
+    # Para otros roles, si no es staff, filtrar sus propios casos
+    elif not request.user.is_staff:
         cases = cases.filter(user=request.user, is_active=True)
     
     return render(request, 'ai_modules/repository.html', {
