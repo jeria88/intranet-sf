@@ -13,9 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # ── Seguridad ──────────────────────────────────────────────────────────────
-SECRET_KEY = 'django-insecure-dev-key-change-in-production-intranet-sfa-2026'
-DEBUG = False
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-dev-only-override-via-env-in-production')
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
 # ── Apps ───────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [

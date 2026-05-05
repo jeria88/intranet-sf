@@ -29,10 +29,9 @@ DEMO_USERS = [
 ]
 
 for ud in DEMO_USERS:
-    User.objects.get_or_create(
+    user, created = User.objects.get_or_create(
         username=ud['username'],
         defaults={
-            'password': 'Admin1234!',
             'first_name': ud['username'].split('.')[0].capitalize(),
             'last_name': 'Demo',
             'role': ud['role'],
@@ -40,6 +39,9 @@ for ud in DEMO_USERS:
             'email': f"{ud['username']}@demo.cl"
         }
     )
+    if created:
+        user.set_password('Admin1234!')
+        user.save()
 
 # ── 2. Asistentes IA Oficiales (Temuco) ───────────────────────────────────────
 print("\n🤖 Sincronizando Asistentes IA Temuco...")
