@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
 from django.utils import timezone
 from .models import ImprovementGoal, RiskAlert, ImprovementAction
 from users.models import User
@@ -35,7 +34,8 @@ def alertas_activas(request):
 @login_required
 def meta_crear(request):
     if not request.user.is_staff:
-        return HttpResponseForbidden()
+        messages.error(request, "Solo el administrador puede realizar esta acción.")
+        return redirect('improvement_cycle:dashboard_ee')
     
     ee_initial = request.user.establishment or 'RED'
 
@@ -118,7 +118,8 @@ def goal_detail(request, pk):
 @login_required
 def goal_edit(request, pk):
     if not request.user.is_staff:
-        return HttpResponseForbidden()
+        messages.error(request, "Solo el administrador puede realizar esta acción.")
+        return redirect('improvement_cycle:dashboard_ee')
     goal = get_object_or_404(ImprovementGoal, pk=pk)
 
 
@@ -189,7 +190,8 @@ def goal_edit(request, pk):
 @login_required
 def action_create(request, goal_pk):
     if not request.user.is_staff:
-        return HttpResponseForbidden()
+        messages.error(request, "Solo el administrador puede realizar esta acción.")
+        return redirect('improvement_cycle:dashboard_ee')
     goal = get_object_or_404(ImprovementGoal, pk=goal_pk)
 
 
@@ -252,7 +254,8 @@ def action_toggle(request, pk):
 def goal_delete(request, pk):
     """Elimina una meta de mejora (solo admin)."""
     if not request.user.is_staff:
-        return HttpResponseForbidden()
+        messages.error(request, "Solo el administrador puede realizar esta acción.")
+        return redirect('improvement_cycle:dashboard_ee')
     goal = get_object_or_404(ImprovementGoal, pk=pk)
 
 

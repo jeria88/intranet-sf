@@ -66,7 +66,7 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
     <h2 style="margin:0;">📊 Ciclo de Mejora — {{ establishment }}</h2>
     <div style="display:flex;gap:10px;align-items:center;">
-        {% if user.can_approve_circulars or user.is_staff %}
+        {% if user.is_staff %}
         <a href="{% url 'improvement_cycle:meta_crear' %}"
             style="background:var(--accent); color:white; padding:8px 16px; border-radius:20px; text-decoration:none; font-size:13px; font-weight:600;">+ Agregar Ciclo de Mejora</a>
         {% endif %}
