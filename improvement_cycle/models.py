@@ -102,6 +102,11 @@ class ImprovementAction(models.Model):
     deadline = models.DateField(verbose_name='Plazo de la acción')
     weight = models.FloatField(default=1.0, verbose_name='Peso/Importancia (1-100)')
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pendiente')
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='completed_actions', verbose_name='Completado por'
+    )
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Completado el')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

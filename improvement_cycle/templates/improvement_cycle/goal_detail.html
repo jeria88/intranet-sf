@@ -113,22 +113,27 @@
 
                 <div style="display:flex; flex-direction:column; gap:12px;">
                     {% for action in actions %}
-                    <div style="border:1px solid #f1f5f9; border-radius:12px; padding:18px; display:flex; gap:16px; align-items:center; transition: all 0.2s; {% if action.status == 'completado' %}background:#fafafa; opacity:0.8;{% endif %}" class="action-card">
-                        <div style="display:flex; align-items:center;">
+                    <div id="action-card-{{ action.pk }}" style="border:1px solid {% if action.status == 'completado' %}#d1e7dd{% else %}#f1f5f9{% endif %}; border-radius:12px; padding:18px; display:flex; gap:16px; align-items:flex-start; transition: all 0.2s; {% if action.status == 'completado' %}background:#f8fffe;{% endif %}" class="action-card">
+                        <div style="display:flex; align-items:flex-start; padding-top:2px;">
                             <form class="action-toggle-form" data-url="{% url 'improvement_cycle:action_toggle' action.pk %}">
                                 {% csrf_token %}
-                                <button type="button" class="toggle-btn" style="width:28px; height:28px; border-radius:6px; border:2px solid {% if action.status == 'completado' %}#198754{% else %}#e2e8f0{% endif %}; cursor:pointer; display:flex; align-items:center; justify-content:center; background:{% if action.status == 'completado' %}#198754{% else %}white{% endif %}; color:white; transition: all 0.2s;" 
+                                <button type="button" class="toggle-btn" data-pk="{{ action.pk }}" style="width:28px; height:28px; border-radius:6px; border:2px solid {% if action.status == 'completado' %}#198754{% else %}#e2e8f0{% endif %}; cursor:pointer; display:flex; align-items:center; justify-content:center; background:{% if action.status == 'completado' %}#198754{% else %}white{% endif %}; color:white; transition: all 0.2s; flex-shrink:0;"
                                     title="Marcar como {% if action.status == 'completado' %}pendiente{% else %}completado{% endif %}">
                                     {% if action.status == 'completado' %}✓{% endif %}
                                 </button>
                             </form>
                         </div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                                 <h4 style="margin:0; font-size:15px; color:var(--contrast); {% if action.status == 'completado' %}text-decoration:line-through; color:#94a3b8;{% endif %}">{{ action.title }}</h4>
-                                <span style="font-size:11px; font-weight:600; color:var(--contrast-3); background:#f8f9fa; padding:2px 8px; border-radius:4px;">{{ action.weight|floatformat:0 }}%</span>
+                                <span style="font-size:11px; font-weight:600; color:var(--contrast-3); background:#f8f9fa; padding:2px 8px; border-radius:4px; white-space:nowrap; flex-shrink:0;">{{ action.weight|floatformat:0 }}%</span>
                             </div>
+                            {% if action.description %}
                             <p style="margin:4px 0 0; font-size:13px; color:var(--contrast-2); line-height:1.4;">{{ action.description }}</p>
+                            {% endif %}
+                            <p id="trace-{{ action.pk }}" style="margin:6px 0 0; font-size:11px; color:#198754; font-weight:600; display:{% if action.completed_by %}block{% else %}none{% endif %};">
+                                ✓ {% if action.completed_by %}{{ action.completed_by.get_full_name|default:action.completed_by.username }} · {{ action.completed_at|date:"d/m/Y H:i" }}{% endif %}
+                            </p>
                         </div>
                     </div>
                     {% endfor %}
@@ -230,41 +235,48 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
         const form = this.closest('form');
         const url = form.getAttribute('data-url');
         const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
-        
+        const pk = this.dataset.pk;
+        const card = document.getElementById('action-card-' + pk);
+        const trace = document.getElementById('trace-' + pk);
+        const titleEl = card.querySelector('h4');
+
         try {
             const res = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' }
             });
-            
-            if (res.ok) {
-                const data = await res.json();
-                if (data.error) {
-                    alert(data.error);
-                    return;
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.error) { alert(data.error); return; }
+
+            if (data.status === 'completado') {
+                this.style.background = '#198754';
+                this.style.borderColor = '#198754';
+                this.innerText = '✓';
+                card.style.border = '1px solid #d1e7dd';
+                card.style.background = '#f8fffe';
+                titleEl.style.textDecoration = 'line-through';
+                titleEl.style.color = '#94a3b8';
+                if (trace && data.completed_label) {
+                    trace.innerText = '✓ ' + data.completed_label;
+                    trace.style.display = 'block';
                 }
-                
-                // Actualizar botón
-                if (data.status === 'completado') {
-                    this.style.background = '#198754';
-                    this.style.color = 'white';
-                } else {
-                    this.style.background = '#f0f0f0';
-                    this.style.color = '#b2b2be';
-                }
-                
-                // Actualizar barra de progreso
-                document.getElementById('progress-text').innerText = data.new_progress + '%';
-                document.getElementById('progress-bar').style.width = data.new_progress + '%';
-                document.getElementById('progress-summary').innerText = data.summary;
-                
+            } else {
+                this.style.background = 'white';
+                this.style.borderColor = '#e2e8f0';
+                this.innerText = '';
+                card.style.border = '1px solid #f1f5f9';
+                card.style.background = '';
+                titleEl.style.textDecoration = '';
+                titleEl.style.color = '';
+                if (trace) trace.style.display = 'none';
             }
-        } catch (e) {
-            console.error(e);
-        }
+
+            document.getElementById('progress-text').innerText = data.new_progress + '%';
+            document.getElementById('progress-bar').style.width = data.new_progress + '%';
+            document.getElementById('progress-summary').innerText = data.summary;
+
+        } catch (e) { console.error(e); }
     });
 });
 </script>

@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
+from django.utils import timezone
 from .models import ImprovementGoal, RiskAlert, ImprovementAction
 from users.models import User
 from django.db.models import Count
@@ -32,8 +34,7 @@ def alertas_activas(request):
 
 @login_required
 def meta_crear(request):
-    if not (request.user.role in ['REPRESENTANTE', 'DIRECTOR', 'UTP'] or request.user.is_staff):
-        from django.http import HttpResponseForbidden
+    if not request.user.is_staff:
         return HttpResponseForbidden()
     
     ee_initial = request.user.establishment or 'RED'
@@ -107,7 +108,7 @@ def goal_detail(request, pk):
         return render(request, 'improvement_cycle/goal_detail.html', {
             'goal': goal,
             'actions': actions,
-            'can_edit': can_edit,
+            'can_edit': request.user.is_staff,
         })
     except Exception as e:
         messages.error(request, f"Error al cargar el detalle: {str(e)}")
@@ -116,8 +117,9 @@ def goal_detail(request, pk):
 
 @login_required
 def goal_edit(request, pk):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
     goal = get_object_or_404(ImprovementGoal, pk=pk)
-    # Permiso universal para todos los usuarios autenticados
 
 
     if request.method == 'POST':
@@ -186,8 +188,9 @@ def goal_edit(request, pk):
 
 @login_required
 def action_create(request, goal_pk):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
     goal = get_object_or_404(ImprovementGoal, pk=goal_pk)
-    # Permiso universal para todos los usuarios autenticados
 
 
     if request.method == 'POST':
@@ -217,30 +220,40 @@ def action_create(request, goal_pk):
 @login_required
 def action_toggle(request, pk):
     action = get_object_or_404(ImprovementAction, pk=pk)
-    # Permiso universal para todos los usuarios autenticados
-    
+
     if action.status == 'completado':
         action.status = 'pendiente'
+        action.completed_by = None
+        action.completed_at = None
     else:
         action.status = 'completado'
+        action.completed_by = request.user
+        action.completed_at = timezone.now()
     action.save()
-    
+
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         from django.http import JsonResponse
+        completed_label = ''
+        if action.completed_by:
+            name = action.completed_by.get_full_name() or action.completed_by.username
+            date = action.completed_at.strftime('%d/%m/%Y %H:%M')
+            completed_label = f'{name} · {date}'
         return JsonResponse({
-            'status': action.status, 
+            'status': action.status,
             'new_progress': action.goal.progress_pct,
-            'summary': action.goal.actions_summary
+            'summary': action.goal.actions_summary,
+            'completed_label': completed_label,
         })
-    
+
     messages.success(request, f"Estado de '{action.title}' actualizado.")
     return redirect('improvement_cycle:goal_detail', pk=action.goal.pk)
 
 @login_required
 def goal_delete(request, pk):
-    """Elimina una meta de mejora (Permiso universal)."""
+    """Elimina una meta de mejora (solo admin)."""
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
     goal = get_object_or_404(ImprovementGoal, pk=pk)
-    # Habilitado para todos los usuarios según requerimiento
 
 
     if request.method == 'POST':
