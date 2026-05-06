@@ -33,10 +33,41 @@
 
     <p style="font-size:12px; color:#bbb; margin:0;">El proceso tarda entre 2 y 4 minutos.<br>No cierres esta ventana.</p>
 
-    <div id="error-box" style="display:none; margin-top:20px; background:#f8d7da; border-radius:10px; padding:14px; font-size:13px; color:#721c24;"></div>
+    <div id="error-box" style="display:none; margin-top:20px; text-align:left;">
+      <div style="background:#f8d7da; border-radius:10px; padding:14px; font-size:13px; color:#721c24; margin-bottom:10px;">
+        <strong>Error:</strong> <span id="error-msg"></span>
+      </div>
+      <div style="background:#1e1e2e; border-radius:10px; padding:14px; font-size:11px; color:#cdd6f4; white-space:pre-wrap; overflow-x:auto; max-height:220px; overflow-y:auto; font-family:monospace; line-height:1.5;" id="error-tb"></div>
+      <button onclick="copiarError()"
+        style="margin-top:10px; width:100%; background:#575760; color:#fff; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;" id="btn-copiar">
+        📋 Copiar error completo para reportar
+      </button>
+      <a href="{{ request.build_absolute_uri|default:'' }}" id="link-dashboard"
+        style="display:block; margin-top:10px; text-align:center; font-size:12px; color:var(--accent);">
+        ← Volver al panel
+      </a>
+    </div>
   </div>
 </div>
 
+<script>
+let errorData = {};
+function copiarError() {
+  const txt = [
+    '=== ERROR SIMCE GENERATOR ===',
+    `Asignatura: ${errorData.asignatura}  Curso: ${errorData.curso}`,
+    `Error: ${errorData.error}`,
+    '',
+    errorData.traceback,
+  ].join('\n');
+  navigator.clipboard.writeText(txt).then(() => {
+    document.getElementById('btn-copiar').textContent = '✓ Copiado al portapapeles';
+    setTimeout(() => {
+      document.getElementById('btn-copiar').textContent = '📋 Copiar error completo para reportar';
+    }, 2500);
+  });
+}
+</script>
 <script>
 const PK = {{ prueba.pk }};
 const URL_ESTADO = "{% url 'simce:api_estado_prueba' prueba.pk %}";
@@ -80,11 +111,13 @@ function poll() {
       } else if (d.estado === 'error') {
         document.getElementById('spinner').style.display = 'none';
         document.querySelector('h2').textContent = 'Error al generar';
-        const errBox = document.getElementById('error-box');
-        errBox.style.display = 'block';
-        errBox.textContent = d.error || 'Ocurrió un error inesperado. Vuelve al panel e inténtalo de nuevo.';
-        document.querySelector('h2').insertAdjacentHTML('afterend',
-          '<br><a href="' + URL_DASHBOARD + '" style="font-size:13px;color:var(--accent);">← Volver al panel</a>');
+        document.getElementById('subtitulo').style.display = 'none';
+        document.querySelector('.step.active')?.classList.remove('active');
+        errorData = d;
+        document.getElementById('error-msg').textContent = d.error || 'Error inesperado';
+        document.getElementById('error-tb').textContent  = d.traceback || '(sin traceback)';
+        document.getElementById('link-dashboard').href   = URL_DASHBOARD;
+        document.getElementById('error-box').style.display = 'block';
 
       } else {
         // Sigue generando

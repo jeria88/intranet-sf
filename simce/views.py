@@ -1,5 +1,6 @@
 import json
 import threading
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -81,20 +82,27 @@ def _guardar_resultado(prueba, resultado):
 
 
 def _hilo_generacion(prueba_pk, asignatura, curso, titulo):
+    from django.db import connection
     try:
         resultado = generar_prueba_completa(asignatura, curso, titulo)
         prueba = Prueba.objects.get(pk=prueba_pk)
         _guardar_resultado(prueba, resultado)
     except Exception as e:
+        tb = traceback.format_exc()
         try:
             prueba = Prueba.objects.get(pk=prueba_pk)
-            prueba.titulo  = f'Error: {str(e)[:120]}'
-            prueba.estado  = 'error'
-            prueba.rubrica_log = {'error': str(e)}
+            prueba.titulo     = f'Error: {str(e)[:120]}'
+            prueba.estado     = 'error'
+            prueba.rubrica_log = {
+                'error':     str(e),
+                'traceback': tb,
+                'asignatura': asignatura,
+                'curso':      curso,
+            }
             prueba.save()
         except Exception:
             pass
-        from django.db import connection
+    finally:
         connection.close()
 
 
@@ -143,10 +151,14 @@ def prueba_generando(request, pk):
 @user_passes_test(is_staff)
 def api_estado_prueba(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
+    log = prueba.rubrica_log if isinstance(prueba.rubrica_log, dict) else {}
     return JsonResponse({
-        'estado': prueba.estado,
-        'titulo': prueba.titulo,
-        'error':  prueba.rubrica_log.get('error', '') if isinstance(prueba.rubrica_log, dict) else '',
+        'estado':    prueba.estado,
+        'titulo':    prueba.titulo,
+        'error':     log.get('error', ''),
+        'traceback': log.get('traceback', ''),
+        'asignatura': log.get('asignatura', ''),
+        'curso':     log.get('curso', ''),
     })
 
 
