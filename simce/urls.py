@@ -12,9 +12,11 @@ urlpatterns = [
     path('publicar/<int:pk>/',        views.admin_publicar,     name='admin_publicar'),
 
     # Estudiante
-    path('rendir/<int:pk>/',          views.prueba_identificacion, name='prueba_identificacion'),
-    path('sesion/<int:sesion_pk>/',   views.prueba_rendir,         name='prueba_rendir'),
-    path('resultado/<int:sesion_pk>/',views.prueba_resultado,      name='prueba_resultado'),
+    path('rendir/<int:pk>/',                                         views.prueba_identificacion, name='prueba_identificacion'),
+    path('sesion/<int:sesion_pk>/',                                  views.prueba_rendir,         name='prueba_rendir'),
+    path('sesion/<int:sesion_pk>/verificar/<int:pregunta_pk>/',      views.verificar_respuesta,   name='verificar_respuesta'),
+    path('sesion/<int:sesion_pk>/finalizar/',                        views.finalizar_prueba,      name='finalizar_prueba'),
+    path('resultado/<int:sesion_pk>/',                               views.prueba_resultado,      name='prueba_resultado'),
 
     # Reportes
     path('reportes/',                 views.reportes_dashboard,  name='reportes_dashboard'),

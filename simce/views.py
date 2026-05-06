@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Count, Avg, Q
-from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST, require_http_methods
 
 from .models import (Prueba, TextoPrueba, Pregunta, Alternativa,
                      SesionEstudiante, RespuestaEstudiante,
@@ -82,6 +83,8 @@ def admin_generar(request):
                 habilidad_justificacion = p_data.get('habilidad_justificacion', ''),
                 nivel_justificacion     = p_data.get('nivel_justificacion', ''),
                 alternativa_correcta    = p_data['alternativa_correcta'],
+                pista_1                 = p_data.get('pista_1', ''),
+                pista_2                 = p_data.get('pista_2', ''),
             )
             for a_data in p_data['alternativas']:
                 Alternativa.objects.create(
@@ -166,22 +169,117 @@ def prueba_rendir(request, sesion_pk):
     prueba = sesion.prueba
     textos = prueba.textos.prefetch_related('preguntas__alternativas').all()
 
-    if request.method == 'POST':
-        preguntas = Pregunta.objects.filter(texto__prueba=prueba)
-        for pregunta in preguntas:
-            letra = request.POST.get(f'p_{pregunta.pk}')
-            alternativa = None
-            if letra:
-                alternativa = pregunta.alternativas.filter(letra=letra).first()
-            RespuestaEstudiante.objects.update_or_create(
-                sesion=sesion, pregunta=pregunta,
-                defaults={'alternativa_elegida': alternativa}
-            )
-        sesion.calcular_puntajes()
-        return redirect('simce:prueba_resultado', sesion_pk=sesion.pk)
+    # Preguntas ya respondidas (para restaurar estado en caso de recarga)
+    respondidas = {
+        r.pregunta_id: {
+            'puntaje': r.puntaje_obtenido,
+            'intentos': r.intentos,
+            'correcta': r.alternativa_elegida.es_correcta if r.alternativa_elegida else False,
+            'letra_elegida': r.alternativa_elegida.letra if r.alternativa_elegida else None,
+        }
+        for r in sesion.respuestas.select_related('alternativa_elegida').all()
+    }
 
-    ctx = {'sesion': sesion, 'prueba': prueba, 'textos': textos}
+    ctx = {
+        'sesion': sesion,
+        'prueba': prueba,
+        'textos': textos,
+        'respondidas_json': json.dumps(respondidas),
+        'total_preguntas': Pregunta.objects.filter(texto__prueba=prueba).count(),
+    }
     return render(request, 'simce/prueba_rendir.html', ctx)
+
+
+# ── AJAX: Verificar respuesta individual ─────────────────────────
+
+@require_POST
+def verificar_respuesta(request, sesion_pk, pregunta_pk):
+    sesion   = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
+    pregunta = get_object_or_404(Pregunta, pk=pregunta_pk, texto__prueba=sesion.prueba)
+
+    # No permitir reverificar una pregunta ya resuelta
+    if sesion.respuestas.filter(pregunta=pregunta).exists():
+        return JsonResponse({'error': 'ya_respondida'}, status=400)
+
+    letra = request.POST.get('letra', '').upper()
+    if letra not in ['A', 'B', 'C', 'D']:
+        return JsonResponse({'error': 'letra_invalida'}, status=400)
+
+    # Obtener/inicializar contador de intentos desde sesión Django
+    sesion_key = f'simce_{sesion_pk}_{pregunta_pk}_intentos'
+    intento_actual = request.session.get(sesion_key, 0) + 1
+    request.session[sesion_key] = intento_actual
+
+    alternativa = pregunta.alternativas.filter(letra=letra).first()
+    es_correcta = alternativa and alternativa.es_correcta
+
+    # Calcular puntaje según intento
+    puntaje_map = {1: 4, 2: 3, 3: 2}
+
+    if es_correcta:
+        puntaje = puntaje_map.get(intento_actual, 2)
+        RespuestaEstudiante.objects.create(
+            sesion=sesion, pregunta=pregunta,
+            alternativa_elegida=alternativa,
+            intentos=intento_actual,
+            puntaje_obtenido=puntaje,
+        )
+        del request.session[sesion_key]
+        return JsonResponse({
+            'resultado': 'correcto',
+            'puntaje': puntaje,
+            'intentos': intento_actual,
+        })
+
+    # Respuesta incorrecta
+    if intento_actual >= 3:
+        # Tercer intento fallido: guardar con puntaje 0
+        correcta_alt = pregunta.alternativas.filter(es_correcta=True).first()
+        RespuestaEstudiante.objects.create(
+            sesion=sesion, pregunta=pregunta,
+            alternativa_elegida=alternativa,
+            intentos=3,
+            puntaje_obtenido=0,
+        )
+        del request.session[sesion_key]
+        return JsonResponse({
+            'resultado': 'fallido',
+            'puntaje': 0,
+            'intentos': 3,
+            'letra_correcta': correcta_alt.letra if correcta_alt else pregunta.alternativa_correcta,
+        })
+
+    # Todavía hay intentos: devolver pista
+    pista = pregunta.pista_1 if intento_actual == 1 else pregunta.pista_2
+    return JsonResponse({
+        'resultado': 'incorrecto',
+        'intento': intento_actual,
+        'pista': pista or '💡 Vuelve a leer el texto con atención antes de intentarlo de nuevo.',
+        'intentos_restantes': 3 - intento_actual,
+    })
+
+
+# ── Estudiante: Finalizar prueba ──────────────────────────────────
+
+@require_POST
+def finalizar_prueba(request, sesion_pk):
+    sesion  = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
+    prueba  = sesion.prueba
+    preguntas = Pregunta.objects.filter(texto__prueba=prueba)
+
+    # Crear respuesta vacía para preguntas sin contestar (puntaje 0)
+    respondidas_ids = set(sesion.respuestas.values_list('pregunta_id', flat=True))
+    for p in preguntas:
+        if p.pk not in respondidas_ids:
+            RespuestaEstudiante.objects.create(
+                sesion=sesion, pregunta=p,
+                alternativa_elegida=None,
+                intentos=0,
+                puntaje_obtenido=0,
+            )
+
+    sesion.calcular_puntajes()
+    return JsonResponse({'redirect': f'/simce/resultado/{sesion.pk}/'}, status=200)
 
 
 # ── Estudiante: Resultado ─────────────────────────────────────────

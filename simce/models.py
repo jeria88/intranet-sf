@@ -124,6 +124,8 @@ class Pregunta(models.Model):
     nivel_justificacion     = models.TextField(blank=True, verbose_name='Justificación nivel')
     alternativa_correcta    = models.CharField(max_length=1, choices=ALTERNATIVA_CHOICES,
                                                verbose_name='Alternativa correcta')
+    pista_1 = models.TextField(blank=True, verbose_name='Pista 1 (tras 1er error)')
+    pista_2 = models.TextField(blank=True, verbose_name='Pista 2 (tras 2do error)')
 
     class Meta:
         ordering = ['orden']
@@ -181,12 +183,12 @@ class SesionEstudiante(models.Model):
         return f"{self.nombre} ({self.rut}) — {self.prueba}"
 
     def calcular_puntajes(self):
-        respuestas = self.respuestas.select_related('alternativa_elegida', 'pregunta')
-        total = respuestas.count()
-        correctas = sum(1 for r in respuestas if r.alternativa_elegida and r.alternativa_elegida.es_correcta)
-        self.puntaje_bruto    = correctas
-        self.porcentaje_logro = round((correctas / total * 100), 2) if total else 0
-        # Conversión aproximada a escala SIMCE (150-350 puntos, media ~260)
+        respuestas = self.respuestas.all()
+        total_preguntas = respuestas.count()
+        puntaje = sum(r.puntaje_obtenido for r in respuestas)
+        puntaje_max = total_preguntas * 4  # máximo 4 puntos por pregunta
+        self.puntaje_bruto    = puntaje
+        self.porcentaje_logro = round((puntaje / puntaje_max * 100), 2) if puntaje_max else 0
         self.puntaje_simce    = int(150 + (self.porcentaje_logro / 100) * 200)
         self.finalizada_en    = timezone.now()
         self.completada       = True
@@ -198,6 +200,8 @@ class RespuestaEstudiante(models.Model):
     pregunta           = models.ForeignKey(Pregunta, on_delete=models.CASCADE)
     alternativa_elegida= models.ForeignKey(Alternativa, on_delete=models.SET_NULL,
                                            null=True, blank=True)
+    intentos           = models.PositiveSmallIntegerField(default=1, verbose_name='Intentos usados')
+    puntaje_obtenido   = models.PositiveSmallIntegerField(default=0, verbose_name='Puntaje (0-4)')
     respondida_en      = models.DateTimeField(auto_now=True)
 
     class Meta:

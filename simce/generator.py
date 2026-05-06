@@ -174,6 +174,8 @@ Responde SOLO con JSON válido:
       "habilidad_justificacion": "Por qué evalúa esta habilidad...",
       "nivel_justificacion": "Por qué es nivel avanzado...",
       "alternativa_correcta": "B",
+      "pista_1": "Pista sutil que orienta sin revelar la respuesta (1 oración). Ej: 'Fíjate en lo que el autor dice al inicio del segundo párrafo.'",
+      "pista_2": "Pista más directa pero que aún requiere que el estudiante razone (1 oración). Ej: 'La respuesta está relacionada con el propósito que tiene el autor al escribir este texto.'",
       "alternativas": [
         {{"letra": "A", "texto": "...", "es_correcta": false, "justificacion": "Es incorrecta porque..."}},
         {{"letra": "B", "texto": "...", "es_correcta": true,  "justificacion": "Es correcta porque..."}},

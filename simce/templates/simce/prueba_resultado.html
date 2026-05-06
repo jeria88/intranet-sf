@@ -29,7 +29,7 @@
     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
       <div class="stat-box">
         <div class="stat-val">{{ sesion.puntaje_bruto }}</div>
-        <div class="stat-lbl">correctas de 30</div>
+        <div class="stat-lbl">puntos de 120</div>
       </div>
       <div class="stat-box">
         <div class="stat-val">{{ sesion.porcentaje_logro|floatformat:0 }}%</div>
@@ -83,6 +83,7 @@
         <span style="font-size:11px; color:#888;">
           Tu resp: <strong>{% if resp.alternativa_elegida %}{{ resp.alternativa_elegida.letra }}{% else %}—{% endif %}</strong>
           · Correcta: <strong>{{ resp.pregunta.alternativa_correcta }}</strong>
+          · <strong style="color:{% if resp.puntaje_obtenido >= 3 %}#155724{% elif resp.puntaje_obtenido >= 1 %}#856404{% else %}#721c24{% endif %};">{{ resp.puntaje_obtenido }} pts</strong>
         </span>
       </div>
     </div>
