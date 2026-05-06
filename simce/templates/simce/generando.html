@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Generando prueba…{% endblock %}
+{% block content %}
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+.spinner { width:56px; height:56px; border:5px solid #e8e8e8; border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px; }
+.step { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px; color:#888; }
+.step.done  { color:#155724; }
+.step.active { color:var(--accent); font-weight:600; animation:pulse 1.4s ease-in-out infinite; }
+.step .dot  { width:10px; height:10px; border-radius:50%; background:#e0e0e0; flex-shrink:0; }
+.step.done  .dot { background:#28a745; }
+.step.active .dot { background:var(--accent); }
+</style>
+
+<div style="max-width:480px; margin:80px auto; text-align:center; padding:0 16px;">
+  <div style="background:#fff; border-radius:20px; padding:40px 32px; box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+
+    <div class="spinner" id="spinner"></div>
+
+    <h2 style="margin:0 0 8px; font-size:20px;">Generando con IA</h2>
+    <p style="color:#888; font-size:13px; margin:0 0 28px;" id="subtitulo">
+      {{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }}
+    </p>
+
+    <div style="text-align:left; background:#f9f9f9; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div class="step done">    <span class="dot"></span> Solicitud recibida</div>
+      <div class="step active" id="step-textos"><span class="dot"></span> Generando 6 textos auténticos…</div>
+      <div class="step" id="step-preguntas"><span class="dot"></span> Creando 30 preguntas con pistas</div>
+      <div class="step" id="step-rubrica">  <span class="dot"></span> Validando rúbrica oficial</div>
+      <div class="step" id="step-guardando"><span class="dot"></span> Guardando en base de datos</div>
+    </div>
+
+    <p style="font-size:12px; color:#bbb; margin:0;">El proceso tarda entre 2 y 4 minutos.<br>No cierres esta ventana.</p>
+
+    <div id="error-box" style="display:none; margin-top:20px; background:#f8d7da; border-radius:10px; padding:14px; font-size:13px; color:#721c24;"></div>
+  </div>
+</div>
+
+<script>
+const PK = {{ prueba.pk }};
+const URL_ESTADO = "{% url 'simce:api_estado_prueba' prueba.pk %}";
+const URL_REVISAR = "{% url 'simce:admin_revisar' prueba.pk %}";
+const URL_DASHBOARD = "{% url 'simce:admin_dashboard' %}";
+
+let elapsed = 0;
+const steps = ['step-textos', 'step-preguntas', 'step-rubrica', 'step-guardando'];
+const stepTimes = [30, 90, 150, 170]; // segundos aproximados por step
+
+function updateStepVisual() {
+  steps.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'step';
+    if (elapsed >= stepTimes[i] && (i === steps.length - 1 || elapsed < stepTimes[i + 1])) {
+      el.classList.add('active');
+    } else if (elapsed >= stepTimes[i]) {
+      el.classList.add('done');
+    }
+  });
+}
+
+function poll() {
+  elapsed += 4;
+  updateStepVisual();
+
+  fetch(URL_ESTADO)
+    .then(r => r.json())
+    .then(d => {
+      if (d.estado === 'revision') {
+        // Listo — marcar todos done y redirigir
+        steps.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.className = 'step done';
+        });
+        document.getElementById('spinner').style.borderTopColor = '#28a745';
+        document.querySelector('h2').textContent = '¡Prueba lista!';
+        setTimeout(() => { window.location.href = URL_REVISAR; }, 800);
+
+      } else if (d.estado === 'error') {
+        document.getElementById('spinner').style.display = 'none';
+        document.querySelector('h2').textContent = 'Error al generar';
+        const errBox = document.getElementById('error-box');
+        errBox.style.display = 'block';
+        errBox.textContent = d.error || 'Ocurrió un error inesperado. Vuelve al panel e inténtalo de nuevo.';
+        document.querySelector('h2').insertAdjacentHTML('afterend',
+          '<br><a href="' + URL_DASHBOARD + '" style="font-size:13px;color:var(--accent);">← Volver al panel</a>');
+
+      } else {
+        // Sigue generando
+        setTimeout(poll, 4000);
+      }
+    })
+    .catch(() => setTimeout(poll, 5000));
+}
+
+// Arrancar polling después de 4s
+setTimeout(poll, 4000);
+</script>
+{% endblock %}

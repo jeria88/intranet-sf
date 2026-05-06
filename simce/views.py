@@ -1,4 +1,5 @@
 import json
+import threading
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -32,7 +33,70 @@ def admin_dashboard(request):
     return render(request, 'simce/admin_dashboard.html', ctx)
 
 
-# ── Admin: Generar prueba con IA ──────────────────────────────────
+# ── Admin: Generar prueba con IA (async) ─────────────────────────
+
+def _guardar_resultado(prueba, resultado):
+    """Persiste textos y preguntas generados. Llamado desde hilo background."""
+    from django.db import connection
+    try:
+        rubrica = resultado['rubrica']
+        prueba.titulo     = resultado['titulo']
+        prueba.rubrica_ok = rubrica['aprobado']
+        prueba.rubrica_log = rubrica
+        prueba.estado     = 'revision'
+        prueba.save()
+
+        orden_global = 1
+        for t_data in resultado['textos']:
+            texto = TextoPrueba.objects.create(
+                prueba=prueba, orden=t_data['orden'],
+                tipo_textual=t_data['tipo_textual'],
+                titulo=t_data['titulo'], contenido=t_data['contenido'],
+            )
+            for p_data in t_data['preguntas']:
+                pregunta = Pregunta.objects.create(
+                    texto=texto, orden=orden_global,
+                    enunciado=p_data['enunciado'], nivel=p_data['nivel'],
+                    habilidad=p_data['habilidad'],
+                    habilidad_justificacion=p_data.get('habilidad_justificacion', ''),
+                    nivel_justificacion=p_data.get('nivel_justificacion', ''),
+                    alternativa_correcta=p_data['alternativa_correcta'],
+                    pista_1=p_data.get('pista_1', ''),
+                    pista_2=p_data.get('pista_2', ''),
+                )
+                for a_data in p_data['alternativas']:
+                    Alternativa.objects.create(
+                        pregunta=pregunta, letra=a_data['letra'],
+                        texto=a_data['texto'], es_correcta=a_data['es_correcta'],
+                        justificacion=a_data.get('justificacion', ''),
+                    )
+                orden_global += 1
+    except Exception as e:
+        prueba.titulo     = f'Error: {str(e)[:120]}'
+        prueba.estado     = 'error'
+        prueba.rubrica_log = {'error': str(e)}
+        prueba.save()
+    finally:
+        connection.close()
+
+
+def _hilo_generacion(prueba_pk, asignatura, curso, titulo):
+    try:
+        resultado = generar_prueba_completa(asignatura, curso, titulo)
+        prueba = Prueba.objects.get(pk=prueba_pk)
+        _guardar_resultado(prueba, resultado)
+    except Exception as e:
+        try:
+            prueba = Prueba.objects.get(pk=prueba_pk)
+            prueba.titulo  = f'Error: {str(e)[:120]}'
+            prueba.estado  = 'error'
+            prueba.rubrica_log = {'error': str(e)}
+            prueba.save()
+        except Exception:
+            pass
+        from django.db import connection
+        connection.close()
+
 
 @login_required
 @user_passes_test(is_staff)
@@ -40,66 +104,50 @@ def admin_dashboard(request):
 def admin_generar(request):
     asignatura = request.POST.get('asignatura')
     curso      = request.POST.get('curso')
-    modo       = request.POST.get('modo', 'simce')
     titulo     = request.POST.get('titulo', '').strip() or None
 
     if not asignatura or not curso:
         messages.error(request, 'Selecciona asignatura y curso.')
         return redirect('simce:admin_dashboard')
 
-    try:
-        resultado = generar_prueba_completa(asignatura, curso, titulo)
-    except Exception as e:
-        messages.error(request, f'Error al generar con IA: {e}')
-        return redirect('simce:admin_dashboard')
-
-    # Guardar en BD
-    rubrica = resultado['rubrica']
+    # Crear registro placeholder inmediatamente
     prueba = Prueba.objects.create(
-        titulo      = resultado['titulo'],
-        asignatura  = asignatura,
-        curso       = curso,
-        modo        = modo,
-        estado      = 'revision',
-        creada_por  = request.user,
-        rubrica_ok  = rubrica['aprobado'],
-        rubrica_log = rubrica,
+        titulo     = titulo or f'Generando {asignatura.title()} {curso}…',
+        asignatura = asignatura,
+        curso      = curso,
+        estado     = 'generando',
+        creada_por = request.user,
     )
 
-    orden_global = 1
-    for t_data in resultado['textos']:
-        texto = TextoPrueba.objects.create(
-            prueba       = prueba,
-            orden        = t_data['orden'],
-            tipo_textual = t_data['tipo_textual'],
-            titulo       = t_data['titulo'],
-            contenido    = t_data['contenido'],
-        )
-        for p_data in t_data['preguntas']:
-            pregunta = Pregunta.objects.create(
-                texto                   = texto,
-                orden                   = orden_global,
-                enunciado               = p_data['enunciado'],
-                nivel                   = p_data['nivel'],
-                habilidad               = p_data['habilidad'],
-                habilidad_justificacion = p_data.get('habilidad_justificacion', ''),
-                nivel_justificacion     = p_data.get('nivel_justificacion', ''),
-                alternativa_correcta    = p_data['alternativa_correcta'],
-                pista_1                 = p_data.get('pista_1', ''),
-                pista_2                 = p_data.get('pista_2', ''),
-            )
-            for a_data in p_data['alternativas']:
-                Alternativa.objects.create(
-                    pregunta      = pregunta,
-                    letra         = a_data['letra'],
-                    texto         = a_data['texto'],
-                    es_correcta   = a_data['es_correcta'],
-                    justificacion = a_data.get('justificacion', ''),
-                )
-            orden_global += 1
+    # Lanzar generación en hilo background
+    t = threading.Thread(
+        target=_hilo_generacion,
+        args=(prueba.pk, asignatura, curso, titulo),
+        daemon=True,
+    )
+    t.start()
 
-    messages.success(request, f'Prueba generada: {prueba.titulo}')
-    return redirect('simce:admin_revisar', pk=prueba.pk)
+    return redirect('simce:prueba_generando', pk=prueba.pk)
+
+
+# ── Admin: Página de espera durante generación ────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+def prueba_generando(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+    return render(request, 'simce/generando.html', {'prueba': prueba})
+
+
+@login_required
+@user_passes_test(is_staff)
+def api_estado_prueba(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+    return JsonResponse({
+        'estado': prueba.estado,
+        'titulo': prueba.titulo,
+        'error':  prueba.rubrica_log.get('error', '') if isinstance(prueba.rubrica_log, dict) else '',
+    })
 
 
 # ── Admin: Revisar prueba ─────────────────────────────────────────

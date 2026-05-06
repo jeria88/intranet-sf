@@ -7,6 +7,8 @@ urlpatterns = [
     # Admin
     path('',                          views.admin_dashboard,    name='admin_dashboard'),
     path('generar/',                  views.admin_generar,      name='admin_generar'),
+    path('generando/<int:pk>/',       views.prueba_generando,   name='prueba_generando'),
+    path('api/estado/<int:pk>/',      views.api_estado_prueba,  name='api_estado_prueba'),
     path('revisar/<int:pk>/',         views.admin_revisar,      name='admin_revisar'),
     path('aprobar/<int:pk>/',         views.admin_aprobar,      name='admin_aprobar'),
     path('publicar/<int:pk>/',        views.admin_publicar,     name='admin_publicar'),

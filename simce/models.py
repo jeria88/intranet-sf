@@ -46,7 +46,9 @@ TIPO_TEXTUAL_CHOICES = [
 ALTERNATIVA_CHOICES = [('A','A'), ('B','B'), ('C','C'), ('D','D')]
 
 ESTADO_PRUEBA = [
+    ('generando', 'Generando…'),
     ('borrador',  'Borrador'),
+    ('error',     'Error de generación'),
     ('revision',  'En Revisión'),
     ('aprobada',  'Aprobada'),
     ('publicada', 'Publicada'),
