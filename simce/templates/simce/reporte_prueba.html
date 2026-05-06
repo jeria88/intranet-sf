@@ -162,7 +162,11 @@ tr:hover td { background:#fafafa; }
           <td style="font-weight:600; color:{% if sesion.puntaje_simce >= 280 %}#155724{% elif sesion.puntaje_simce >= 220 %}#856404{% else %}#721c24{% endif %};">
             {{ sesion.puntaje_simce }}
           </td>
-          <td class="no-print"><a href="{% url 'simce:reporte_estudiante' sesion.pk %}" class="btn-outline" style="padding:4px 10px; font-size:11px;">Pauta</a></td>
+          <td class="no-print" style="white-space:nowrap;">
+            <a href="{% url 'simce:reporte_estudiante' sesion.pk %}" class="btn-outline" style="padding:4px 10px; font-size:11px;">Pauta</a>
+            <button onclick="eliminarSesion({{ sesion.pk }}, this)"
+              style="margin-left:6px; background:#fde8e8; color:#dc3545; border:none; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer;">✕ Eliminar</button>
+          </td>
         </tr>
         {% empty %}
         <tr><td colspan="8" style="text-align:center; color:#aaa; padding:24px;">Sin estudiantes con los filtros actuales.</td></tr>
@@ -171,4 +175,21 @@ tr:hover td { background:#fafafa; }
     </table>
   </div>
 </div>
+
+<script>
+function eliminarSesion(pk, btn) {
+  if (!confirm('¿Eliminar esta sesión? Se borrarán todas sus respuestas. Esta acción no se puede deshacer.')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch(`/simce/api/sesion/${pk}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) btn.closest('tr').remove();
+  })
+  .catch(() => { btn.disabled = false; btn.textContent = '✕ Eliminar'; });
+}
+</script>
 {% endblock %}

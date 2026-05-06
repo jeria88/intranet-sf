@@ -23,4 +23,9 @@ urlpatterns = [
     path('reportes/',                 views.reportes_dashboard,  name='reportes_dashboard'),
     path('reportes/<int:pk>/',        views.reporte_prueba,      name='reporte_prueba'),
     path('reportes/estudiante/<int:sesion_pk>/', views.reporte_estudiante, name='reporte_estudiante'),
+
+    # CRUD API
+    path('api/texto/<int:pk>/',       views.api_texto,           name='api_texto'),
+    path('api/pregunta/<int:pk>/',    views.api_pregunta,        name='api_pregunta'),
+    path('api/sesion/<int:pk>/',      views.api_sesion,          name='api_sesion'),
 ]

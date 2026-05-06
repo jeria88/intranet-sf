@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 
 from .models import (Prueba, TextoPrueba, Pregunta, Alternativa,
                      SesionEstudiante, RespuestaEstudiante,
-                     ASIGNATURA_CHOICES, CURSO_CHOICES)
+                     ASIGNATURA_CHOICES, CURSO_CHOICES, TIPO_TEXTUAL_CHOICES)
 from .generator import generar_prueba_completa
 
 is_staff = lambda u: u.is_staff or u.is_superuser
@@ -109,7 +109,12 @@ def admin_generar(request):
 def admin_revisar(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
     textos = prueba.textos.prefetch_related('preguntas__alternativas').all()
-    ctx = {'prueba': prueba, 'textos': textos, 'rubrica': prueba.rubrica_log}
+    ctx = {
+        'prueba': prueba,
+        'textos': textos,
+        'rubrica': prueba.rubrica_log,
+        'tipos_textuales': TIPO_TEXTUAL_CHOICES,
+    }
     return render(request, 'simce/admin_revisar.html', ctx)
 
 
@@ -322,6 +327,108 @@ def prueba_resultado(request, sesion_pk):
     ).order_by('pregunta__orden')
     ctx = {'sesion': sesion, 'respuestas': respuestas}
     return render(request, 'simce/prueba_resultado.html', ctx)
+
+
+# ── CRUD API ──────────────────────────────────────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def api_texto(request, pk):
+    texto = get_object_or_404(TextoPrueba, pk=pk)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'pk': texto.pk,
+            'titulo': texto.titulo,
+            'tipo_textual': texto.tipo_textual,
+            'contenido': texto.contenido,
+            'char_count': texto.char_count,
+        })
+
+    if request.method == 'POST':
+        texto.titulo       = request.POST.get('titulo', texto.titulo).strip()
+        texto.tipo_textual = request.POST.get('tipo_textual', texto.tipo_textual)
+        texto.contenido    = request.POST.get('contenido', texto.contenido).strip()
+        texto.save()
+        return JsonResponse({
+            'ok': True,
+            'titulo': texto.titulo,
+            'tipo_textual_display': texto.get_tipo_textual_display(),
+            'char_count': texto.char_count,
+            'cumple': texto.cumple_extension(),
+        })
+
+    # DELETE — solo si la prueba está en revisión
+    if texto.prueba.estado != 'revision':
+        return JsonResponse({'error': 'solo_en_revision'}, status=403)
+    prueba_pk = texto.prueba.pk
+    texto.delete()
+    return JsonResponse({'ok': True, 'redirect': f'/simce/revisar/{prueba_pk}/'})
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def api_pregunta(request, pk):
+    pregunta = get_object_or_404(Pregunta, pk=pk)
+
+    if request.method == 'GET':
+        alts = {a.letra: {'texto': a.texto, 'justificacion': a.justificacion}
+                for a in pregunta.alternativas.all()}
+        return JsonResponse({
+            'pk': pregunta.pk,
+            'enunciado': pregunta.enunciado,
+            'nivel': pregunta.nivel,
+            'habilidad': pregunta.habilidad,
+            'alternativa_correcta': pregunta.alternativa_correcta,
+            'pista_1': pregunta.pista_1,
+            'pista_2': pregunta.pista_2,
+            'alternativas': alts,
+        })
+
+    if request.method == 'POST':
+        pregunta.enunciado            = request.POST.get('enunciado', pregunta.enunciado).strip()
+        pregunta.nivel                = int(request.POST.get('nivel', pregunta.nivel))
+        pregunta.habilidad            = request.POST.get('habilidad', pregunta.habilidad).strip()
+        pregunta.alternativa_correcta = request.POST.get('alternativa_correcta', pregunta.alternativa_correcta)
+        pregunta.pista_1              = request.POST.get('pista_1', pregunta.pista_1).strip()
+        pregunta.pista_2              = request.POST.get('pista_2', pregunta.pista_2).strip()
+        pregunta.save()
+
+        for letra in ['A', 'B', 'C', 'D']:
+            texto_alt = request.POST.get(f'alt_{letra}', '').strip()
+            if texto_alt:
+                alt = pregunta.alternativas.filter(letra=letra).first()
+                if alt:
+                    alt.texto      = texto_alt
+                    alt.es_correcta = (letra == pregunta.alternativa_correcta)
+                    alt.save()
+        # Sincronizar es_correcta para todas las alternativas
+        pregunta.alternativas.exclude(letra=pregunta.alternativa_correcta).update(es_correcta=False)
+        pregunta.alternativas.filter(letra=pregunta.alternativa_correcta).update(es_correcta=True)
+
+        return JsonResponse({'ok': True, 'nivel': pregunta.nivel,
+                             'nivel_estrellas': pregunta.nivel_estrellas(),
+                             'alternativa_correcta': pregunta.alternativa_correcta})
+
+    # DELETE
+    if pregunta.texto.prueba.estado != 'revision':
+        return JsonResponse({'error': 'solo_en_revision'}, status=403)
+    if pregunta.texto.preguntas.count() <= 1:
+        return JsonResponse({'error': 'minimo_una_pregunta'}, status=400)
+    pregunta.delete()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_http_methods(['DELETE', 'POST'])
+def api_sesion(request, pk):
+    sesion = get_object_or_404(SesionEstudiante, pk=pk)
+    prueba_pk = sesion.prueba.pk
+    sesion.delete()
+    return JsonResponse({'ok': True, 'prueba_pk': prueba_pk})
 
 
 # ── Reportes UTP ──────────────────────────────────────────────────

@@ -17,6 +17,27 @@
 .alt-correct { background:#d4edda; }
 .btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
 .btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-sm { padding:4px 12px; font-size:11px; border-radius:20px; border:none; cursor:pointer; font-weight:600; }
+.btn-edit { background:#e8f0fe; color:var(--accent); }
+.btn-del  { background:#fde8e8; color:#dc3545; }
+.btn-edit:hover { background:#d0e2ff; }
+.btn-del:hover  { background:#f8d7da; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:640px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.modal-box h3 { margin:0 0 20px; font-size:16px; }
+.form-field { margin-bottom:14px; }
+.form-field label { display:block; font-size:11px; font-weight:600; color:#575760; margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em; }
+.form-field input, .form-field select, .form-field textarea {
+  width:100%; padding:9px 12px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px; box-sizing:border-box; font-family:inherit;
+}
+.form-field textarea { resize:vertical; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline:none; border-color:var(--accent); }
+.modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.char-badge { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; margin-left:8px; }
 </style>
 
 <div style="max-width:900px; margin:0 auto;">
@@ -65,40 +86,270 @@
 
   <!-- Textos y preguntas -->
   {% for texto in textos %}
-  <div class="card">
+  <div class="card" id="texto-card-{{ texto.pk }}">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
       <div>
-        <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}</span>
-        <h3 style="margin:4px 0 0; font-size:16px;">{{ texto.titulo }}</h3>
+        <span id="texto-tipo-{{ texto.pk }}" style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">
+          Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}
+        </span>
+        <h3 id="texto-titulo-{{ texto.pk }}" style="margin:4px 0 0; font-size:16px;">{{ texto.titulo }}</h3>
       </div>
-      <span style="font-size:11px; padding:3px 10px; border-radius:20px; {% if texto.cumple_extension %}background:#d4edda;color:#155724;{% else %}background:#f8d7da;color:#721c24;{% endif %}">
-        {{ texto.char_count|floatformat:0 }} chars {% if texto.cumple_extension %}✓{% else %}⚠ < 1500{% endif %}
-      </span>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span id="texto-chars-{{ texto.pk }}" style="font-size:11px; padding:3px 10px; border-radius:20px; {% if texto.cumple_extension %}background:#d4edda;color:#155724;{% else %}background:#f8d7da;color:#721c24;{% endif %}">
+          {{ texto.char_count|floatformat:0 }} chars {% if texto.cumple_extension %}✓{% else %}⚠ < 1500{% endif %}
+        </span>
+        <button class="btn-sm btn-edit" onclick="abrirModalTexto({{ texto.pk }})">✏ Editar</button>
+      </div>
     </div>
 
-    <div style="background:#f9f9f9; border-radius:10px; padding:16px; font-size:13px; line-height:1.8; color:#333; margin-bottom:20px; max-height:250px; overflow-y:auto;">
+    <div id="texto-contenido-{{ texto.pk }}" style="background:#f9f9f9; border-radius:10px; padding:16px; font-size:13px; line-height:1.8; color:#333; margin-bottom:20px; max-height:250px; overflow-y:auto;">
       {{ texto.contenido|linebreaksbr }}
     </div>
 
     <h4 style="margin:0 0 12px; font-size:13px; color:#575760;">Preguntas ({{ texto.preguntas.count }})</h4>
     {% for pregunta in texto.preguntas.all %}
-    <div class="pregunta-box">
+    <div class="pregunta-box" id="pregunta-box-{{ pregunta.pk }}">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
-        <div style="font-size:13px; font-weight:500;">P{{ pregunta.orden }}. {{ pregunta.enunciado }}</div>
+        <div style="font-size:13px; font-weight:500;" id="pq-enunciado-{{ pregunta.pk }}">
+          P{{ pregunta.orden }}. {{ pregunta.enunciado }}
+        </div>
         <div style="flex-shrink:0; display:flex; gap:6px; align-items:center;">
-          <span class="badge-nivel nivel-{{ pregunta.nivel }}">{{ pregunta.nivel_estrellas }}</span>
-          <span style="font-size:10px; color:#888;">Correcta: <strong>{{ pregunta.alternativa_correcta }}</strong></span>
+          <span class="badge-nivel nivel-{{ pregunta.nivel }}" id="pq-nivel-{{ pregunta.pk }}">{{ pregunta.nivel_estrellas }}</span>
+          <span style="font-size:10px; color:#888;">Correcta: <strong id="pq-correcta-{{ pregunta.pk }}">{{ pregunta.alternativa_correcta }}</strong></span>
+          <button class="btn-sm btn-edit" onclick="abrirModalPregunta({{ pregunta.pk }})">✏</button>
+          <button class="btn-sm btn-del" onclick="eliminarPregunta({{ pregunta.pk }})">✕</button>
         </div>
       </div>
-      <div style="font-size:11px; color:#888; margin-bottom:8px;">Habilidad: {{ pregunta.habilidad }}</div>
-      {% for alt in pregunta.alternativas.all %}
-      <div class="alt {% if alt.es_correcta %}alt-correct{% endif %}">
-        <strong>{{ alt.letra }}.</strong> {{ alt.texto }}
+      <div style="font-size:11px; color:#888; margin-bottom:8px;">Habilidad: <span id="pq-habilidad-{{ pregunta.pk }}">{{ pregunta.habilidad }}</span></div>
+      <div id="pq-alts-{{ pregunta.pk }}">
+        {% for alt in pregunta.alternativas.all %}
+        <div class="alt {% if alt.es_correcta %}alt-correct{% endif %}" id="alt-{{ pregunta.pk }}-{{ alt.letra }}">
+          <strong>{{ alt.letra }}.</strong> {{ alt.texto }}
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% if pregunta.pista_1 %}
+      <div style="margin-top:8px; font-size:11px; color:#856404; background:#fff8e1; padding:6px 10px; border-radius:6px;">
+        💡 P1: {{ pregunta.pista_1|truncatechars:80 }}
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
   {% endfor %}
 </div>
+
+<!-- ══════ MODAL EDITAR TEXTO ══════ -->
+<div class="modal-overlay" id="modal-texto">
+  <div class="modal-box">
+    <h3>✏ Editar Texto</h3>
+    <input type="hidden" id="et-pk">
+    <div class="form-field">
+      <label>Título</label>
+      <input type="text" id="et-titulo">
+    </div>
+    <div class="form-field">
+      <label>Tipo textual</label>
+      <select id="et-tipo">
+        {% for val, label in tipos_textuales %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Contenido <span id="et-chars-lbl" class="char-badge" style="background:#f0f0f0;color:#888;">0 chars</span></label>
+      <textarea id="et-contenido" rows="14" oninput="actualizarChars()"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-del" onclick="cerrarModal('modal-texto')">Cancelar</button>
+      <button class="btn-primary" style="padding:8px 20px; font-size:12px;" onclick="guardarTexto()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL EDITAR PREGUNTA ══════ -->
+<div class="modal-overlay" id="modal-pregunta">
+  <div class="modal-box">
+    <h3>✏ Editar Pregunta</h3>
+    <input type="hidden" id="ep-pk">
+    <div class="form-field">
+      <label>Enunciado</label>
+      <textarea id="ep-enunciado" rows="3"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-field">
+        <label>Nivel</label>
+        <select id="ep-nivel">
+          <option value="1">⭐ Inicial</option>
+          <option value="2">⭐⭐ Intermedio</option>
+          <option value="3">⭐⭐⭐ Avanzado</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Alternativa correcta</label>
+        <select id="ep-correcta">
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label>Habilidad que evalúa</label>
+      <input type="text" id="ep-habilidad">
+    </div>
+    <div style="margin-bottom:4px; font-size:11px; font-weight:600; color:#575760; text-transform:uppercase; letter-spacing:.05em;">Alternativas</div>
+    {% for letra in "ABCD" %}
+    <div class="form-field">
+      <label>{{ letra }}</label>
+      <input type="text" id="ep-alt-{{ letra }}" placeholder="Texto alternativa {{ letra }}">
+    </div>
+    {% endfor %}
+    <div class="grid-2">
+      <div class="form-field">
+        <label>Pista 1 (tras 1er error)</label>
+        <textarea id="ep-pista1" rows="2"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Pista 2 (tras 2do error)</label>
+        <textarea id="ep-pista2" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-del" onclick="cerrarModal('modal-pregunta')">Cancelar</button>
+      <button class="btn-primary" style="padding:8px 20px; font-size:12px;" onclick="guardarPregunta()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = "{{ csrf_token }}";
+
+// ── Textos ──────────────────────────────────────────────
+function abrirModalTexto(pk) {
+  fetch(`/simce/api/texto/${pk}/`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('et-pk').value = pk;
+      document.getElementById('et-titulo').value   = d.titulo;
+      document.getElementById('et-tipo').value     = d.tipo_textual;
+      document.getElementById('et-contenido').value = d.contenido;
+      actualizarChars();
+      abrirModal('modal-texto');
+    });
+}
+
+function actualizarChars() {
+  const txt = document.getElementById('et-contenido').value;
+  const chars = txt.replace(/ /g, '').length;
+  const lbl = document.getElementById('et-chars-lbl');
+  lbl.textContent = chars + ' chars';
+  lbl.style.background = chars >= 1500 ? '#d4edda' : '#f8d7da';
+  lbl.style.color       = chars >= 1500 ? '#155724' : '#721c24';
+}
+
+function guardarTexto() {
+  const pk = document.getElementById('et-pk').value;
+  const body = new URLSearchParams({
+    titulo:       document.getElementById('et-titulo').value,
+    tipo_textual: document.getElementById('et-tipo').value,
+    contenido:    document.getElementById('et-contenido').value,
+  });
+  fetch(`/simce/api/texto/${pk}/`, { method:'POST', headers:{'X-CSRFToken':CSRF}, body })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      document.getElementById(`texto-titulo-${pk}`).textContent = d.titulo;
+      document.getElementById(`texto-tipo-${pk}`).textContent   =
+        `Texto ${document.getElementById(`texto-tipo-${pk}`).textContent.split('·')[0].trim().split(' ')[1]} · ${d.tipo_textual_display}`;
+      const charEl = document.getElementById(`texto-chars-${pk}`);
+      charEl.textContent = d.char_count + ' chars ' + (d.cumple ? '✓' : '⚠ < 1500');
+      charEl.style.background = d.cumple ? '#d4edda' : '#f8d7da';
+      charEl.style.color      = d.cumple ? '#155724' : '#721c24';
+      // Actualizar contenido visible
+      const raw = document.getElementById('et-contenido').value;
+      document.getElementById(`texto-contenido-${pk}`).innerHTML =
+        raw.replace(/\n/g, '<br>');
+      cerrarModal('modal-texto');
+    });
+}
+
+// ── Preguntas ────────────────────────────────────────────
+function abrirModalPregunta(pk) {
+  fetch(`/simce/api/pregunta/${pk}/`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('ep-pk').value          = pk;
+      document.getElementById('ep-enunciado').value   = d.enunciado;
+      document.getElementById('ep-nivel').value       = d.nivel;
+      document.getElementById('ep-correcta').value    = d.alternativa_correcta;
+      document.getElementById('ep-habilidad').value   = d.habilidad;
+      document.getElementById('ep-pista1').value      = d.pista_1 || '';
+      document.getElementById('ep-pista2').value      = d.pista_2 || '';
+      ['A','B','C','D'].forEach(l => {
+        document.getElementById(`ep-alt-${l}`).value = d.alternativas[l]?.texto || '';
+      });
+      abrirModal('modal-pregunta');
+    });
+}
+
+function guardarPregunta() {
+  const pk = document.getElementById('ep-pk').value;
+  const correcta = document.getElementById('ep-correcta').value;
+  const body = new URLSearchParams({
+    enunciado:            document.getElementById('ep-enunciado').value,
+    nivel:                document.getElementById('ep-nivel').value,
+    habilidad:            document.getElementById('ep-habilidad').value,
+    alternativa_correcta: correcta,
+    pista_1:              document.getElementById('ep-pista1').value,
+    pista_2:              document.getElementById('ep-pista2').value,
+  });
+  ['A','B','C','D'].forEach(l =>
+    body.append(`alt_${l}`, document.getElementById(`ep-alt-${l}`).value)
+  );
+  fetch(`/simce/api/pregunta/${pk}/`, { method:'POST', headers:{'X-CSRFToken':CSRF}, body })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      document.getElementById(`pq-enunciado-${pk}`).textContent =
+        document.getElementById(`pq-enunciado-${pk}`).textContent.split('.')[0] + '. ' +
+        document.getElementById('ep-enunciado').value;
+      document.getElementById(`pq-nivel-${pk}`).textContent = d.nivel_estrellas;
+      document.getElementById(`pq-nivel-${pk}`).className   = `badge-nivel nivel-${d.nivel}`;
+      document.getElementById(`pq-correcta-${pk}`).textContent = d.alternativa_correcta;
+      document.getElementById(`pq-habilidad-${pk}`).textContent = document.getElementById('ep-habilidad').value;
+      // Refrescar alternativas
+      const altsDiv = document.getElementById(`pq-alts-${pk}`);
+      altsDiv.innerHTML = '';
+      ['A','B','C','D'].forEach(l => {
+        const txt = document.getElementById(`ep-alt-${l}`).value;
+        const div = document.createElement('div');
+        div.className = 'alt' + (l === correcta ? ' alt-correct' : '');
+        div.innerHTML = `<strong>${l}.</strong> ${txt}`;
+        altsDiv.appendChild(div);
+      });
+      cerrarModal('modal-pregunta');
+    });
+}
+
+function eliminarPregunta(pk) {
+  if (!confirm('¿Eliminar esta pregunta? No se puede deshacer.')) return;
+  fetch(`/simce/api/pregunta/${pk}/`, { method:'DELETE', headers:{'X-CSRFToken':CSRF} })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) document.getElementById(`pregunta-box-${pk}`).remove();
+      else if (d.error === 'minimo_una_pregunta') alert('Debe quedar al menos una pregunta en el texto.');
+      else alert('Solo se puede editar en estado Revisión.');
+    });
+}
+
+// ── Utilidades ───────────────────────────────────────────
+function abrirModal(id)  { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+// Cerrar al hacer click fuera
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
+);
+</script>
 {% endblock %}
