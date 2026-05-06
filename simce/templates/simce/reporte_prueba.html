@@ -18,20 +18,34 @@ select { padding:8px 12px; border:1px solid #e8e8e8; border-radius:8px; font-siz
 table { width:100%; border-collapse:collapse; font-size:12px; }
 th { text-align:left; padding:8px 12px; background:#f9f9f9; font-weight:600; color:#575760; border-bottom:2px solid #f0f0f0; }
 td { padding:9px 12px; border-bottom:1px solid #f5f5f5; }
+@media print {
+  .no-print { display:none !important; }
+  body { background:#fff !important; font-size:11px; }
+  .card { box-shadow:none !important; border:1px solid #ddd !important; border-radius:6px !important; margin-bottom:10px !important; padding:14px !important; }
+  .stat-val { font-size:20px !important; }
+  nav, header, footer { display:none !important; }
+  a { text-decoration:none !important; color:inherit !important; }
+  th { background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .logro-fill { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .badge-nivel { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
 tr:hover td { background:#fafafa; }
 </style>
 
 <div style="max-width:900px; margin:0 auto;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
     <div>
-      <a href="{% url 'simce:reportes_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Reportes</a>
+      <a href="{% url 'simce:reportes_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;" class="no-print">← Reportes</a>
       <h2 style="margin:6px 0 0; font-size:20px;">{{ prueba.titulo }}</h2>
       <p style="color:#888; margin:4px 0 0; font-size:12px;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
     </div>
+    <button onclick="window.print()" class="btn-primary no-print" style="display:flex; align-items:center; gap:6px;">
+      🖨 Descargar PDF
+    </button>
   </div>
 
   <!-- Filtros -->
-  <div class="card" style="padding:14px 24px;">
+  <div class="card no-print" style="padding:14px 24px;">
     <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <select name="establecimiento">
         <option value="">Todos los establecimientos</option>
@@ -148,7 +162,7 @@ tr:hover td { background:#fafafa; }
           <td style="font-weight:600; color:{% if sesion.puntaje_simce >= 280 %}#155724{% elif sesion.puntaje_simce >= 220 %}#856404{% else %}#721c24{% endif %};">
             {{ sesion.puntaje_simce }}
           </td>
-          <td><a href="{% url 'simce:reporte_estudiante' sesion.pk %}" class="btn-outline" style="padding:4px 10px; font-size:11px;">Pauta</a></td>
+          <td class="no-print"><a href="{% url 'simce:reporte_estudiante' sesion.pk %}" class="btn-outline" style="padding:4px 10px; font-size:11px;">Pauta</a></td>
         </tr>
         {% empty %}
         <tr><td colspan="8" style="text-align:center; color:#aaa; padding:24px;">Sin estudiantes con los filtros actuales.</td></tr>

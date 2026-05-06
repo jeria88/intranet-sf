@@ -19,17 +19,26 @@
 .alt-correct { color:#155724; font-weight:600; }
 .alt-chosen  { color:#dc3545; }
 .btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:7px 16px; border-radius:30px; font-weight:600; font-size:12px; text-decoration:none; display:inline-block; }
+@media print {
+  .no-print { display:none !important; }
+  body { background:#fff !important; font-size:11px; }
+  .card { box-shadow:none !important; border:1px solid #ddd !important; border-radius:6px !important; margin-bottom:10px !important; padding:14px !important; }
+  nav, header, footer { display:none !important; }
+  a { color:inherit !important; text-decoration:none !important; }
+  .badge-nivel, .ic-ok, .ic-err { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .alt-correct { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
 </style>
 
 <div style="max-width:800px; margin:0 auto;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
     <div>
-      <a href="{% url 'simce:reporte_prueba' sesion.prueba.pk %}" style="color:#888; font-size:12px; text-decoration:none;">← Volver al reporte</a>
+      <a href="{% url 'simce:reporte_prueba' sesion.prueba.pk %}" style="color:#888; font-size:12px; text-decoration:none;" class="no-print">← Volver al reporte</a>
       <h2 style="margin:6px 0 0; font-size:20px;">Pauta de corrección</h2>
       <p style="color:#888; margin:4px 0 0; font-size:12px;">{{ sesion.nombre }} · {{ sesion.rut }}</p>
       <p style="color:#888; margin:2px 0 0; font-size:12px;">{{ sesion.establecimiento }} · {{ sesion.prueba.get_curso_display }}{{ sesion.letra_curso }}</p>
     </div>
-    <button onclick="window.print()" class="btn-outline">🖨 Imprimir</button>
+    <button onclick="window.print()" class="btn-outline no-print">🖨 Descargar PDF</button>
   </div>
 
   <!-- KPIs -->
