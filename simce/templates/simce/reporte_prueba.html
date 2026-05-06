@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block title %}Reporte — {{ prueba.titulo }}{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.stat-box { text-align:center; padding:16px 12px; background:#f9f9f9; border-radius:10px; }
+.stat-val { font-size:26px; font-weight:700; color:var(--accent); }
+.stat-lbl { font-size:10px; color:#888; margin-top:2px; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:30px; font-weight:600; font-size:12px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:7px 16px; border-radius:30px; font-weight:600; font-size:12px; text-decoration:none; display:inline-block; }
+select { padding:8px 12px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px; }
+.logro-bar { height:8px; border-radius:4px; background:#e8e8e8; overflow:hidden; }
+.logro-fill { height:100%; border-radius:4px; background:var(--accent); }
+.badge-nivel { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:600; }
+.nivel-1 { background:#d1ecf1; color:#0c5460; }
+.nivel-2 { background:#fff3cd; color:#856404; }
+.nivel-3 { background:#f8d7da; color:#721c24; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:left; padding:8px 12px; background:#f9f9f9; font-weight:600; color:#575760; border-bottom:2px solid #f0f0f0; }
+td { padding:9px 12px; border-bottom:1px solid #f5f5f5; }
+tr:hover td { background:#fafafa; }
+</style>
+
+<div style="max-width:900px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:reportes_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Reportes</a>
+      <h2 style="margin:6px 0 0; font-size:20px;">{{ prueba.titulo }}</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:12px;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card" style="padding:14px 24px;">
+    <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <select name="establecimiento">
+        <option value="">Todos los establecimientos</option>
+        {% for estab in establecimientos %}
+        <option value="{{ estab }}" {% if filtros.establecimiento == estab %}selected{% endif %}>{{ estab }}</option>
+        {% endfor %}
+      </select>
+      <select name="curso">
+        <option value="">Todos los cursos</option>
+        {% for val, label in cursos %}
+        <option value="{{ val }}" {% if filtros.curso == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="letra">
+        <option value="">Todas las letras</option>
+        {% for l in "ABCDEFGH" %}
+        <option value="{{ l }}" {% if filtros.letra == l %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-primary" style="padding:8px 16px; font-size:12px;">Filtrar</button>
+      {% if filtros.establecimiento or filtros.curso or filtros.letra %}
+      <a href="{% url 'simce:reporte_prueba' prueba.pk %}" style="font-size:12px; color:#888;">✕ Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- KPIs globales -->
+  <div class="card">
+    <h3 style="margin:0 0 16px; font-size:14px; color:#575760;">Resumen general ({{ sesiones.count }} estudiantes)</h3>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+      <div class="stat-box">
+        <div class="stat-val">{{ sesiones.count }}</div>
+        <div class="stat-lbl">participantes</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ promedio_logro|floatformat:1 }}%</div>
+        <div class="stat-lbl">logro promedio</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ promedio_simce|floatformat:0 }}</div>
+        <div class="stat-lbl">SIMCE promedio</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ prueba.total_preguntas }}</div>
+        <div class="stat-lbl">preguntas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Análisis por pregunta -->
+  <div class="card">
+    <h3 style="margin:0 0 16px; font-size:14px; color:#575760;">Análisis por pregunta</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Pregunta</th>
+          <th style="width:60px;">Nivel</th>
+          <th style="width:70px;">Logro</th>
+          <th style="width:180px;">Distribución A/B/C/D</th>
+          <th style="width:80px;">Correcta</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in analisis %}
+        <tr>
+          <td>{{ item.pregunta.orden }}</td>
+          <td style="font-size:11px; color:#555;">{{ item.pregunta.enunciado|truncatechars:70 }}</td>
+          <td><span class="badge-nivel nivel-{{ item.pregunta.nivel }}">{{ item.pregunta.nivel_estrellas }}</span></td>
+          <td>
+            <div class="logro-bar">
+              <div class="logro-fill" style="width:{{ item.pct_logro }}%;
+                background:{% if item.pct_logro >= 60 %}#28a745{% elif item.pct_logro >= 40 %}#ffc107{% else %}#dc3545{% endif %};"></div>
+            </div>
+            <span style="font-size:10px; color:#888;">{{ item.pct_logro }}%</span>
+          </td>
+          <td style="font-size:11px; color:#555;">
+            {% if item.total > 0 %}
+            A:{{ item.dist.A }} B:{{ item.dist.B }} C:{{ item.dist.C }} D:{{ item.dist.D }}
+            {% else %}—{% endif %}
+          </td>
+          <td><strong>{{ item.pregunta.alternativa_correcta }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Listado de estudiantes -->
+  <div class="card">
+    <h3 style="margin:0 0 16px; font-size:14px; color:#575760;">Estudiantes</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>RUT</th>
+          <th>Establecimiento</th>
+          <th>Curso</th>
+          <th>Correctas</th>
+          <th>Logro</th>
+          <th>SIMCE</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sesion in sesiones %}
+        <tr>
+          <td>{{ sesion.nombre }}</td>
+          <td style="color:#888; font-size:11px;">{{ sesion.rut }}</td>
+          <td style="font-size:11px;">{{ sesion.establecimiento }}</td>
+          <td style="font-size:11px;">{{ sesion.curso }}{{ sesion.letra_curso }}</td>
+          <td>{{ sesion.puntaje_bruto }}/30</td>
+          <td>{{ sesion.porcentaje_logro|floatformat:0 }}%</td>
+          <td style="font-weight:600; color:{% if sesion.puntaje_simce >= 280 %}#155724{% elif sesion.puntaje_simce >= 220 %}#856404{% else %}#721c24{% endif %};">
+            {{ sesion.puntaje_simce }}
+          </td>
+          <td><a href="{% url 'simce:reporte_estudiante' sesion.pk %}" class="btn-outline" style="padding:4px 10px; font-size:11px;">Pauta</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center; color:#aaa; padding:24px;">Sin estudiantes con los filtros actuales.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

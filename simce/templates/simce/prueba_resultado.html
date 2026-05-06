@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Resultado — {{ sesion.prueba.titulo }}{% endblock %}
+{% block content %}
+<style>
+.res-card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.stat-box { text-align:center; padding:20px 16px; background:#f9f9f9; border-radius:12px; }
+.stat-val { font-size:32px; font-weight:700; color:var(--accent); }
+.stat-lbl { font-size:11px; color:#888; margin-top:4px; }
+.resp-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f5f5f5; font-size:12px; }
+.resp-row:last-child { border-bottom:none; }
+.ic-ok  { color:#28a745; font-weight:700; }
+.ic-err { color:#dc3545; font-weight:700; }
+.ic-blank { color:#aaa; }
+.badge-nivel { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:600; }
+.nivel-1 { background:#d1ecf1; color:#0c5460; }
+.nivel-2 { background:#fff3cd; color:#856404; }
+.nivel-3 { background:#f8d7da; color:#721c24; }
+</style>
+
+<div style="max-width:800px; margin:0 auto; padding:24px 16px;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <p style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 8px;">Resultado</p>
+    <h1 style="margin:0 0 6px; font-size:22px;">{{ sesion.prueba.titulo }}</h1>
+    <p style="color:#888; font-size:13px; margin:0;">{{ sesion.nombre }} · {{ sesion.establecimiento }} · {{ sesion.prueba.get_curso_display }}</p>
+  </div>
+
+  <!-- KPIs -->
+  <div class="res-card">
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+      <div class="stat-box">
+        <div class="stat-val">{{ sesion.puntaje_bruto }}</div>
+        <div class="stat-lbl">correctas de 30</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ sesion.porcentaje_logro|floatformat:0 }}%</div>
+        <div class="stat-lbl">logro</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:
+          {% if sesion.puntaje_simce >= 280 %}#28a745
+          {% elif sesion.puntaje_simce >= 220 %}#856404
+          {% else %}#dc3545{% endif %}">
+          {{ sesion.puntaje_simce }}
+        </div>
+        <div class="stat-lbl">puntaje SIMCE</div>
+      </div>
+    </div>
+    {% if sesion.puntaje_simce >= 280 %}
+    <div style="text-align:center; margin-top:14px; padding:10px; background:#d4edda; border-radius:8px; font-size:13px; color:#155724;">
+      🌟 Nivel avanzado — ¡Excelente desempeño!
+    </div>
+    {% elif sesion.puntaje_simce >= 220 %}
+    <div style="text-align:center; margin-top:14px; padding:10px; background:#fff3cd; border-radius:8px; font-size:13px; color:#856404;">
+      📚 Nivel intermedio — Buen desempeño, sigue practicando.
+    </div>
+    {% else %}
+    <div style="text-align:center; margin-top:14px; padding:10px; background:#f8d7da; border-radius:8px; font-size:13px; color:#721c24;">
+      📖 Nivel inicial — Te recomendamos reforzar los contenidos.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Pauta de corrección -->
+  <div class="res-card">
+    <h3 style="margin:0 0 16px; font-size:15px;">Pauta de corrección</h3>
+    {% for resp in respuestas %}
+    <div class="resp-row">
+      <div style="width:24px; text-align:center;">
+        {% if resp.alternativa_elegida and resp.alternativa_elegida.es_correcta %}
+          <span class="ic-ok">✓</span>
+        {% elif not resp.alternativa_elegida %}
+          <span class="ic-blank">—</span>
+        {% else %}
+          <span class="ic-err">✗</span>
+        {% endif %}
+      </div>
+      <div style="flex:1;">
+        <span style="font-weight:600;">{{ resp.pregunta.orden }}.</span>
+        {{ resp.pregunta.enunciado|truncatechars:80 }}
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+        <span class="badge-nivel nivel-{{ resp.pregunta.nivel }}">{{ resp.pregunta.nivel_estrellas }}</span>
+        <span style="font-size:11px; color:#888;">
+          Tu resp: <strong>{% if resp.alternativa_elegida %}{{ resp.alternativa_elegida.letra }}{% else %}—{% endif %}</strong>
+          · Correcta: <strong>{{ resp.pregunta.alternativa_correcta }}</strong>
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="text-align:center; margin-top:20px;">
+    <p style="font-size:12px; color:#bbb;">Resultados registrados. Puedes cerrar esta ventana.</p>
+  </div>
+</div>
+{% endblock %}

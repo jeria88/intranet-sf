@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}SIMCE — Panel Admin{% endblock %}
+{% block content %}
+<style>
+.simce-card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-borrador  { background:#f0f0f0; color:#888; }
+.badge-revision  { background:#fff3cd; color:#856404; }
+.badge-aprobada  { background:#d1ecf1; color:#0c5460; }
+.badge-publicada { background:#d4edda; color:#155724; }
+.badge-cerrada   { background:#e2e3e5; color:#383d41; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.rubrica-ok  { color:#155724; font-size:12px; }
+.rubrica-err { color:#721c24; font-size:12px; }
+</style>
+
+<div style="max-width:900px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h2 style="margin:0; font-size:22px;">📋 Pruebas SIMCE</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:13px;">Generación, revisión y publicación de ensayos</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="{% url 'simce:reportes_dashboard' %}" class="btn-outline">📊 Reportes</a>
+      <button onclick="document.getElementById('modal-generar').style.display='flex'" class="btn-primary">+ Generar prueba con IA</button>
+    </div>
+  </div>
+
+  {% for m in messages %}
+  <div style="background:{% if 'error' in m.tags %}#f8d7da{% else %}#d4edda{% endif %}; padding:12px 18px; border-radius:10px; margin-bottom:16px; font-size:13px;">
+    {{ m }}
+  </div>
+  {% endfor %}
+
+  {% if not pruebas %}
+  <div class="simce-card" style="text-align:center; padding:60px;">
+    <p style="font-size:32px; margin-bottom:12px;">📄</p>
+    <p style="color:#888;">Aún no hay pruebas generadas.</p>
+    <button onclick="document.getElementById('modal-generar').style.display='flex'" class="btn-primary" style="margin-top:16px;">Generar primera prueba</button>
+  </div>
+  {% endif %}
+
+  {% for prueba in pruebas %}
+  <div class="simce-card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span class="badge badge-{{ prueba.estado }}">{{ prueba.get_estado_display }}</span>
+          {% if prueba.rubrica_ok %}
+            <span class="rubrica-ok">✓ Rúbrica aprobada</span>
+          {% else %}
+            <span class="rubrica-err">⚠ Rúbrica con observaciones</span>
+          {% endif %}
+        </div>
+        <h3 style="margin:0 0 4px; font-size:16px;">{{ prueba.titulo }}</h3>
+        <p style="color:#888; margin:0; font-size:12px;">
+          {{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }} ·
+          {{ prueba.total_preguntas }} preguntas · {{ prueba.n_sesiones }} sesión(es)
+        </p>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{% url 'simce:admin_revisar' prueba.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px;">Revisar</a>
+        {% if prueba.estado == 'revision' %}
+          <form method="post" action="{% url 'simce:admin_aprobar' prueba.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary" style="font-size:12px; padding:7px 14px;" onclick="return confirm('¿Aprobar esta prueba?')">Aprobar</button>
+          </form>
+        {% elif prueba.estado == 'aprobada' %}
+          <form method="post" action="{% url 'simce:admin_publicar' prueba.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-primary" style="font-size:12px; padding:7px 14px; background:#28a745;" onclick="return confirm('¿Publicar para estudiantes?')">Publicar</button>
+          </form>
+        {% elif prueba.estado == 'publicada' %}
+          <a href="{% url 'simce:prueba_identificacion' prueba.pk %}" target="_blank" class="btn-outline" style="font-size:12px; padding:7px 14px;">🔗 Link estudiantes</a>
+          <a href="{% url 'simce:reporte_prueba' prueba.pk %}" class="btn-primary" style="font-size:12px; padding:7px 14px;">📊 Reportes</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal generar -->
+<div id="modal-generar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px; max-width:480px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 20px;">Generar nueva prueba con IA</h3>
+    <form method="post" action="{% url 'simce:admin_generar' %}" id="formGenerar">
+      {% csrf_token %}
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Asignatura *</label>
+        <select name="asignatura" required style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+          <option value="">Seleccionar...</option>
+          {% for val, label in asignaturas %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Curso *</label>
+        <select name="curso" required style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+          <option value="">Seleccionar...</option>
+          {% for val, label in cursos %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom:24px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Título (opcional)</label>
+        <input type="text" name="titulo" placeholder="Se genera automáticamente si se deja vacío"
+          style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px; box-sizing:border-box;">
+      </div>
+
+      <p style="font-size:11px; color:#999; margin-bottom:20px;">⏱ La generación puede tomar 1-2 minutos. No cierres la ventana.</p>
+
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn-primary" onclick="this.textContent='Generando…'; this.disabled=true; document.getElementById('formGenerar').submit();">Generar con IA</button>
+        <button type="button" onclick="document.getElementById('modal-generar').style.display='none'" class="btn-outline">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

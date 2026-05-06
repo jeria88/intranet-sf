@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Reportes SIMCE{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.badge-pub { background:#d4edda; color:#155724; display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-cer { background:#e2e3e5; color:#383d41; display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.stat { text-align:center; }
+.stat-n { font-size:22px; font-weight:700; color:var(--accent); }
+.stat-l { font-size:10px; color:#888; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:8px 18px; border-radius:30px; font-weight:600; font-size:12px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:7px 16px; border-radius:30px; font-weight:600; font-size:12px; cursor:pointer; text-decoration:none; display:inline-block; }
+select, input { padding:8px 12px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px; }
+</style>
+
+<div style="max-width:900px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:admin_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Panel SIMCE</a>
+      <h2 style="margin:6px 0 0; font-size:22px;">📊 Reportes SIMCE</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:13px;">Resultados por prueba, establecimiento y curso</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card" style="padding:16px 24px;">
+    <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <select name="asignatura">
+        <option value="">Todas las asignaturas</option>
+        {% for val, label in asignaturas %}
+        <option value="{{ val }}" {% if filtros.asignatura == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="curso">
+        <option value="">Todos los cursos</option>
+        {% for val, label in cursos %}
+        <option value="{{ val }}" {% if filtros.curso == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-primary">Filtrar</button>
+      {% if filtros.asignatura or filtros.curso %}
+      <a href="{% url 'simce:reportes_dashboard' %}" style="font-size:12px; color:#888;">✕ Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if not pruebas %}
+  <div class="card" style="text-align:center; padding:60px;">
+    <p style="font-size:32px; margin-bottom:12px;">📋</p>
+    <p style="color:#888;">No hay pruebas publicadas que coincidan con los filtros.</p>
+  </div>
+  {% endif %}
+
+  {% for prueba in pruebas %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div style="margin-bottom:8px;">
+          {% if prueba.estado == 'publicada' %}
+            <span class="badge-pub">Publicada</span>
+          {% else %}
+            <span class="badge-cer">Cerrada</span>
+          {% endif %}
+        </div>
+        <h3 style="margin:0 0 4px; font-size:16px;">{{ prueba.titulo }}</h3>
+        <p style="color:#888; margin:0; font-size:12px;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; min-width:260px;">
+        <div class="stat">
+          <div class="stat-n">{{ prueba.n_sesiones }}</div>
+          <div class="stat-l">estudiantes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">
+            {% if prueba.promedio_logro %}{{ prueba.promedio_logro|floatformat:0 }}%{% else %}—{% endif %}
+          </div>
+          <div class="stat-l">logro prom.</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">
+            {% if prueba.promedio_simce %}{{ prueba.promedio_simce|floatformat:0 }}{% else %}—{% endif %}
+          </div>
+          <div class="stat-l">SIMCE prom.</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="{% url 'simce:reporte_prueba' prueba.pk %}" class="btn-primary">Ver reporte detallado</a>
+      <a href="{% url 'simce:prueba_identificacion' prueba.pk %}" target="_blank" class="btn-outline">🔗 Link estudiantes</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

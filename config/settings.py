@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'calendar_red',
     'improvement_cycle',
     'notifications',
+    'simce',
 ]
 
 # ── SLA ───────────────────────────────────────────────────────────────────

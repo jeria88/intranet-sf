@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Identificación — {{ prueba.titulo }}{% endblock %}
+{% block content %}
+<style>
+.id-card { background:#fff; border-radius:16px; padding:32px; box-shadow:0 2px 12px rgba(0,0,0,0.08); max-width:520px; margin:0 auto; }
+.field { margin-bottom:18px; }
+.field label { display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px; }
+.field input, .field select {
+  width:100%; padding:11px 14px; border:1px solid #e8e8e8; border-radius:10px;
+  font-size:14px; box-sizing:border-box; transition:border-color .2s;
+}
+.field input:focus, .field select:focus { outline:none; border-color:var(--accent); }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:13px 28px; border-radius:30px; font-weight:600; font-size:14px; cursor:pointer; width:100%; margin-top:8px; }
+.btn-primary:hover { opacity:.9; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+</style>
+
+<div style="max-width:560px; margin:0 auto; padding:24px 16px;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <p style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 8px;">Ensayo SIMCE</p>
+    <h1 style="margin:0 0 8px; font-size:22px; font-weight:700;">{{ prueba.titulo }}</h1>
+    <p style="color:#888; font-size:13px; margin:0;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
+  </div>
+
+  {% for m in messages %}
+  <div style="background:#f8d7da; padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; color:#721c24;">
+    {{ m }}
+  </div>
+  {% endfor %}
+
+  <div class="id-card">
+    <h2 style="margin:0 0 6px; font-size:17px;">Antes de comenzar</h2>
+    <p style="color:#888; font-size:13px; margin:0 0 24px;">Ingresa tus datos para registrar tu participación.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Nombre completo *</label>
+        <input type="text" name="nombre" required placeholder="Ej: María González Rojas" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>RUT *</label>
+        <input type="text" name="rut" required placeholder="Ej: 12.345.678-9" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Curso *</label>
+          <select name="curso" required>
+            <option value="">Seleccionar...</option>
+            {% for val, label in cursos %}
+            <option value="{{ val }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Letra *</label>
+          <select name="letra" required>
+            <option value="">—</option>
+            {% for l in "ABCDEFGH" %}
+            <option value="{{ l }}">{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Establecimiento *</label>
+        <input type="text" name="establecimiento" required placeholder="Nombre del colegio">
+      </div>
+      <div class="field">
+        <label>RBD <span style="font-weight:400; color:#aaa;">(opcional)</span></label>
+        <input type="text" name="rbd" placeholder="Ej: 12345-6">
+      </div>
+      <button type="submit" class="btn-primary">Comenzar prueba →</button>
+    </form>
+  </div>
+
+  <p style="text-align:center; font-size:11px; color:#bbb; margin-top:20px;">
+    Esta prueba tiene 30 preguntas distribuidas en 6 textos.<br>Respóndela de corrido sin cerrar el navegador.
+  </p>
+</div>
+{% endblock %}

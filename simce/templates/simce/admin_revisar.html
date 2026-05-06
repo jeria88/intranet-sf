@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load simce_extras %}
+{% block title %}Revisar — {{ prueba.titulo }}{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.rubrica-item { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid #f5f5f5; }
+.rubrica-item:last-child { border-bottom:none; }
+.ri-ok  { color:#28a745; font-size:18px; flex-shrink:0; }
+.ri-err { color:#dc3545; font-size:18px; flex-shrink:0; }
+.nivel-1 { background:#d1ecf1; color:#0c5460; }
+.nivel-2 { background:#fff3cd; color:#856404; }
+.nivel-3 { background:#f8d7da; color:#721c24; }
+.badge-nivel { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+.pregunta-box { border:1px solid #f0f0f0; border-radius:10px; padding:16px; margin-bottom:12px; }
+.alt { padding:6px 10px; border-radius:6px; margin-top:4px; font-size:12px; }
+.alt-correct { background:#d4edda; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+</style>
+
+<div style="max-width:900px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:admin_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Panel SIMCE</a>
+      <h2 style="margin:6px 0 0; font-size:20px;">{{ prueba.titulo }}</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:12px;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
+    </div>
+    {% if prueba.estado == 'revision' %}
+    <form method="post" action="{% url 'simce:admin_aprobar' prueba.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary" onclick="return confirm('¿Aprobar esta prueba?')">✓ Aprobar prueba</button>
+    </form>
+    {% elif prueba.estado == 'aprobada' %}
+    <form method="post" action="{% url 'simce:admin_publicar' prueba.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary" style="background:#28a745;" onclick="return confirm('¿Publicar para estudiantes?')">🚀 Publicar</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <!-- Rúbrica -->
+  <div class="card">
+    <h3 style="margin:0 0 16px; font-size:15px; display:flex; align-items:center; gap:8px;">
+      {% if rubrica.aprobado %}✅{% else %}⚠️{% endif %}
+      Rúbrica de Validación
+    </h3>
+    {% for criterio, datos in rubrica.criterios.items %}
+    <div class="rubrica-item">
+      <span class="{% if datos.ok %}ri-ok{% else %}ri-err{% endif %}">{% if datos.ok %}✓{% else %}✗{% endif %}</span>
+      <div>
+        <div style="font-size:12px; font-weight:600;">{{ criterio|replace:"_: "|capfirst }}</div>
+        <div style="font-size:11px; color:#888;">{{ datos.detalle }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if rubrica.observaciones %}
+    <div style="margin-top:12px; padding:12px; background:#fff3cd; border-radius:8px;">
+      {% for obs in rubrica.observaciones %}
+      <p style="margin:0 0 4px; font-size:12px; color:#856404;">⚠ {{ obs }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Textos y preguntas -->
+  {% for texto in textos %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+      <div>
+        <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}</span>
+        <h3 style="margin:4px 0 0; font-size:16px;">{{ texto.titulo }}</h3>
+      </div>
+      <span style="font-size:11px; padding:3px 10px; border-radius:20px; {% if texto.cumple_extension %}background:#d4edda;color:#155724;{% else %}background:#f8d7da;color:#721c24;{% endif %}">
+        {{ texto.char_count|floatformat:0 }} chars {% if texto.cumple_extension %}✓{% else %}⚠ < 1500{% endif %}
+      </span>
+    </div>
+
+    <div style="background:#f9f9f9; border-radius:10px; padding:16px; font-size:13px; line-height:1.8; color:#333; margin-bottom:20px; max-height:250px; overflow-y:auto;">
+      {{ texto.contenido|linebreaksbr }}
+    </div>
+
+    <h4 style="margin:0 0 12px; font-size:13px; color:#575760;">Preguntas ({{ texto.preguntas.count }})</h4>
+    {% for pregunta in texto.preguntas.all %}
+    <div class="pregunta-box">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:500;">P{{ pregunta.orden }}. {{ pregunta.enunciado }}</div>
+        <div style="flex-shrink:0; display:flex; gap:6px; align-items:center;">
+          <span class="badge-nivel nivel-{{ pregunta.nivel }}">{{ pregunta.nivel_estrellas }}</span>
+          <span style="font-size:10px; color:#888;">Correcta: <strong>{{ pregunta.alternativa_correcta }}</strong></span>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#888; margin-bottom:8px;">Habilidad: {{ pregunta.habilidad }}</div>
+      {% for alt in pregunta.alternativas.all %}
+      <div class="alt {% if alt.es_correcta %}alt-correct{% endif %}">
+        <strong>{{ alt.letra }}.</strong> {{ alt.texto }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

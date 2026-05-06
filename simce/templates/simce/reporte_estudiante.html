@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Pauta — {{ sesion.nombre }}{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+.stat-box { text-align:center; padding:16px; background:#f9f9f9; border-radius:10px; }
+.stat-val { font-size:26px; font-weight:700; color:var(--accent); }
+.stat-lbl { font-size:10px; color:#888; margin-top:2px; }
+.resp-row { padding:10px 0; border-bottom:1px solid #f5f5f5; }
+.resp-row:last-child { border-bottom:none; }
+.ic-ok  { color:#28a745; font-weight:700; }
+.ic-err { color:#dc3545; font-weight:700; }
+.ic-blank { color:#aaa; }
+.badge-nivel { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:600; }
+.nivel-1 { background:#d1ecf1; color:#0c5460; }
+.nivel-2 { background:#fff3cd; color:#856404; }
+.nivel-3 { background:#f8d7da; color:#721c24; }
+.alt-row { font-size:12px; padding:4px 0 4px 24px; color:#555; }
+.alt-correct { color:#155724; font-weight:600; }
+.alt-chosen  { color:#dc3545; }
+.btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:7px 16px; border-radius:30px; font-weight:600; font-size:12px; text-decoration:none; display:inline-block; }
+</style>
+
+<div style="max-width:800px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:reporte_prueba' sesion.prueba.pk %}" style="color:#888; font-size:12px; text-decoration:none;">← Volver al reporte</a>
+      <h2 style="margin:6px 0 0; font-size:20px;">Pauta de corrección</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:12px;">{{ sesion.nombre }} · {{ sesion.rut }}</p>
+      <p style="color:#888; margin:2px 0 0; font-size:12px;">{{ sesion.establecimiento }} · {{ sesion.prueba.get_curso_display }}{{ sesion.letra_curso }}</p>
+    </div>
+    <button onclick="window.print()" class="btn-outline">🖨 Imprimir</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="card">
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;">
+      <div class="stat-box">
+        <div class="stat-val">{{ sesion.puntaje_bruto }}</div>
+        <div class="stat-lbl">correctas / 30</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ sesion.porcentaje_logro|floatformat:0 }}%</div>
+        <div class="stat-lbl">logro</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:{% if sesion.puntaje_simce >= 280 %}#28a745{% elif sesion.puntaje_simce >= 220 %}#856404{% else %}#dc3545{% endif %};">
+          {{ sesion.puntaje_simce }}
+        </div>
+        <div class="stat-lbl">puntaje SIMCE</div>
+      </div>
+    </div>
+    <div style="font-size:12px; color:#888; text-align:center;">
+      {{ sesion.prueba.titulo }} · {{ sesion.prueba.get_asignatura_display }} · {{ sesion.prueba.anio }}
+    </div>
+  </div>
+
+  <!-- Respuestas detalladas -->
+  <div class="card">
+    <h3 style="margin:0 0 16px; font-size:14px; color:#575760;">Detalle de respuestas</h3>
+    {% for resp in respuestas %}
+    <div class="resp-row">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <div style="width:20px; text-align:center; flex-shrink:0; margin-top:1px;">
+          {% if resp.alternativa_elegida and resp.alternativa_elegida.es_correcta %}
+            <span class="ic-ok">✓</span>
+          {% elif not resp.alternativa_elegida %}
+            <span class="ic-blank">—</span>
+          {% else %}
+            <span class="ic-err">✗</span>
+          {% endif %}
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+            <span style="font-size:13px; font-weight:500; line-height:1.4;">
+              {{ resp.pregunta.orden }}. {{ resp.pregunta.enunciado }}
+            </span>
+            <span class="badge-nivel nivel-{{ resp.pregunta.nivel }}" style="flex-shrink:0;">{{ resp.pregunta.nivel_estrellas }}</span>
+          </div>
+          <div style="font-size:11px; color:#888; margin-bottom:6px;">
+            Habilidad: {{ resp.pregunta.habilidad }}
+          </div>
+          {% for alt in resp.pregunta.alternativas.all %}
+          <div class="alt-row
+            {% if alt.es_correcta %}alt-correct{% endif %}
+            {% if resp.alternativa_elegida and resp.alternativa_elegida.letra == alt.letra and not alt.es_correcta %}alt-chosen{% endif %}
+          ">
+            {% if alt.es_correcta %}✓{% elif resp.alternativa_elegida and resp.alternativa_elegida.letra == alt.letra %}✗{% else %}&nbsp;{% endif %}
+            <strong>{{ alt.letra }}.</strong> {{ alt.texto }}
+            {% if alt.es_correcta %}<span style="color:#28a745;"> ← correcta</span>{% endif %}
+            {% if resp.alternativa_elegida and resp.alternativa_elegida.letra == alt.letra and not alt.es_correcta %}
+              <span style="color:#dc3545;"> ← tu respuesta</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% if not resp.alternativa_elegida %}
+          <div class="alt-row" style="color:#aaa;">Sin respuesta</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
