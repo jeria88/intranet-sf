@@ -29,7 +29,7 @@
     <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
       <div class="stat-box">
         <div class="stat-val">{{ sesion.puntaje_bruto }}</div>
-        <div class="stat-lbl">puntos de 120</div>
+        <div class="stat-lbl">{% if sesion.modo == 'pistas' %}puntos de 120{% else %}correctas de 30{% endif %}</div>
       </div>
       <div class="stat-box">
         <div class="stat-val">{{ sesion.porcentaje_logro|floatformat:0 }}%</div>

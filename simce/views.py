@@ -40,6 +40,7 @@ def admin_dashboard(request):
 def admin_generar(request):
     asignatura = request.POST.get('asignatura')
     curso      = request.POST.get('curso')
+    modo       = request.POST.get('modo', 'simce')
     titulo     = request.POST.get('titulo', '').strip() or None
 
     if not asignatura or not curso:
@@ -58,6 +59,7 @@ def admin_generar(request):
         titulo      = resultado['titulo'],
         asignatura  = asignatura,
         curso       = curso,
+        modo        = modo,
         estado      = 'revision',
         creada_por  = request.user,
         rubrica_ok  = rubrica['aprobado'],
@@ -137,8 +139,10 @@ def admin_publicar(request, pk):
 
 # ── Estudiante: Identificación ────────────────────────────────────
 
-def prueba_identificacion(request, pk):
+def prueba_identificacion(request, pk, modo='simce'):
     prueba = get_object_or_404(Prueba, pk=pk, estado='publicada')
+    if modo not in ('simce', 'pistas'):
+        modo = 'simce'
 
     if request.method == 'POST':
         nombre      = request.POST.get('nombre', '').strip()
@@ -155,10 +159,11 @@ def prueba_identificacion(request, pk):
                 prueba=prueba, nombre=nombre, rut=rut,
                 curso=curso, letra_curso=letra,
                 establecimiento=estab, rbd=rbd,
+                modo=modo,
             )
             return redirect('simce:prueba_rendir', sesion_pk=sesion.pk)
 
-    ctx = {'prueba': prueba, 'cursos': CURSO_CHOICES}
+    ctx = {'prueba': prueba, 'cursos': CURSO_CHOICES, 'modo': modo}
     return render(request, 'simce/prueba_identificacion.html', ctx)
 
 
@@ -186,6 +191,7 @@ def prueba_rendir(request, sesion_pk):
         'textos': textos,
         'respondidas_json': json.dumps(respondidas),
         'total_preguntas': Pregunta.objects.filter(texto__prueba=prueba).count(),
+        'modo': sesion.modo,
     }
     return render(request, 'simce/prueba_rendir.html', ctx)
 
@@ -280,6 +286,31 @@ def finalizar_prueba(request, sesion_pk):
 
     sesion.calcular_puntajes()
     return JsonResponse({'redirect': f'/simce/resultado/{sesion.pk}/'}, status=200)
+
+
+# ── Estudiante: Entregar modo SIMCE (submit tradicional) ─────────
+
+@require_POST
+def entregar_simce(request, sesion_pk):
+    sesion   = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
+    prueba   = sesion.prueba
+    preguntas = Pregunta.objects.filter(texto__prueba=prueba)
+
+    for pregunta in preguntas:
+        letra = request.POST.get(f'p_{pregunta.pk}')
+        alternativa = pregunta.alternativas.filter(letra=letra).first() if letra else None
+        es_correcta = alternativa.es_correcta if alternativa else False
+        RespuestaEstudiante.objects.update_or_create(
+            sesion=sesion, pregunta=pregunta,
+            defaults={
+                'alternativa_elegida': alternativa,
+                'intentos': 1,
+                'puntaje_obtenido': 1 if es_correcta else 0,
+            }
+        )
+
+    sesion.calcular_puntajes()
+    return redirect('simce:prueba_resultado', sesion_pk=sesion.pk)
 
 
 # ── Estudiante: Resultado ─────────────────────────────────────────

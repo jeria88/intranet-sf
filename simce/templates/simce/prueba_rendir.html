@@ -8,11 +8,11 @@
 .pregunta-box.resuelta-ok  { border-color:#28a745; background:#f6fff8; }
 .pregunta-box.resuelta-err { border-color:#dc3545; background:#fff8f8; }
 .alt-label { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:13px; border:1.5px solid transparent; transition:all .15s; margin-top:6px; }
-.alt-label:hover:not(.disabled) { background:#f0f4ff; border-color:#b8c9f0; }
+.alt-label:hover { background:#f0f4ff; border-color:#b8c9f0; }
 .alt-label:has(input:checked) { background:#e8f0fe; border-color:var(--accent); }
 .alt-label.disabled { cursor:default; opacity:.7; }
-.alt-label.alt-correcta { background:#d4edda; border-color:#28a745; opacity:1; }
-.alt-label.alt-elegida-err { background:#f8d7da; border-color:#dc3545; opacity:1; }
+.alt-label.alt-correcta { background:#d4edda !important; border-color:#28a745 !important; opacity:1 !important; }
+.alt-label.alt-elegida-err { background:#f8d7da !important; border-color:#dc3545 !important; opacity:1 !important; }
 input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0; }
 .badge-nivel { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
 .nivel-1 { background:#d1ecf1; color:#0c5460; }
@@ -21,13 +21,13 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
 .pista-box { background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:12px 14px; margin-top:10px; font-size:13px; color:#856404; display:none; }
 .pista-box.visible { display:block; }
 .btn-verificar { background:var(--accent); color:#fff; border:none; padding:9px 20px; border-radius:20px; font-weight:600; font-size:12px; cursor:pointer; margin-top:10px; }
-.btn-verificar:disabled { opacity:.5; cursor:default; }
+.btn-verificar:disabled { opacity:.45; cursor:default; }
 .resultado-tag { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; margin-top:10px; }
 .tag-ok  { background:#d4edda; color:#155724; }
 .tag-err { background:#f8d7da; color:#721c24; }
 .sticky-bar { position:sticky; bottom:0; background:#fff; border-top:1px solid #f0f0f0; padding:14px 0; z-index:100; }
-.btn-entregar { background:#28a745; color:#fff; border:none; padding:13px 36px; border-radius:30px; font-weight:700; font-size:15px; cursor:pointer; opacity:.4; transition:opacity .3s; }
-.btn-entregar.activo { opacity:1; }
+.btn-entregar { background:#28a745; color:#fff; border:none; padding:13px 36px; border-radius:30px; font-weight:700; font-size:15px; cursor:pointer; }
+.btn-entregar:disabled { opacity:.4; cursor:default; }
 #progress-bar-wrap { position:fixed; top:0; left:0; right:0; height:4px; background:#f0f0f0; z-index:200; }
 #progress-bar { height:100%; background:var(--accent); border-radius:2px; transition:width .3s; width:0; }
 </style>
@@ -35,12 +35,63 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
 <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
 
 <div style="max-width:800px; margin:0 auto; padding:24px 16px;">
-  <div style="margin-bottom:24px;">
+  <div style="margin-bottom:20px;">
     <p style="font-size:11px; color:#888; margin:0 0 4px;">{{ sesion.nombre }} · {{ sesion.establecimiento }}</p>
     <h2 style="margin:0; font-size:20px;">{{ prueba.titulo }}</h2>
-    <p style="color:#888; font-size:12px; margin:4px 0 0;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ total_preguntas }} preguntas · escala 4-3-2-0 pts</p>
+    <p style="color:#888; font-size:12px; margin:4px 0 0;">
+      {{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ total_preguntas }} preguntas ·
+      {% if modo == 'pistas' %}
+        <span style="color:#856404; font-weight:600;">💡 Con pistas e intentos (4-3-2-0)</span>
+      {% else %}
+        <span style="color:#0c5460; font-weight:600;">📋 Estilo SIMCE</span>
+      {% endif %}
+    </p>
   </div>
 
+  {% if modo == 'simce' %}
+  {# ══════════════ MODO SIMCE: form tradicional ══════════════ #}
+  <form method="post" action="{% url 'simce:entregar_simce' sesion.pk %}" id="formSimce">
+    {% csrf_token %}
+    {% for texto in textos %}
+    <div class="texto-card">
+      <div style="margin-bottom:14px;">
+        <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}</span>
+        <h3 style="margin:4px 0 0; font-size:17px;">{{ texto.titulo }}</h3>
+      </div>
+      <div class="texto-body">{{ texto.contenido|linebreaksbr }}</div>
+
+      {% for pregunta in texto.preguntas.all %}
+      <div class="pregunta-box" id="pq-{{ pregunta.pk }}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
+          <p style="margin:0; font-size:13px; font-weight:500; line-height:1.5;">
+            <strong>{{ pregunta.orden }}.</strong> {{ pregunta.enunciado }}
+          </p>
+          <span class="badge-nivel nivel-{{ pregunta.nivel }}" style="flex-shrink:0;">{{ pregunta.nivel_estrellas }}</span>
+        </div>
+        {% for alt in pregunta.alternativas.all %}
+        <label class="alt-label">
+          <input type="radio" name="p_{{ pregunta.pk }}" value="{{ alt.letra }}" onchange="simceOnChange()">
+          <span><strong>{{ alt.letra }}.</strong> {{ alt.texto }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="sticky-bar">
+      <div style="max-width:800px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; padding:0 16px;">
+        <div id="counter" style="font-size:13px; color:#888;">0 / {{ total_preguntas }} respondidas</div>
+        <button type="submit" class="btn-entregar" id="btn-entregar"
+                onclick="return confirm('¿Entregar la prueba? No podrás modificar tus respuestas.')">
+          Entregar prueba
+        </button>
+      </div>
+    </div>
+  </form>
+
+  {% else %}
+  {# ══════════════ MODO PISTAS: AJAX con verificación ══════════════ #}
   {% for texto in textos %}
   <div class="texto-card">
     <div style="margin-bottom:14px;">
@@ -50,7 +101,7 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
     <div class="texto-body">{{ texto.contenido|linebreaksbr }}</div>
 
     {% for pregunta in texto.preguntas.all %}
-    <div class="pregunta-box" id="pq-{{ pregunta.pk }}" data-pk="{{ pregunta.pk }}" data-correcta="{{ pregunta.alternativa_correcta }}">
+    <div class="pregunta-box" id="pq-{{ pregunta.pk }}" data-pk="{{ pregunta.pk }}">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
         <p style="margin:0; font-size:13px; font-weight:500; line-height:1.5;">
           <strong>{{ pregunta.orden }}.</strong> {{ pregunta.enunciado }}
@@ -68,7 +119,6 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
       </div>
 
       <div class="pista-box" id="pista-{{ pregunta.pk }}"></div>
-
       <div id="resultado-{{ pregunta.pk }}"></div>
 
       <button class="btn-verificar" id="btn-{{ pregunta.pk }}"
@@ -88,23 +138,38 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
       </button>
     </div>
   </div>
+  {% endif %}
 </div>
 
 <script>
 const TOTAL = {{ total_preguntas }};
-const SESION_PK = {{ sesion.pk }};
+const CSRF  = "{{ csrf_token }}";
+const MODO  = "{{ modo }}";
+
+{% if modo == 'simce' %}
+// ── MODO SIMCE ──
+let simceRespondidas = 0;
+
+function simceOnChange() {
+  // Contar preguntas con al menos una opción marcada
+  let count = 0;
+  document.querySelectorAll('.pregunta-box').forEach(box => {
+    if (box.querySelector('input[type="radio"]:checked')) count++;
+  });
+  simceRespondidas = count;
+  document.getElementById('counter').textContent = count + ' / ' + TOTAL + ' respondidas';
+  document.getElementById('progress-bar').style.width = (count / TOTAL * 100) + '%';
+}
+
+{% else %}
+// ── MODO PISTAS ──
 const FINALIZAR_URL = "{% url 'simce:finalizar_prueba' sesion.pk %}";
-const CSRF = "{{ csrf_token }}";
+const RESPONDIDAS   = {{ respondidas_json|safe }};
+let resueltasCount  = Object.keys(RESPONDIDAS).length;
 
-// Estado inicial (restaura si hubo recarga)
-const RESPONDIDAS = {{ respondidas_json|safe }};
-let resueltasCount = Object.keys(RESPONDIDAS).length;
-
-// Restaurar preguntas ya respondidas al cargar
 document.addEventListener('DOMContentLoaded', () => {
   for (const [pkStr, data] of Object.entries(RESPONDIDAS)) {
-    const pk = parseInt(pkStr);
-    bloquearPregunta(pk, data.correcta, data.puntaje, data.intentos, data.letra_elegida);
+    bloquearPregunta(parseInt(pkStr), data.correcta, data.puntaje, data.intentos, data.letra_elegida);
   }
   actualizarContador();
 });
@@ -116,7 +181,6 @@ function onSelect(pk) {
 function verificar(pk, url) {
   const selected = document.querySelector(`input[name="p_${pk}"]:checked`);
   if (!selected) return;
-
   const btn = document.getElementById('btn-' + pk);
   btn.disabled = true;
   btn.textContent = 'Verificando...';
@@ -130,98 +194,61 @@ function verificar(pk, url) {
   .then(data => {
     if (data.resultado === 'correcto') {
       bloquearPregunta(pk, true, data.puntaje, data.intentos, selected.value);
-      resueltasCount++;
-      actualizarContador();
-
+      resueltasCount++; actualizarContador();
     } else if (data.resultado === 'fallido') {
       bloquearPregunta(pk, false, 0, 3, selected.value, data.letra_correcta);
-      resueltasCount++;
-      actualizarContador();
-
+      resueltasCount++; actualizarContador();
     } else {
-      // Incorrecto pero quedan intentos
-      mostrarPista(pk, data.pista, data.intentos_restantes);
-      btn.textContent = `Intentar de nuevo (${data.intentos_restantes} intento${data.intentos_restantes > 1 ? 's' : ''} restante${data.intentos_restantes > 1 ? 's' : ''})`;
-      btn.disabled = true;  // se reactiva al seleccionar otra opción
-      // Permitir re-seleccionar
+      document.getElementById('pista-' + pk).innerHTML = `💡 <strong>Pista:</strong> ${data.pista}`;
+      document.getElementById('pista-' + pk).classList.add('visible');
+      btn.textContent = `Intentar de nuevo (${data.intentos_restantes} restante${data.intentos_restantes > 1 ? 's' : ''})`;
+      btn.disabled = true;
       document.querySelectorAll(`input[name="p_${pk}"]`).forEach(r => {
         r.addEventListener('change', () => { btn.disabled = false; }, { once: true });
       });
     }
   })
-  .catch(() => {
-    btn.textContent = 'Verificar respuesta';
-    btn.disabled = false;
-  });
-}
-
-function mostrarPista(pk, texto, restantes) {
-  const pista = document.getElementById('pista-' + pk);
-  pista.innerHTML = `💡 <strong>Pista:</strong> ${texto}`;
-  pista.classList.add('visible');
+  .catch(() => { btn.textContent = 'Verificar respuesta'; btn.disabled = false; });
 }
 
 function bloquearPregunta(pk, correcto, puntaje, intentos, letraElegida, letraCorrecta) {
-  const box = document.getElementById('pq-' + pk);
-  box.classList.add(correcto ? 'resuelta-ok' : 'resuelta-err');
-
-  // Bloquear todas las alternativas
+  document.getElementById('pq-' + pk).classList.add(correcto ? 'resuelta-ok' : 'resuelta-err');
   document.querySelectorAll(`input[name="p_${pk}"]`).forEach(r => r.disabled = true);
   document.querySelectorAll(`#pq-${pk} .alt-label`).forEach(l => l.classList.add('disabled'));
-
-  // Resaltar alternativa correcta y elegida
   if (letraCorrecta) {
-    const labelCorrecta = document.getElementById(`alt-${pk}-${letraCorrecta}`);
-    if (labelCorrecta) labelCorrecta.classList.add('alt-correcta');
+    const lc = document.getElementById(`alt-${pk}-${letraCorrecta}`);
+    if (lc) lc.classList.add('alt-correcta');
   }
   if (letraElegida && !correcto) {
-    const labelElegida = document.getElementById(`alt-${pk}-${letraElegida}`);
-    if (labelElegida) labelElegida.classList.add('alt-elegida-err');
+    const le = document.getElementById(`alt-${pk}-${letraElegida}`);
+    if (le) le.classList.add('alt-elegida-err');
   }
-
-  // Ocultar pista y botón
   const pista = document.getElementById('pista-' + pk);
   if (pista) pista.classList.remove('visible');
   const btn = document.getElementById('btn-' + pk);
-  btn.style.display = 'none';
-
-  // Mostrar resultado
-  const res = document.getElementById('resultado-' + pk);
+  if (btn) btn.style.display = 'none';
   const intentoTexto = intentos > 0 ? ` · ${intentos} intento${intentos > 1 ? 's' : ''}` : '';
-  res.innerHTML = correcto
+  document.getElementById('resultado-' + pk).innerHTML = correcto
     ? `<span class="resultado-tag tag-ok">✓ Correcto — ${puntaje} pts${intentoTexto}</span>`
     : `<span class="resultado-tag tag-err">✗ Sin puntos${intentoTexto}</span>`;
 }
 
 function actualizarContador() {
   document.getElementById('counter').textContent = `${resueltasCount} / ${TOTAL} respondidas`;
-  const pct = resueltasCount / TOTAL * 100;
-  document.getElementById('progress-bar').style.width = pct + '%';
-
-  const btnEntregar = document.getElementById('btn-entregar');
-  if (resueltasCount >= TOTAL) {
-    btnEntregar.disabled = false;
-    btnEntregar.classList.add('activo');
-  }
+  document.getElementById('progress-bar').style.width = (resueltasCount / TOTAL * 100) + '%';
+  const btn = document.getElementById('btn-entregar');
+  if (resueltasCount >= TOTAL) { btn.disabled = false; }
 }
 
 function entregar() {
-  if (!confirm('¿Entregar la prueba? No podrás modificar tus respuestas.')) return;
+  if (!confirm('¿Entregar la prueba?')) return;
   const btn = document.getElementById('btn-entregar');
-  btn.textContent = 'Guardando...';
-  btn.disabled = true;
-
-  fetch(FINALIZAR_URL, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': CSRF }
-  })
-  .then(r => r.json())
-  .then(data => { window.location.href = data.redirect; })
-  .catch(() => {
-    btn.textContent = 'Entregar prueba';
-    btn.disabled = false;
-    btn.classList.add('activo');
-  });
+  btn.textContent = 'Guardando...'; btn.disabled = true;
+  fetch(FINALIZAR_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json())
+    .then(data => { window.location.href = data.redirect; })
+    .catch(() => { btn.textContent = 'Entregar prueba'; btn.disabled = false; });
 }
+{% endif %}
 </script>
 {% endblock %}

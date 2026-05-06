@@ -20,6 +20,13 @@
     <p style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 8px;">Ensayo SIMCE</p>
     <h1 style="margin:0 0 8px; font-size:22px; font-weight:700;">{{ prueba.titulo }}</h1>
     <p style="color:#888; font-size:13px; margin:0;">{{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}</p>
+    <p style="margin:8px 0 0; font-size:12px;">
+      {% if modo == 'pistas' %}
+      <span style="background:#fff3cd; color:#856404; padding:3px 10px; border-radius:10px; font-weight:600;">💡 Modo con pistas e intentos (4-3-2-0)</span>
+      {% else %}
+      <span style="background:#d1ecf1; color:#0c5460; padding:3px 10px; border-radius:10px; font-weight:600;">📋 Modo estilo SIMCE</span>
+      {% endif %}
+    </p>
   </div>
 
   {% for m in messages %}

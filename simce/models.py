@@ -53,6 +53,11 @@ ESTADO_PRUEBA = [
     ('cerrada',   'Cerrada'),
 ]
 
+MODO_SESION = [
+    ('simce',  'Estilo SIMCE (1 pt, sin pistas)'),
+    ('pistas', 'Con pistas e intentos (4-3-2-0)'),
+]
+
 
 class Prueba(models.Model):
     titulo       = models.CharField(max_length=200, verbose_name='Título')
@@ -166,6 +171,7 @@ class SesionEstudiante(models.Model):
     rbd             = models.CharField(max_length=10, verbose_name='RBD', blank=True)
     curso           = models.CharField(max_length=3,  choices=CURSO_CHOICES)
     letra_curso     = models.CharField(max_length=1,  choices=LETRA_CHOICES)
+    modo            = models.CharField(max_length=8, choices=MODO_SESION, default='simce', verbose_name='Modo')
     iniciada_en     = models.DateTimeField(auto_now_add=True)
     finalizada_en   = models.DateTimeField(null=True, blank=True)
     completada      = models.BooleanField(default=False)
@@ -186,7 +192,8 @@ class SesionEstudiante(models.Model):
         respuestas = self.respuestas.all()
         total_preguntas = respuestas.count()
         puntaje = sum(r.puntaje_obtenido for r in respuestas)
-        puntaje_max = total_preguntas * 4  # máximo 4 puntos por pregunta
+        pts_por_pregunta = 4 if self.modo == 'pistas' else 1
+        puntaje_max = total_preguntas * pts_por_pregunta
         self.puntaje_bruto    = puntaje
         self.porcentaje_logro = round((puntaje / puntaje_max * 100), 2) if puntaje_max else 0
         self.puntaje_simce    = int(150 + (self.porcentaje_logro / 100) * 200)

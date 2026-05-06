@@ -72,7 +72,8 @@
             <button type="submit" class="btn-primary" style="font-size:12px; padding:7px 14px; background:#28a745;" onclick="return confirm('¿Publicar para estudiantes?')">Publicar</button>
           </form>
         {% elif prueba.estado == 'publicada' %}
-          <a href="{% url 'simce:prueba_identificacion' prueba.pk %}" target="_blank" class="btn-outline" style="font-size:12px; padding:7px 14px;">🔗 Link estudiantes</a>
+          <a href="{% url 'simce:prueba_identificacion' prueba.pk 'simce' %}" target="_blank" class="btn-outline" style="font-size:12px; padding:7px 14px;">📋 Link SIMCE</a>
+          <a href="{% url 'simce:prueba_identificacion' prueba.pk 'pistas' %}" target="_blank" class="btn-outline" style="font-size:12px; padding:7px 14px; border-color:#856404; color:#856404;">💡 Link con pistas</a>
           <a href="{% url 'simce:reporte_prueba' prueba.pk %}" class="btn-primary" style="font-size:12px; padding:7px 14px;">📊 Reportes</a>
         {% endif %}
       </div>
