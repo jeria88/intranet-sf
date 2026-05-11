@@ -124,7 +124,7 @@ function poll() {
   fetch(URL_ESTADO)
     .then(r => r.json())
     .then(d => {
-      if (d.estado === 'revision_textos') {
+      if (d.estado === 'borrador') {
         marcarTodosDone(['st-1','st-2','st-3','st-4']);
         document.getElementById('spinner').style.borderTopColor = '#28a745';
         document.getElementById('titulo-estado').textContent = '¡Textos listos para revisar!';

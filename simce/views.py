@@ -7,18 +7,71 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Count, Avg, Q
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
 
-from .models import (Prueba, TextoPrueba, Pregunta, Alternativa,
-                     SesionEstudiante, RespuestaEstudiante,
-                     ASIGNATURA_CHOICES, CURSO_CHOICES, TIPO_TEXTUAL_CHOICES)
-from .generator import (generar_textos, generar_preguntas_para_prueba,
-                        ajustar_texto, CHECKLIST_POR_TIPO)
+from .models import (
+    Prueba, PruebaTexto, TextoBiblioteca, PreguntaBanco, AlternativaBanco,
+    Pregunta, Alternativa, SesionEstudiante, RespuestaEstudiante,
+    ASIGNATURA_CHOICES, CURSO_CHOICES, TIPO_TEXTUAL_CHOICES,
+)
+from .generator import (
+    generar_lote_textos_biblioteca, generar_preguntas_banco,
+    poblar_preguntas_prueba_texto, ajustar_texto,
+    validar_rubrica_prueba, CHECKLIST_POR_TIPO,
+)
 
 CURSOS_SIMCE = [('4B', '4° Básico'), ('6B', '6° Básico')]
-
 is_staff = lambda u: u.is_staff or u.is_superuser
+
+
+# ── Helpers de fondo ──────────────────────────────────────────────
+
+def _set_error(prueba_pk, error_str, tb_str):
+    from django.db import connection
+    connection.close()
+    try:
+        prueba = Prueba.objects.get(pk=prueba_pk)
+        prueba.estado = 'error'
+        prueba.rubrica_log = {'error': error_str, 'traceback': tb_str}
+        prueba.save()
+    except Exception:
+        pass
+
+
+def _hilo_textos(prueba_pk, asignatura, curso, n_textos):
+    from django.db import connection
+    try:
+        textos_obj = generar_lote_textos_biblioteca(asignatura, curso, n=n_textos)
+        prueba = Prueba.objects.get(pk=prueba_pk)
+        for i, texto in enumerate(textos_obj, 1):
+            PruebaTexto.objects.get_or_create(
+                prueba=prueba, texto=texto,
+                defaults={'orden': i, 'n_nivel1': 1, 'n_nivel2': 2, 'n_nivel3': 3},
+            )
+        prueba.estado = 'borrador'
+        prueba.save()
+    except Exception as e:
+        _set_error(prueba_pk, str(e), traceback.format_exc())
+    finally:
+        connection.close()
+
+
+def _hilo_preguntas(prueba_pk):
+    from django.db import connection
+    try:
+        prueba = Prueba.objects.get(pk=prueba_pk)
+        for pt in prueba.prueba_textos.all():
+            poblar_preguntas_prueba_texto(pt)
+
+        rubrica = validar_rubrica_prueba(prueba)
+        prueba.rubrica_ok  = rubrica['aprobado']
+        prueba.rubrica_log = rubrica
+        prueba.estado      = 'revision'
+        prueba.save()
+    except Exception as e:
+        _set_error(prueba_pk, str(e), traceback.format_exc())
+    finally:
+        connection.close()
 
 
 # ── Admin: Dashboard ──────────────────────────────────────────────
@@ -30,52 +83,14 @@ def admin_dashboard(request):
         n_sesiones=Count('sesiones', filter=Q(sesiones__completada=True))
     )
     ctx = {
-        'pruebas':    pruebas,
+        'pruebas':     pruebas,
         'asignaturas': ASIGNATURA_CHOICES,
         'cursos':      CURSOS_SIMCE,
     }
     return render(request, 'simce/admin_dashboard.html', ctx)
 
 
-# ── Admin: Generar textos (Fase 1) ────────────────────────────────
-
-def _set_error(prueba_pk, error_str, tb_str, asignatura='', curso=''):
-    """Escribe estado=error en la prueba, reseteando la conexión primero."""
-    from django.db import connection
-    connection.close()
-    try:
-        prueba = Prueba.objects.get(pk=prueba_pk)
-        prueba.titulo = f'Error: {error_str[:120]}'
-        prueba.estado = 'error'
-        prueba.rubrica_log = {
-            'error': error_str, 'traceback': tb_str,
-            'asignatura': asignatura, 'curso': curso,
-        }
-        prueba.save()
-    except Exception:
-        pass
-
-
-def _hilo_textos(prueba_pk, asignatura, curso):
-    from django.db import connection
-    try:
-        textos = generar_textos(asignatura, curso)
-        prueba = Prueba.objects.get(pk=prueba_pk)
-        for i, t in enumerate(textos, 1):
-            TextoPrueba.objects.create(
-                prueba=prueba, orden=i,
-                tipo_textual=t['tipo_textual'],
-                titulo=t['titulo'],
-                contenido=t['contenido'],
-                dificultad=t.get('dificultad', 2),
-            )
-        prueba.estado = 'revision_textos'
-        prueba.save()
-    except Exception as e:
-        _set_error(prueba_pk, str(e), traceback.format_exc(), asignatura, curso)
-    finally:
-        connection.close()
-
+# ── Admin: Generar prueba (textos + preguntas) ────────────────────
 
 @login_required
 @user_passes_test(is_staff)
@@ -84,13 +99,17 @@ def admin_generar(request):
     asignatura = request.POST.get('asignatura')
     curso      = request.POST.get('curso')
     titulo     = request.POST.get('titulo', '').strip() or None
+    try:
+        n_textos = max(1, min(8, int(request.POST.get('n_textos', 3))))
+    except (TypeError, ValueError):
+        n_textos = 3
 
     if not asignatura or not curso:
         messages.error(request, 'Selecciona asignatura y curso.')
         return redirect('simce:admin_dashboard')
 
     prueba = Prueba.objects.create(
-        titulo     = titulo or f'Textos {asignatura.title()} {curso}…',
+        titulo     = titulo or f'SIMCE {asignatura.title()} {curso} {timezone.now().year}',
         asignatura = asignatura,
         curso      = curso,
         estado     = 'generando_textos',
@@ -99,14 +118,14 @@ def admin_generar(request):
 
     threading.Thread(
         target=_hilo_textos,
-        args=(prueba.pk, asignatura, curso),
+        args=(prueba.pk, asignatura, curso, n_textos),
         daemon=True,
     ).start()
 
     return redirect('simce:prueba_generando', pk=prueba.pk)
 
 
-# ── Admin: Página de espera (sirve para ambas fases) ──────────────
+# ── Admin: Página de espera ───────────────────────────────────────
 
 @login_required
 @user_passes_test(is_staff)
@@ -121,156 +140,107 @@ def api_estado_prueba(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
     log = prueba.rubrica_log if isinstance(prueba.rubrica_log, dict) else {}
     return JsonResponse({
-        'estado':     prueba.estado,
-        'titulo':     prueba.titulo,
-        'error':      log.get('error', ''),
-        'traceback':  log.get('traceback', ''),
-        'asignatura': log.get('asignatura', prueba.asignatura),
-        'curso':      log.get('curso', prueba.curso),
+        'estado':    prueba.estado,
+        'titulo':    prueba.titulo,
+        'error':     log.get('error', ''),
+        'traceback': log.get('traceback', ''),
     })
 
 
-# ── Admin: Revisar textos (Fase 2 — antes de generar preguntas) ───
+# ── Admin: Revisar textos + configurar preguntas ──────────────────
 
 @login_required
 @user_passes_test(is_staff)
 def admin_revisar_textos(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
-    textos = prueba.textos.all()
+    prueba_textos = prueba.prueba_textos.select_related('texto').order_by('orden')
 
-    textos_con_checklist = []
-    for texto in textos:
+    items = []
+    for pt in prueba_textos:
+        texto   = pt.texto
         checklist = CHECKLIST_POR_TIPO.get(texto.tipo_textual, [])
-        textos_con_checklist.append({'texto': texto, 'checklist': checklist})
+        items.append({'pt': pt, 'texto': texto, 'checklist': checklist})
 
-    n_aprobados = textos.filter(estado_texto='aprobado').count()
+    n_aprobados = prueba_textos.filter(texto__estado='aprobado').count()
     ctx = {
-        'prueba':              prueba,
-        'textos_con_checklist': textos_con_checklist,
-        'n_aprobados':         n_aprobados,
-        'n_total':             textos.count(),
+        'prueba':      prueba,
+        'items':       items,
+        'n_aprobados': n_aprobados,
+        'n_total':     prueba_textos.count(),
     }
     return render(request, 'simce/admin_revisar_textos.html', ctx)
 
 
-# ── AJAX: Ajustar texto (largo o dificultad) ─────────────────────
+# ── AJAX: Ajustar texto de la biblioteca ─────────────────────────
 
 @login_required
 @user_passes_test(is_staff)
 @require_POST
 def api_ajustar_texto(request, pk):
-    texto  = get_object_or_404(TextoPrueba, pk=pk)
+    texto  = get_object_or_404(TextoBiblioteca, pk=pk)
     accion = request.POST.get('accion', '')
-    acciones_validas = ('aumentar_largo', 'disminuir_largo',
-                        'aumentar_dificultad', 'disminuir_dificultad')
-    if accion not in acciones_validas:
+    curso  = request.POST.get('curso', '6B')
+    if accion not in ('aumentar_largo', 'disminuir_largo',
+                      'aumentar_dificultad', 'disminuir_dificultad'):
         return JsonResponse({'error': 'accion_invalida'}, status=400)
 
     try:
-        resultado = ajustar_texto(texto, accion)
+        resultado = ajustar_texto(texto, accion, curso=curso)
         texto.titulo    = resultado['titulo']
         texto.contenido = resultado['contenido']
         texto.dificultad = resultado['dificultad']
-        texto.estado_texto = 'pendiente'
+        texto.estado     = 'pendiente'
         texto.save()
         return JsonResponse({
-            'ok':         True,
-            'titulo':     texto.titulo,
-            'contenido':  texto.contenido,
-            'char_count': texto.char_count,
-            'word_count': texto.word_count,
-            'dificultad': texto.dificultad,
+            'ok':               True,
+            'titulo':           texto.titulo,
+            'contenido':        texto.contenido,
+            'char_count':       texto.char_count,
+            'word_count':       texto.word_count,
+            'dificultad':       texto.dificultad,
             'dificultad_display': texto.get_dificultad_display(),
-            'cumple':     texto.cumple_extension(),
+            'cumple':           texto.cumple_extension(),
         })
     except Exception as e:
-        tb = traceback.format_exc()
-        return JsonResponse({'error': str(e), 'traceback': tb}, status=500)
+        return JsonResponse({'error': str(e), 'traceback': traceback.format_exc()}, status=500)
 
 
-# ── AJAX: Aprobar / rechazar texto individual ─────────────────────
+# ── AJAX: Aprobar / rechazar texto ────────────────────────────────
 
 @login_required
 @user_passes_test(is_staff)
 @require_POST
 def api_estado_texto(request, pk):
-    texto  = get_object_or_404(TextoPrueba, pk=pk)
+    texto  = get_object_or_404(TextoBiblioteca, pk=pk)
     estado = request.POST.get('estado', '')
     if estado not in ('aprobado', 'rechazado', 'pendiente'):
         return JsonResponse({'error': 'estado_invalido'}, status=400)
 
-    texto.estado_texto = estado
-    texto.save(update_fields=['estado_texto'])
+    texto.estado = estado
+    texto.save(update_fields=['estado'])
 
-    n_aprobados = texto.prueba.textos.filter(estado_texto='aprobado').count()
+    # Cuenta aprobados para la prueba si viene con prueba_pk
+    prueba_pk = request.POST.get('prueba_pk')
+    n_aprobados = None
+    n_total = None
+    if prueba_pk:
+        try:
+            prueba = Prueba.objects.get(pk=prueba_pk)
+            pts = prueba.prueba_textos.select_related('texto')
+            n_aprobados = pts.filter(texto__estado='aprobado').count()
+            n_total = pts.count()
+        except Prueba.DoesNotExist:
+            pass
+
     return JsonResponse({
         'ok':          True,
         'estado':      estado,
         'n_aprobados': n_aprobados,
-        'n_total':     texto.prueba.textos.count(),
+        'n_total':     n_total,
     })
 
 
-# ── Admin: Lanzar generación de preguntas (Fase 3) ────────────────
-
-def _hilo_preguntas(prueba_pk, textos_ids, n_nivel1, n_nivel2, n_nivel3):
-    from django.db import connection
-    try:
-        prueba = Prueba.objects.get(pk=prueba_pk)
-
-        if textos_ids:
-            textos_qs = prueba.textos.filter(pk__in=textos_ids, estado_texto='aprobado')
-        else:
-            textos_qs = prueba.textos.filter(estado_texto='aprobado')
-
-        if not textos_qs.exists():
-            raise ValueError('No hay textos aprobados para generar preguntas.')
-
-        resultado = generar_preguntas_para_prueba(
-            prueba,
-            textos_override=list(textos_qs.order_by('orden')),
-            n_nivel1=n_nivel1,
-            n_nivel2=n_nivel2,
-            n_nivel3=n_nivel3,
-        )
-
-        rubrica = resultado['rubrica']
-        prueba.rubrica_ok  = rubrica['aprobado']
-        prueba.rubrica_log = rubrica
-        prueba.estado      = 'revision'
-        prueba.save()
-
-        orden_global = 1
-        for t_data in resultado['textos']:
-            texto_obj = t_data['texto_obj']
-            for p_data in t_data['preguntas']:
-                pregunta = Pregunta.objects.create(
-                    texto=texto_obj, orden=orden_global,
-                    enunciado=p_data['enunciado'],
-                    nivel=p_data['nivel'],
-                    habilidad=p_data['habilidad'],
-                    habilidad_justificacion=p_data.get('habilidad_justificacion', ''),
-                    nivel_justificacion=p_data.get('nivel_justificacion', ''),
-                    alternativa_correcta=p_data['alternativa_correcta'],
-                    pista_1=p_data.get('pista_1', ''),
-                    pista_2=p_data.get('pista_2', ''),
-                )
-                for a_data in p_data['alternativas']:
-                    Alternativa.objects.create(
-                        pregunta=pregunta, letra=a_data['letra'],
-                        texto=a_data['texto'], es_correcta=a_data['es_correcta'],
-                        justificacion=a_data.get('justificacion', ''),
-                    )
-                orden_global += 1
-
-        prueba.titulo = prueba.titulo.replace('Textos ', '')
-        prueba.save(update_fields=['titulo'])
-
-    except Exception as e:
-        _set_error(prueba_pk, str(e), traceback.format_exc())
-    finally:
-        connection.close()
-
+# ── Admin: Lanzar generación de preguntas ─────────────────────────
 
 @login_required
 @user_passes_test(is_staff)
@@ -278,39 +248,44 @@ def _hilo_preguntas(prueba_pk, textos_ids, n_nivel1, n_nivel2, n_nivel3):
 def admin_lanzar_preguntas(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
 
-    textos_ids = request.POST.getlist('textos_ids')
-    textos_ids = [int(x) for x in textos_ids if x.isdigit()]
+    # Actualizar configuración per-texto desde el form
+    for pt in prueba.prueba_textos.all():
+        try:
+            n1 = max(0, int(request.POST.get(f'n1_{pt.pk}', pt.n_nivel1)))
+            n2 = max(0, int(request.POST.get(f'n2_{pt.pk}', pt.n_nivel2)))
+            n3 = max(0, int(request.POST.get(f'n3_{pt.pk}', pt.n_nivel3)))
+        except (ValueError, TypeError):
+            n1, n2, n3 = pt.n_nivel1, pt.n_nivel2, pt.n_nivel3
+        PruebaTexto.objects.filter(pk=pt.pk).update(n_nivel1=n1, n_nivel2=n2, n_nivel3=n3)
 
-    try:
-        n_nivel1 = max(0, int(request.POST.get('n_nivel1', 5)))
-        n_nivel2 = max(0, int(request.POST.get('n_nivel2', 5)))
-        n_nivel3 = max(0, int(request.POST.get('n_nivel3', 20)))
-    except (ValueError, TypeError):
-        n_nivel1, n_nivel2, n_nivel3 = 5, 5, 20
+    # Limpiar preguntas existentes
+    Pregunta.objects.filter(prueba_texto__prueba=prueba).delete()
 
     prueba.estado = 'generando_preguntas'
     prueba.save(update_fields=['estado'])
 
     threading.Thread(
         target=_hilo_preguntas,
-        args=(prueba.pk, textos_ids, n_nivel1, n_nivel2, n_nivel3),
+        args=(prueba.pk,),
         daemon=True,
     ).start()
 
     return redirect('simce:prueba_generando', pk=prueba.pk)
 
 
-# ── Admin: Revisar prueba ─────────────────────────────────────────
+# ── Admin: Revisar prueba (preguntas) ─────────────────────────────
 
 @login_required
 @user_passes_test(is_staff)
 def admin_revisar(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
-    textos = prueba.textos.prefetch_related('preguntas__alternativas').all()
+    prueba_textos = prueba.prueba_textos.select_related('texto').prefetch_related(
+        'preguntas__alternativas'
+    ).order_by('orden')
     ctx = {
-        'prueba': prueba,
-        'textos': textos,
-        'rubrica': prueba.rubrica_log,
+        'prueba':       prueba,
+        'prueba_textos': prueba_textos,
+        'rubrica':      prueba.rubrica_log,
         'tipos_textuales': TIPO_TEXTUAL_CHOICES,
     }
     return render(request, 'simce/admin_revisar.html', ctx)
@@ -321,11 +296,22 @@ def admin_revisar(request, pk):
 @require_POST
 def admin_aprobar(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
-    prueba.estado      = 'aprobada'
+    prueba.estado       = 'aprobada'
     prueba.aprobada_por = request.user
     prueba.aprobada_en  = timezone.now()
     prueba.save()
     messages.success(request, f'Prueba aprobada: {prueba.titulo}')
+    return redirect('simce:admin_dashboard')
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def admin_publicar(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+    prueba.estado = 'publicada'
+    prueba.save()
+    messages.success(request, 'Prueba publicada. Los estudiantes ya pueden acceder.')
     return redirect('simce:admin_dashboard')
 
 
@@ -340,15 +326,154 @@ def admin_eliminar(request, pk):
     return redirect('simce:admin_dashboard')
 
 
+# ── Biblioteca de Textos (CRUD independiente) ─────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+def biblioteca_list(request):
+    asignatura_f = request.GET.get('asignatura', '')
+    textos = TextoBiblioteca.objects.all()
+    if asignatura_f:
+        textos = textos.filter(asignatura=asignatura_f)
+
+    ctx = {
+        'textos':      textos.annotate(n_banco=Count('preguntas_banco')),
+        'asignaturas': ASIGNATURA_CHOICES,
+        'cursos':      CURSOS_SIMCE,
+        'filtro_asignatura': asignatura_f,
+    }
+    return render(request, 'simce/biblioteca_list.html', ctx)
+
+
 @login_required
 @user_passes_test(is_staff)
 @require_POST
-def admin_publicar(request, pk):
-    prueba = get_object_or_404(Prueba, pk=pk)
-    prueba.estado = 'publicada'
-    prueba.save()
-    messages.success(request, f'Prueba publicada. Los estudiantes ya pueden acceder.')
-    return redirect('simce:admin_dashboard')
+def biblioteca_generar(request):
+    asignatura = request.POST.get('asignatura')
+    curso      = request.POST.get('curso')
+    try:
+        n_textos = max(1, min(8, int(request.POST.get('n_textos', 3))))
+    except (TypeError, ValueError):
+        n_textos = 3
+    if not asignatura or not curso:
+        messages.error(request, 'Selecciona asignatura y curso.')
+        return redirect('simce:biblioteca_list')
+
+    def _hilo(asig, cur, n):
+        from django.db import connection
+        try:
+            generar_lote_textos_biblioteca(asig, cur, n=n)
+        except Exception as e:
+            print(f'[biblioteca_generar] error: {e}')
+        finally:
+            connection.close()
+
+    threading.Thread(target=_hilo, args=(asignatura, curso, n_textos), daemon=True).start()
+    messages.success(request, f'Generando {n_textos} textos para {asignatura}/{curso}. Aparecerán en esta página en breve.')
+    return redirect('simce:biblioteca_list')
+
+
+@login_required
+@user_passes_test(is_staff)
+def biblioteca_texto_detalle(request, pk):
+    texto = get_object_or_404(TextoBiblioteca, pk=pk)
+    preguntas_banco = texto.preguntas_banco.prefetch_related('alternativas').order_by('nivel', 'creada_en')
+    checklist = CHECKLIST_POR_TIPO.get(texto.tipo_textual, [])
+    ctx = {
+        'texto':           texto,
+        'preguntas_banco': preguntas_banco,
+        'checklist':       checklist,
+        'cursos':          CURSOS_SIMCE,
+    }
+    return render(request, 'simce/biblioteca_texto_detalle.html', ctx)
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def api_generar_preguntas_banco(request, pk):
+    texto = get_object_or_404(TextoBiblioteca, pk=pk)
+    try:
+        n1 = max(0, int(request.POST.get('n_nivel1', 1)))
+        n2 = max(0, int(request.POST.get('n_nivel2', 2)))
+        n3 = max(0, int(request.POST.get('n_nivel3', 3)))
+    except (TypeError, ValueError):
+        n1, n2, n3 = 1, 2, 3
+
+    try:
+        creadas = generar_preguntas_banco(texto, n1, n2, n3)
+        return JsonResponse({'ok': True, 'n_creadas': len(creadas)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def api_pregunta_banco_estado(request, pk):
+    pregunta = get_object_or_404(PreguntaBanco, pk=pk)
+    estado   = request.POST.get('estado', '')
+    if estado not in ('aprobado', 'rechazado', 'pendiente'):
+        return JsonResponse({'error': 'estado_invalido'}, status=400)
+    pregunta.estado = estado
+    pregunta.save(update_fields=['estado'])
+    return JsonResponse({'ok': True, 'estado': estado})
+
+
+# ── Admin: Crear test desde biblioteca ───────────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+def admin_crear_test(request):
+    if request.method == 'GET':
+        asignatura_f = request.GET.get('asignatura', '')
+        textos_aprobados = TextoBiblioteca.objects.filter(estado='aprobado')
+        if asignatura_f:
+            textos_aprobados = textos_aprobados.filter(asignatura=asignatura_f)
+        ctx = {
+            'textos':      textos_aprobados.annotate(n_banco_aprobado=Count(
+                'preguntas_banco', filter=Q(preguntas_banco__estado='aprobado')
+            )),
+            'asignaturas': ASIGNATURA_CHOICES,
+            'cursos':      CURSOS_SIMCE,
+            'filtro_asignatura': asignatura_f,
+        }
+        return render(request, 'simce/admin_crear_test.html', ctx)
+
+    # POST: crear prueba con textos seleccionados
+    asignatura = request.POST.get('asignatura')
+    curso      = request.POST.get('curso')
+    titulo     = request.POST.get('titulo', '').strip()
+    textos_ids = [int(x) for x in request.POST.getlist('textos_ids') if x.isdigit()]
+
+    if not asignatura or not curso or not textos_ids:
+        messages.error(request, 'Selecciona asignatura, curso y al menos un texto.')
+        return redirect('simce:admin_crear_test')
+
+    prueba = Prueba.objects.create(
+        titulo     = titulo or f'SIMCE {asignatura.title()} {curso} {timezone.now().year}',
+        asignatura = asignatura,
+        curso      = curso,
+        estado     = 'generando_preguntas',
+        creada_por = request.user,
+    )
+
+    textos_qs = TextoBiblioteca.objects.filter(pk__in=textos_ids, asignatura=asignatura)
+    for i, texto in enumerate(textos_qs, 1):
+        key = f'texto_{texto.pk}'
+        try:
+            n1 = max(0, int(request.POST.get(f'{key}_n1', 1)))
+            n2 = max(0, int(request.POST.get(f'{key}_n2', 2)))
+            n3 = max(0, int(request.POST.get(f'{key}_n3', 3)))
+        except (TypeError, ValueError):
+            n1, n2, n3 = 1, 2, 3
+        PruebaTexto.objects.create(
+            prueba=prueba, texto=texto, orden=i,
+            n_nivel1=n1, n_nivel2=n2, n_nivel3=n3,
+        )
+
+    threading.Thread(target=_hilo_preguntas, args=(prueba.pk,), daemon=True).start()
+    return redirect('simce:prueba_generando', pk=prueba.pk)
 
 
 # ── Estudiante: Identificación ────────────────────────────────────
@@ -359,21 +484,19 @@ def prueba_identificacion(request, pk, modo='simce'):
         modo = 'simce'
 
     if request.method == 'POST':
-        nombre      = request.POST.get('nombre', '').strip()
-        rut         = request.POST.get('rut', '').strip()
-        curso       = request.POST.get('curso')
-        letra       = request.POST.get('letra')
-        estab       = request.POST.get('establecimiento', '').strip()
-        rbd         = request.POST.get('rbd', '').strip()
-
+        nombre = request.POST.get('nombre', '').strip()
+        rut    = request.POST.get('rut', '').strip()
+        curso  = request.POST.get('curso')
+        letra  = request.POST.get('letra')
+        estab  = request.POST.get('establecimiento', '').strip()
+        rbd    = request.POST.get('rbd', '').strip()
         if not all([nombre, rut, curso, letra, estab]):
             messages.error(request, 'Completa todos los campos obligatorios.')
         else:
             sesion = SesionEstudiante.objects.create(
                 prueba=prueba, nombre=nombre, rut=rut,
                 curso=curso, letra_curso=letra,
-                establecimiento=estab, rbd=rbd,
-                modo=modo,
+                establecimiento=estab, rbd=rbd, modo=modo,
             )
             return redirect('simce:prueba_rendir', sesion_pk=sesion.pk)
 
@@ -386,9 +509,10 @@ def prueba_identificacion(request, pk, modo='simce'):
 def prueba_rendir(request, sesion_pk):
     sesion = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
     prueba = sesion.prueba
-    textos = prueba.textos.prefetch_related('preguntas__alternativas').all()
+    prueba_textos = prueba.prueba_textos.select_related('texto').prefetch_related(
+        'preguntas__alternativas'
+    ).order_by('orden')
 
-    # Preguntas ya respondidas (para restaurar estado en caso de recarga)
     respondidas = {
         r.pregunta_id: {
             'puntaje': r.puntaje_obtenido,
@@ -399,25 +523,26 @@ def prueba_rendir(request, sesion_pk):
         for r in sesion.respuestas.select_related('alternativa_elegida').all()
     }
 
+    total_preguntas = Pregunta.objects.filter(prueba_texto__prueba=prueba).count()
+
     ctx = {
-        'sesion': sesion,
-        'prueba': prueba,
-        'textos': textos,
+        'sesion':         sesion,
+        'prueba':         prueba,
+        'prueba_textos':  prueba_textos,
         'respondidas_json': json.dumps(respondidas),
-        'total_preguntas': Pregunta.objects.filter(texto__prueba=prueba).count(),
-        'modo': sesion.modo,
+        'total_preguntas': total_preguntas,
+        'modo':           sesion.modo,
     }
     return render(request, 'simce/prueba_rendir.html', ctx)
 
 
-# ── AJAX: Verificar respuesta individual ─────────────────────────
+# ── AJAX: Verificar respuesta ─────────────────────────────────────
 
 @require_POST
 def verificar_respuesta(request, sesion_pk, pregunta_pk):
     sesion   = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
-    pregunta = get_object_or_404(Pregunta, pk=pregunta_pk, texto__prueba=sesion.prueba)
+    pregunta = get_object_or_404(Pregunta, pk=pregunta_pk, prueba_texto__prueba=sesion.prueba)
 
-    # No permitir reverificar una pregunta ya resuelta
     if sesion.respuestas.filter(pregunta=pregunta).exists():
         return JsonResponse({'error': 'ya_respondida'}, status=400)
 
@@ -425,15 +550,12 @@ def verificar_respuesta(request, sesion_pk, pregunta_pk):
     if letra not in ['A', 'B', 'C', 'D']:
         return JsonResponse({'error': 'letra_invalida'}, status=400)
 
-    # Obtener/inicializar contador de intentos desde sesión Django
-    sesion_key = f'simce_{sesion_pk}_{pregunta_pk}_intentos'
+    sesion_key    = f'simce_{sesion_pk}_{pregunta_pk}_intentos'
     intento_actual = request.session.get(sesion_key, 0) + 1
     request.session[sesion_key] = intento_actual
 
     alternativa = pregunta.alternativas.filter(letra=letra).first()
     es_correcta = alternativa and alternativa.es_correcta
-
-    # Calcular puntaje según intento
     puntaje_map = {1: 4, 2: 3, 3: 2}
 
     if es_correcta:
@@ -441,77 +563,59 @@ def verificar_respuesta(request, sesion_pk, pregunta_pk):
         RespuestaEstudiante.objects.create(
             sesion=sesion, pregunta=pregunta,
             alternativa_elegida=alternativa,
-            intentos=intento_actual,
-            puntaje_obtenido=puntaje,
+            intentos=intento_actual, puntaje_obtenido=puntaje,
         )
         del request.session[sesion_key]
-        return JsonResponse({
-            'resultado': 'correcto',
-            'puntaje': puntaje,
-            'intentos': intento_actual,
-        })
+        return JsonResponse({'resultado': 'correcto', 'puntaje': puntaje, 'intentos': intento_actual})
 
-    # Respuesta incorrecta
     if intento_actual >= 3:
-        # Tercer intento fallido: guardar con puntaje 0
         correcta_alt = pregunta.alternativas.filter(es_correcta=True).first()
         RespuestaEstudiante.objects.create(
             sesion=sesion, pregunta=pregunta,
             alternativa_elegida=alternativa,
-            intentos=3,
-            puntaje_obtenido=0,
+            intentos=3, puntaje_obtenido=0,
         )
         del request.session[sesion_key]
         return JsonResponse({
-            'resultado': 'fallido',
-            'puntaje': 0,
-            'intentos': 3,
+            'resultado': 'fallido', 'puntaje': 0, 'intentos': 3,
             'letra_correcta': correcta_alt.letra if correcta_alt else pregunta.alternativa_correcta,
         })
 
-    # Todavía hay intentos: devolver pista
     pista = pregunta.pista_1 if intento_actual == 1 else pregunta.pista_2
     return JsonResponse({
         'resultado': 'incorrecto',
         'intento': intento_actual,
-        'pista': pista or '💡 Vuelve a leer el texto con atención antes de intentarlo de nuevo.',
+        'pista': pista or '💡 Vuelve a leer el texto con atención.',
         'intentos_restantes': 3 - intento_actual,
     })
 
 
-# ── Estudiante: Finalizar prueba ──────────────────────────────────
+# ── Estudiante: Finalizar ─────────────────────────────────────────
 
 @require_POST
 def finalizar_prueba(request, sesion_pk):
-    sesion  = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
-    prueba  = sesion.prueba
-    preguntas = Pregunta.objects.filter(texto__prueba=prueba)
+    sesion    = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
+    preguntas = Pregunta.objects.filter(prueba_texto__prueba=sesion.prueba)
 
-    # Crear respuesta vacía para preguntas sin contestar (puntaje 0)
     respondidas_ids = set(sesion.respuestas.values_list('pregunta_id', flat=True))
     for p in preguntas:
         if p.pk not in respondidas_ids:
             RespuestaEstudiante.objects.create(
                 sesion=sesion, pregunta=p,
-                alternativa_elegida=None,
-                intentos=0,
-                puntaje_obtenido=0,
+                alternativa_elegida=None, intentos=0, puntaje_obtenido=0,
             )
 
     sesion.calcular_puntajes()
     return JsonResponse({'redirect': f'/simce/resultado/{sesion.pk}/'}, status=200)
 
 
-# ── Estudiante: Entregar modo SIMCE (submit tradicional) ─────────
-
 @require_POST
 def entregar_simce(request, sesion_pk):
-    sesion   = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
-    prueba   = sesion.prueba
-    preguntas = Pregunta.objects.filter(texto__prueba=prueba)
+    sesion    = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=False)
+    preguntas = Pregunta.objects.filter(prueba_texto__prueba=sesion.prueba)
 
     for pregunta in preguntas:
-        letra = request.POST.get(f'p_{pregunta.pk}')
+        letra       = request.POST.get(f'p_{pregunta.pk}')
         alternativa = pregunta.alternativas.filter(letra=letra).first() if letra else None
         es_correcta = alternativa.es_correcta if alternativa else False
         RespuestaEstudiante.objects.update_or_create(
@@ -530,9 +634,9 @@ def entregar_simce(request, sesion_pk):
 # ── Estudiante: Resultado ─────────────────────────────────────────
 
 def prueba_resultado(request, sesion_pk):
-    sesion = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=True)
+    sesion     = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=True)
     respuestas = sesion.respuestas.select_related(
-        'pregunta', 'pregunta__texto', 'alternativa_elegida'
+        'pregunta', 'pregunta__prueba_texto__texto', 'alternativa_elegida'
     ).order_by('pregunta__orden')
     ctx = {'sesion': sesion, 'respuestas': respuestas}
     return render(request, 'simce/prueba_resultado.html', ctx)
@@ -544,12 +648,11 @@ def prueba_resultado(request, sesion_pk):
 @user_passes_test(is_staff)
 @require_http_methods(['GET', 'POST', 'DELETE'])
 def api_texto(request, pk):
-    texto = get_object_or_404(TextoPrueba, pk=pk)
+    texto = get_object_or_404(TextoBiblioteca, pk=pk)
 
     if request.method == 'GET':
         return JsonResponse({
-            'pk': texto.pk,
-            'titulo': texto.titulo,
+            'pk': texto.pk, 'titulo': texto.titulo,
             'tipo_textual': texto.tipo_textual,
             'contenido': texto.contenido,
             'char_count': texto.char_count,
@@ -561,19 +664,17 @@ def api_texto(request, pk):
         texto.contenido    = request.POST.get('contenido', texto.contenido).strip()
         texto.save()
         return JsonResponse({
-            'ok': True,
-            'titulo': texto.titulo,
+            'ok': True, 'titulo': texto.titulo,
             'tipo_textual_display': texto.get_tipo_textual_display(),
             'char_count': texto.char_count,
             'cumple': texto.cumple_extension(),
         })
 
-    # DELETE — solo si la prueba está en revisión
-    if texto.prueba.estado != 'revision':
-        return JsonResponse({'error': 'solo_en_revision'}, status=403)
-    prueba_pk = texto.prueba.pk
+    # DELETE — solo si no está en ninguna prueba publicada
+    if texto.usos_en_pruebas.filter(prueba__estado='publicada').exists():
+        return JsonResponse({'error': 'texto_en_prueba_publicada'}, status=403)
     texto.delete()
-    return JsonResponse({'ok': True, 'redirect': f'/simce/revisar/{prueba_pk}/'})
+    return JsonResponse({'ok': True})
 
 
 @login_required
@@ -586,13 +687,10 @@ def api_pregunta(request, pk):
         alts = {a.letra: {'texto': a.texto, 'justificacion': a.justificacion}
                 for a in pregunta.alternativas.all()}
         return JsonResponse({
-            'pk': pregunta.pk,
-            'enunciado': pregunta.enunciado,
-            'nivel': pregunta.nivel,
-            'habilidad': pregunta.habilidad,
+            'pk': pregunta.pk, 'enunciado': pregunta.enunciado,
+            'nivel': pregunta.nivel, 'habilidad': pregunta.habilidad,
             'alternativa_correcta': pregunta.alternativa_correcta,
-            'pista_1': pregunta.pista_1,
-            'pista_2': pregunta.pista_2,
+            'pista_1': pregunta.pista_1, 'pista_2': pregunta.pista_2,
             'alternativas': alts,
         })
 
@@ -613,7 +711,6 @@ def api_pregunta(request, pk):
                     alt.texto      = texto_alt
                     alt.es_correcta = (letra == pregunta.alternativa_correcta)
                     alt.save()
-        # Sincronizar es_correcta para todas las alternativas
         pregunta.alternativas.exclude(letra=pregunta.alternativa_correcta).update(es_correcta=False)
         pregunta.alternativas.filter(letra=pregunta.alternativa_correcta).update(es_correcta=True)
 
@@ -622,9 +719,9 @@ def api_pregunta(request, pk):
                              'alternativa_correcta': pregunta.alternativa_correcta})
 
     # DELETE
-    if pregunta.texto.prueba.estado != 'revision':
+    if pregunta.prueba_texto.prueba.estado != 'revision':
         return JsonResponse({'error': 'solo_en_revision'}, status=403)
-    if pregunta.texto.preguntas.count() <= 1:
+    if pregunta.prueba_texto.preguntas.count() <= 1:
         return JsonResponse({'error': 'minimo_una_pregunta'}, status=400)
     pregunta.delete()
     return JsonResponse({'ok': True})
@@ -640,18 +737,15 @@ def api_sesion(request, pk):
     return JsonResponse({'ok': True, 'prueba_pk': prueba_pk})
 
 
-# ── Reportes UTP ──────────────────────────────────────────────────
+# ── Reportes ──────────────────────────────────────────────────────
 
 @login_required
 def reportes_dashboard(request):
-    # UTP ve su establecimiento; staff ve todo
     pruebas = Prueba.objects.filter(estado__in=['publicada', 'cerrada']).annotate(
         n_sesiones=Count('sesiones', filter=Q(sesiones__completada=True)),
         promedio_logro=Avg('sesiones__porcentaje_logro', filter=Q(sesiones__completada=True)),
         promedio_simce=Avg('sesiones__puntaje_simce', filter=Q(sesiones__completada=True)),
     )
-
-    # Filtros
     asignatura_f = request.GET.get('asignatura', '')
     curso_f      = request.GET.get('curso', '')
     if asignatura_f:
@@ -660,9 +754,7 @@ def reportes_dashboard(request):
         pruebas = pruebas.filter(curso=curso_f)
 
     ctx = {
-        'pruebas': pruebas,
-        'asignaturas': ASIGNATURA_CHOICES,
-        'cursos': CURSO_CHOICES,
+        'pruebas': pruebas, 'asignaturas': ASIGNATURA_CHOICES, 'cursos': CURSO_CHOICES,
         'filtros': {'asignatura': asignatura_f, 'curso': curso_f},
     }
     return render(request, 'simce/reportes_dashboard.html', ctx)
@@ -670,42 +762,32 @@ def reportes_dashboard(request):
 
 @login_required
 def reporte_prueba(request, pk):
-    prueba = get_object_or_404(Prueba, pk=pk)
+    prueba   = get_object_or_404(Prueba, pk=pk)
     sesiones = SesionEstudiante.objects.filter(prueba=prueba, completada=True)
 
-    # Filtros
-    estab_f  = request.GET.get('establecimiento', '')
-    curso_f  = request.GET.get('curso', '')
-    letra_f  = request.GET.get('letra', '')
-    if estab_f:  sesiones = sesiones.filter(establecimiento=estab_f)
-    if curso_f:  sesiones = sesiones.filter(curso=curso_f)
-    if letra_f:  sesiones = sesiones.filter(letra_curso=letra_f)
+    estab_f = request.GET.get('establecimiento', '')
+    curso_f = request.GET.get('curso', '')
+    letra_f = request.GET.get('letra', '')
+    if estab_f: sesiones = sesiones.filter(establecimiento=estab_f)
+    if curso_f: sesiones = sesiones.filter(curso=curso_f)
+    if letra_f: sesiones = sesiones.filter(letra_curso=letra_f)
 
-    # Análisis por pregunta
-    preguntas = Pregunta.objects.filter(texto__prueba=prueba).order_by('orden')
-    analisis_preguntas = []
+    preguntas = Pregunta.objects.filter(prueba_texto__prueba=prueba).order_by('orden')
+    analisis  = []
     for p in preguntas:
-        respuestas_p = RespuestaEstudiante.objects.filter(
-            sesion__in=sesiones, pregunta=p
-        )
-        total = respuestas_p.count()
-        correctas = respuestas_p.filter(alternativa_elegida__es_correcta=True).count()
-        dist = {l: respuestas_p.filter(alternativa_elegida__letra=l).count() for l in 'ABCD'}
-        analisis_preguntas.append({
-            'pregunta': p,
-            'total': total,
-            'correctas': correctas,
+        resp_p = RespuestaEstudiante.objects.filter(sesion__in=sesiones, pregunta=p)
+        total  = resp_p.count()
+        correctas = resp_p.filter(alternativa_elegida__es_correcta=True).count()
+        dist = {l: resp_p.filter(alternativa_elegida__letra=l).count() for l in 'ABCD'}
+        analisis.append({
+            'pregunta': p, 'total': total, 'correctas': correctas,
             'pct_logro': round(correctas / total * 100, 1) if total else 0,
             'dist': dist,
         })
 
-    establecimientos = sesiones.values_list('establecimiento', flat=True).distinct()
-
     ctx = {
-        'prueba': prueba,
-        'sesiones': sesiones,
-        'analisis': analisis_preguntas,
-        'establecimientos': establecimientos,
+        'prueba': prueba, 'sesiones': sesiones, 'analisis': analisis,
+        'establecimientos': sesiones.values_list('establecimiento', flat=True).distinct(),
         'cursos': CURSO_CHOICES,
         'filtros': {'establecimiento': estab_f, 'curso': curso_f, 'letra': letra_f},
         'promedio_logro': sesiones.aggregate(p=Avg('porcentaje_logro'))['p'] or 0,
@@ -716,11 +798,10 @@ def reporte_prueba(request, pk):
 
 @login_required
 def reporte_estudiante(request, sesion_pk):
-    sesion = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=True)
+    sesion     = get_object_or_404(SesionEstudiante, pk=sesion_pk, completada=True)
     respuestas = sesion.respuestas.select_related(
-        'pregunta', 'pregunta__texto',
-        'alternativa_elegida', 'pregunta__texto'
+        'pregunta', 'pregunta__prueba_texto__texto',
+        'alternativa_elegida',
     ).prefetch_related('pregunta__alternativas').order_by('pregunta__orden')
-
     ctx = {'sesion': sesion, 'respuestas': respuestas}
     return render(request, 'simce/reporte_estudiante.html', ctx)

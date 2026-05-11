@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}{{ texto.titulo }} — Biblioteca SIMCE{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:20px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-pendiente { background:#f0f0f0; color:#888; }
+.badge-aprobado  { background:#d4edda; color:#155724; }
+.badge-rechazado { background:#f8d7da; color:#721c24; }
+.badge-dif-1 { background:#d1ecf1; color:#0c5460; }
+.badge-dif-2 { background:#fff3cd; color:#856404; }
+.badge-dif-3 { background:#f8d7da; color:#721c24; }
+.badge-nivel { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+.nivel-1 { background:#d1ecf1; color:#0c5460; }
+.nivel-2 { background:#fff3cd; color:#856404; }
+.nivel-3 { background:#f8d7da; color:#721c24; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline  { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-sm { padding:5px 14px; font-size:11px; border-radius:20px; border:none; cursor:pointer; font-weight:600; }
+.btn-aprobar  { background:#d4edda; color:#155724; }
+.btn-rechazar { background:#f8d7da; color:#721c24; }
+.btn-ajuste   { background:#e8f0fe; color:var(--accent); }
+.texto-body { font-size:13px; line-height:1.85; white-space:pre-wrap; background:#f9f9f9; border-radius:10px; padding:20px; max-height:400px; overflow-y:auto; }
+.alt-row { padding:6px 10px; border-radius:6px; margin-top:4px; font-size:12px; }
+.alt-correct { background:#d4edda; }
+.checklist-item { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:1px solid #f5f5f5; font-size:12px; }
+.checklist-item:last-child { border-bottom:none; }
+</style>
+
+<div style="max-width:900px; margin:0 auto; padding-bottom:60px;">
+  <div style="margin-bottom:24px;">
+    <a href="{% url 'simce:biblioteca_list' %}" style="color:#888; font-size:12px; text-decoration:none;">← Biblioteca</a>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-top:8px;">
+      <div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+          <span class="badge badge-{{ texto.estado }}" id="badge-estado">{{ texto.get_estado_display }}</span>
+          <span class="badge badge-dif-{{ texto.dificultad }}">{{ texto.get_dificultad_display }}</span>
+          <span style="font-size:12px; color:#888;">{{ texto.get_asignatura_display }} · {{ texto.get_tipo_textual_display }}</span>
+        </div>
+        <h2 style="margin:0; font-size:20px;">{{ texto.titulo }}</h2>
+        <p style="color:#888; margin:4px 0 0; font-size:12px;">
+          {{ texto.word_count }} palabras · {{ texto.char_count }} caracteres
+          {% if texto.cumple_extension %}<span style="color:#155724;">✓</span>{% else %}<span style="color:#dc3545;">⚠ extensión insuficiente</span>{% endif %}
+        </p>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button class="btn-sm btn-aprobar" onclick="cambiarEstado('aprobado')">✓ Aprobar texto</button>
+        <button class="btn-sm btn-rechazar" onclick="cambiarEstado('rechazado')">✗ Rechazar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botones de ajuste -->
+  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px;">
+    <button class="btn-sm btn-ajuste" onclick="ajustar('aumentar_largo')">⬆ Aumentar largo</button>
+    <button class="btn-sm btn-ajuste" onclick="ajustar('disminuir_largo')">⬇ Disminuir largo</button>
+    <button class="btn-sm btn-ajuste" onclick="ajustar('aumentar_dificultad')">🔥 Subir dificultad</button>
+    <button class="btn-sm btn-ajuste" onclick="ajustar('disminuir_dificultad')">💧 Bajar dificultad</button>
+  </div>
+  <div id="ajuste-loading" style="display:none; font-size:12px; color:#856404; padding:8px 0;">⏳ La IA está ajustando el texto, espera…</div>
+
+  <!-- Contenido del texto -->
+  <div class="card">
+    <div class="texto-body" id="texto-contenido">{{ texto.contenido }}</div>
+  </div>
+
+  <!-- Checklist MINEDUC -->
+  {% if checklist %}
+  <div class="card">
+    <h4 style="margin:0 0 12px; font-size:14px;">📋 Checklist MINEDUC — {{ texto.get_tipo_textual_display }}</h4>
+    {% for item in checklist %}
+    <div class="checklist-item">
+      <input type="checkbox" id="chk-{{ item.id }}">
+      <label for="chk-{{ item.id }}">{{ item.texto }}</label>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Banco de preguntas -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <h4 style="margin:0; font-size:15px;">Banco de preguntas ({{ preguntas_banco.count }})</h4>
+      <button class="btn-primary" style="font-size:12px; padding:7px 16px;" onclick="abrirModalBanco()">+ Generar preguntas con IA</button>
+    </div>
+
+    {% if not preguntas_banco %}
+    <p style="color:#aaa; font-size:13px; text-align:center; padding:20px 0;">No hay preguntas en el banco para este texto.</p>
+    {% endif %}
+
+    {% for pregunta in preguntas_banco %}
+    <div style="border:1px solid #f0f0f0; border-radius:10px; padding:14px; margin-bottom:10px;" id="pregunta-banco-{{ pregunta.pk }}">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:500; line-height:1.4;">{{ pregunta.enunciado }}</div>
+        <div style="flex-shrink:0; display:flex; gap:6px; align-items:center;">
+          <span class="badge-nivel nivel-{{ pregunta.nivel }}">{{ pregunta.nivel_estrellas }}</span>
+          <span class="badge badge-{{ pregunta.estado }}" id="badge-p-{{ pregunta.pk }}">{{ pregunta.get_estado_display }}</span>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#888; margin-bottom:8px;">{{ pregunta.habilidad }}</div>
+      {% for alt in pregunta.alternativas.all %}
+      <div class="alt-row {% if alt.es_correcta %}alt-correct{% endif %}">
+        <strong>{{ alt.letra }}.</strong> {{ alt.texto }}
+      </div>
+      {% endfor %}
+      <div style="margin-top:10px; display:flex; gap:6px;">
+        <button class="btn-sm btn-aprobar" onclick="estadoPregunta({{ pregunta.pk }}, 'aprobado')">✓ Aprobar</button>
+        <button class="btn-sm btn-rechazar" onclick="estadoPregunta({{ pregunta.pk }}, 'rechazado')">✗ Rechazar</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal generar preguntas banco -->
+<div id="modal-banco" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:28px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 20px; font-size:16px;">Generar preguntas para el banco</h3>
+    <p style="font-size:12px; color:#888; margin:0 0 16px;">Las preguntas quedarán como "Pendiente" para que las revises.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; align-items:center;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge-nivel nivel-1">⭐ Inicial</span>
+        <input type="number" id="bn1" value="1" min="0" max="10" style="width:50px; padding:6px 8px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge-nivel nivel-2">⭐⭐ Intermedio</span>
+        <input type="number" id="bn2" value="2" min="0" max="10" style="width:50px; padding:6px 8px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge-nivel nivel-3">⭐⭐⭐ Avanzado</span>
+        <input type="number" id="bn3" value="3" min="0" max="10" style="width:50px; padding:6px 8px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px;">
+      </div>
+    </div>
+    <p style="font-size:11px; color:#aaa; margin:0 0 20px;">⏱ La generación puede tardar 30-60 segundos.</p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary" id="btn-gen-banco" onclick="generarPreguntas()">Generar con IA</button>
+      <button class="btn-outline" onclick="document.getElementById('modal-banco').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF    = "{{ csrf_token }}";
+const TEXTO_PK = {{ texto.pk }};
+const CURSO   = "{% for val, label in cursos %}{{ val }}{% endfor %}".split('').slice(0,2).join('') || '6B';
+
+const MENSAJES_AJUSTE = {
+  'aumentar_largo':      'Ampliando el texto…',
+  'disminuir_largo':     'Reduciendo el largo…',
+  'aumentar_dificultad': 'Aumentando la dificultad…',
+  'disminuir_dificultad':'Simplificando el texto…',
+};
+
+function ajustar(accion) {
+  document.getElementById('ajuste-loading').style.display = 'block';
+  document.getElementById('ajuste-loading').textContent = '⏳ ' + (MENSAJES_AJUSTE[accion] || 'Ajustando…') + ' Espera.';
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('accion', accion);
+  form.append('curso', '6B');
+
+  fetch(`/simce/api/ajustar/${TEXTO_PK}/`, { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('ajuste-loading').style.display = 'none';
+      if (!d.ok) { alert('Error: ' + (d.error || 'desconocido')); return; }
+      document.getElementById('texto-contenido').textContent = d.contenido;
+    })
+    .catch(e => { document.getElementById('ajuste-loading').style.display = 'none'; alert('Error de red'); });
+}
+
+function cambiarEstado(estado) {
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('estado', estado);
+  fetch(`/simce/api/estado-texto/${TEXTO_PK}/`, { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const badge = document.getElementById('badge-estado');
+      badge.className = `badge badge-${estado}`;
+      const labels = { aprobado:'Aprobado', rechazado:'Rechazado', pendiente:'Pendiente' };
+      badge.textContent = labels[estado] || estado;
+    });
+}
+
+function estadoPregunta(pk, estado) {
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('estado', estado);
+  fetch(`/simce/api/pregunta-banco-estado/${pk}/`, { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const badge = document.getElementById(`badge-p-${pk}`);
+      if (badge) {
+        badge.className = `badge badge-${estado}`;
+        const labels = { aprobado:'Aprobado', rechazado:'Rechazado', pendiente:'Pendiente' };
+        badge.textContent = labels[estado] || estado;
+      }
+    });
+}
+
+function abrirModalBanco() {
+  document.getElementById('modal-banco').style.display = 'flex';
+}
+
+function generarPreguntas() {
+  const btn = document.getElementById('btn-gen-banco');
+  btn.textContent = 'Generando…';
+  btn.disabled = true;
+
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('n_nivel1', document.getElementById('bn1').value);
+  form.append('n_nivel2', document.getElementById('bn2').value);
+  form.append('n_nivel3', document.getElementById('bn3').value);
+
+  fetch(`/simce/api/generar-preguntas-banco/${TEXTO_PK}/`, { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('modal-banco').style.display = 'none';
+      if (d.ok) {
+        alert(`✓ Se generaron ${d.n_creadas} preguntas. Recarga la página para verlas.`);
+        location.reload();
+      } else {
+        alert('Error: ' + (d.error || 'desconocido'));
+        btn.textContent = 'Generar con IA';
+        btn.disabled = false;
+      }
+    })
+    .catch(() => {
+      alert('Error de red');
+      btn.textContent = 'Generar con IA';
+      btn.disabled = false;
+    });
+}
+
+document.getElementById('modal-banco').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

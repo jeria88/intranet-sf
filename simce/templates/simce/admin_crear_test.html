@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Crear Test desde Biblioteca{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:14px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-dif-1 { background:#d1ecf1; color:#0c5460; }
+.badge-dif-2 { background:#fff3cd; color:#856404; }
+.badge-dif-3 { background:#f8d7da; color:#721c24; }
+.badge-nivel { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline  { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.filter-pill { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; text-decoration:none; border:1.5px solid #f0f0f0; color:#888; display:inline-block; margin-right:6px; margin-bottom:6px; }
+.filter-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.texto-selector { display:flex; align-items:flex-start; gap:14px; padding:14px; border:1.5px solid #f0f0f0; border-radius:10px; margin-bottom:10px; cursor:pointer; transition:border-color .15s; }
+.texto-selector:hover { border-color:#b8c9f0; }
+.texto-selector.selected { border-color:var(--accent); background:#f0f4ff; }
+.nivel-config { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; padding:10px 14px; background:#f9f9f9; border-radius:8px; }
+.nivel-config label { font-size:11px; color:#888; }
+.nivel-config input { width:50px; padding:4px 8px; border:1px solid #e8e8e8; border-radius:6px; font-size:13px; }
+</style>
+
+<div style="max-width:900px; margin:0 auto; padding-bottom:80px;">
+  <div style="margin-bottom:24px;">
+    <a href="{% url 'simce:admin_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Panel SIMCE</a>
+    <h2 style="margin:6px 0 0; font-size:22px;">🔗 Crear Test desde Biblioteca</h2>
+    <p style="color:#888; margin:4px 0 0; font-size:13px;">Selecciona textos aprobados y configura las preguntas por nivel</p>
+  </div>
+
+  <form method="post" action="{% url 'simce:admin_crear_test' %}" id="formTest">
+    {% csrf_token %}
+
+    <!-- Config prueba -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; flex-wrap:wrap;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Asignatura *</label>
+          <select name="asignatura" id="sel-asignatura" required onchange="filtrarTextos(this.value)"
+            style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+            <option value="">Seleccionar...</option>
+            {% for val, label in asignaturas %}<option value="{{ val }}" {% if filtro_asignatura == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Curso *</label>
+          <select name="curso" required style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+            <option value="">Seleccionar...</option>
+            {% for val, label in cursos %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Título (opcional)</label>
+        <input type="text" name="titulo" placeholder="Se genera automáticamente"
+          style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px; box-sizing:border-box;">
+      </div>
+    </div>
+
+    <!-- Filtro -->
+    <div style="margin-bottom:16px;">
+      <a href="{% url 'simce:admin_crear_test' %}" class="filter-pill {% if not filtro_asignatura %}active{% endif %}">Todas</a>
+      {% for val, label in asignaturas %}
+      <a href="{% url 'simce:admin_crear_test' %}?asignatura={{ val }}" class="filter-pill {% if filtro_asignatura == val %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- Selección de textos -->
+    <h3 style="font-size:15px; margin:0 0 14px;">Textos aprobados disponibles</h3>
+
+    {% if not textos %}
+    <div class="card" style="text-align:center; padding:40px;">
+      <p style="color:#888;">No hay textos aprobados en la biblioteca. Genera y aprueba textos primero.</p>
+      <a href="{% url 'simce:biblioteca_list' %}" class="btn-primary" style="margin-top:12px;">Ir a Biblioteca</a>
+    </div>
+    {% endif %}
+
+    {% for texto in textos %}
+    <div class="texto-selector" id="sel-{{ texto.pk }}" onclick="toggleTexto({{ texto.pk }}, this)">
+      <input type="checkbox" name="textos_ids" value="{{ texto.pk }}" id="chk-{{ texto.pk }}"
+             onclick="event.stopPropagation()" onchange="toggleTextoChk({{ texto.pk }}, this.checked)">
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+          <span class="badge badge-dif-{{ texto.dificultad }}">{{ texto.get_dificultad_display }}</span>
+          <span style="font-size:11px; color:#888;">{{ texto.get_asignatura_display }} · {{ texto.get_tipo_textual_display }}</span>
+          <span style="font-size:11px; color:#888;">{{ texto.n_banco_aprobado }} pregunta(s) aprobada(s) en banco</span>
+        </div>
+        <div style="font-size:14px; font-weight:600;">{{ texto.titulo }}</div>
+        <div style="font-size:12px; color:#888;">{{ texto.word_count }} palabras</div>
+
+        <!-- Config de preguntas por nivel (visible solo cuando está seleccionado) -->
+        <div class="nivel-config" id="nivel-config-{{ texto.pk }}" style="display:none;" onclick="event.stopPropagation()">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge-nivel nivel-1">⭐</span>
+            <label>N1:</label>
+            <input type="number" name="texto_{{ texto.pk }}_n1" value="1" min="0" max="10">
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge-nivel nivel-2">⭐⭐</span>
+            <label>N2:</label>
+            <input type="number" name="texto_{{ texto.pk }}_n2" value="2" min="0" max="10">
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="badge-nivel nivel-3">⭐⭐⭐</span>
+            <label>N3:</label>
+            <input type="number" name="texto_{{ texto.pk }}_n3" value="3" min="0" max="10">
+          </div>
+          <span style="font-size:11px; color:#888; align-self:center;">= 6 preguntas</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div style="position:sticky; bottom:0; background:#fff; border-top:1px solid #f0f0f0; padding:16px 0; margin-top:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="font-size:13px; color:#888;">
+          <span id="count-sel">0</span> texto(s) seleccionado(s)
+        </div>
+        <div style="display:flex; gap:10px;">
+          <a href="{% url 'simce:admin_dashboard' %}" class="btn-outline">Cancelar</a>
+          <button type="submit" class="btn-primary" id="btn-crear" disabled onclick="confirmarCreacion(event)">
+            🤖 Crear test y generar preguntas
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggleTexto(pk, wrapper) {
+  const chk = document.getElementById(`chk-${pk}`);
+  chk.checked = !chk.checked;
+  toggleTextoChk(pk, chk.checked);
+}
+
+function toggleTextoChk(pk, checked) {
+  const wrapper = document.getElementById(`sel-${pk}`);
+  const config  = document.getElementById(`nivel-config-${pk}`);
+  if (checked) {
+    wrapper.classList.add('selected');
+    config.style.display = 'flex';
+  } else {
+    wrapper.classList.remove('selected');
+    config.style.display = 'none';
+  }
+  actualizarContador();
+}
+
+function actualizarContador() {
+  const n = document.querySelectorAll('input[name="textos_ids"]:checked').length;
+  document.getElementById('count-sel').textContent = n;
+  const btn = document.getElementById('btn-crear');
+  btn.disabled = n === 0;
+  btn.style.opacity = n === 0 ? '0.5' : '1';
+}
+
+function confirmarCreacion(e) {
+  const asig = document.getElementById('sel-asignatura')?.value;
+  if (!asig) { e.preventDefault(); alert('Selecciona una asignatura.'); return; }
+  if (!confirm('¿Crear este test? Se generarán preguntas con IA (puede tardar 2-4 minutos).')) {
+    e.preventDefault();
+    return;
+  }
+  const btn = document.getElementById('btn-crear');
+  btn.textContent = 'Creando…';
+  btn.disabled = true;
+}
+
+// Leer nombre del form field (texto_PK_n1) y pasarlo como n1_PTPK en el submit
+// Actually the view reads texto_PK_n1 directly and PruebaTexto is created in the view
+// so the form field names are correct as is.
+
+actualizarContador();
+</script>
+{% endblock %}

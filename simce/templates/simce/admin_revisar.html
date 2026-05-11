@@ -85,12 +85,13 @@
   </div>
 
   <!-- Textos y preguntas -->
-  {% for texto in textos %}
+  {% for pt in prueba_textos %}
+  {% with texto=pt.texto %}
   <div class="card" id="texto-card-{{ texto.pk }}">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
       <div>
         <span id="texto-tipo-{{ texto.pk }}" style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">
-          Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}
+          Texto {{ pt.orden }} · {{ texto.get_tipo_textual_display }}
         </span>
         <h3 id="texto-titulo-{{ texto.pk }}" style="margin:4px 0 0; font-size:16px;">{{ texto.titulo }}</h3>
       </div>
@@ -106,8 +107,8 @@
       {{ texto.contenido|linebreaksbr }}
     </div>
 
-    <h4 style="margin:0 0 12px; font-size:13px; color:#575760;">Preguntas ({{ texto.preguntas.count }})</h4>
-    {% for pregunta in texto.preguntas.all %}
+    <h4 style="margin:0 0 12px; font-size:13px; color:#575760;">Preguntas ({{ pt.preguntas.count }})</h4>
+    {% for pregunta in pt.preguntas.all %}
     <div class="pregunta-box" id="pregunta-box-{{ pregunta.pk }}">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
         <div style="font-size:13px; font-weight:500;" id="pq-enunciado-{{ pregunta.pk }}">
@@ -136,6 +137,7 @@
     </div>
     {% endfor %}
   </div>
+  {% endwith %}
   {% endfor %}
 </div>
 

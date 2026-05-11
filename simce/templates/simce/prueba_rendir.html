@@ -52,15 +52,15 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
   {# ══════════════ MODO SIMCE: form tradicional ══════════════ #}
   <form method="post" action="{% url 'simce:entregar_simce' sesion.pk %}" id="formSimce">
     {% csrf_token %}
-    {% for texto in textos %}
+    {% for pt in prueba_textos %}
     <div class="texto-card">
       <div style="margin-bottom:14px;">
-        <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}</span>
-        <h3 style="margin:4px 0 0; font-size:17px;">{{ texto.titulo }}</h3>
+        <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ pt.orden }} · {{ pt.texto.get_tipo_textual_display }}</span>
+        <h3 style="margin:4px 0 0; font-size:17px;">{{ pt.texto.titulo }}</h3>
       </div>
-      <div class="texto-body">{{ texto.contenido|linebreaksbr }}</div>
+      <div class="texto-body">{{ pt.texto.contenido|linebreaksbr }}</div>
 
-      {% for pregunta in texto.preguntas.all %}
+      {% for pregunta in pt.preguntas.all %}
       <div class="pregunta-box" id="pq-{{ pregunta.pk }}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
           <p style="margin:0; font-size:13px; font-weight:500; line-height:1.5;">
@@ -92,15 +92,15 @@ input[type="radio"] { accent-color:var(--accent); margin-top:2px; flex-shrink:0;
 
   {% else %}
   {# ══════════════ MODO PISTAS: AJAX con verificación ══════════════ #}
-  {% for texto in textos %}
+  {% for pt in prueba_textos %}
   <div class="texto-card">
     <div style="margin-bottom:14px;">
-      <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ texto.orden }} · {{ texto.get_tipo_textual_display }}</span>
-      <h3 style="margin:4px 0 0; font-size:17px;">{{ texto.titulo }}</h3>
+      <span style="font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600;">Texto {{ pt.orden }} · {{ pt.texto.get_tipo_textual_display }}</span>
+      <h3 style="margin:4px 0 0; font-size:17px;">{{ pt.texto.titulo }}</h3>
     </div>
-    <div class="texto-body">{{ texto.contenido|linebreaksbr }}</div>
+    <div class="texto-body">{{ pt.texto.contenido|linebreaksbr }}</div>
 
-    {% for pregunta in texto.preguntas.all %}
+    {% for pregunta in pt.preguntas.all %}
     <div class="pregunta-box" id="pq-{{ pregunta.pk }}" data-pk="{{ pregunta.pk }}">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
         <p style="margin:0; font-size:13px; font-weight:500; line-height:1.5;">

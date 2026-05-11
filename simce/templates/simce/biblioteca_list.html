@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Biblioteca de Textos SIMCE{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:14px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-pendiente { background:#f0f0f0; color:#888; }
+.badge-aprobado  { background:#d4edda; color:#155724; }
+.badge-rechazado { background:#f8d7da; color:#721c24; }
+.badge-dif-1 { background:#d1ecf1; color:#0c5460; }
+.badge-dif-2 { background:#fff3cd; color:#856404; }
+.badge-dif-3 { background:#f8d7da; color:#721c24; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline  { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.filter-pill { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; text-decoration:none; border:1.5px solid #f0f0f0; color:#888; display:inline-block; margin-right:6px; margin-bottom:6px; }
+.filter-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+</style>
+
+<div style="max-width:960px; margin:0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:admin_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Panel SIMCE</a>
+      <h2 style="margin:6px 0 0; font-size:22px;">📚 Biblioteca de Textos</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:13px;">Textos independientes reutilizables en múltiples pruebas</p>
+    </div>
+    <button onclick="document.getElementById('modal-generar').style.display='flex'" class="btn-primary">+ Generar textos con IA</button>
+  </div>
+
+  <!-- Filtro asignatura -->
+  <div style="margin-bottom:20px;">
+    <a href="{% url 'simce:biblioteca_list' %}" class="filter-pill {% if not filtro_asignatura %}active{% endif %}">Todas</a>
+    {% for val, label in asignaturas %}
+    <a href="{% url 'simce:biblioteca_list' %}?asignatura={{ val }}" class="filter-pill {% if filtro_asignatura == val %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if not textos %}
+  <div class="card" style="text-align:center; padding:60px;">
+    <p style="font-size:32px; margin-bottom:12px;">📚</p>
+    <p style="color:#888;">No hay textos en la biblioteca. Genera los primeros con IA.</p>
+  </div>
+  {% endif %}
+
+  {% for texto in textos %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+          <span class="badge badge-{{ texto.estado }}">{{ texto.get_estado_display }}</span>
+          <span class="badge badge-dif-{{ texto.dificultad }}">{{ texto.get_dificultad_display }}</span>
+          <span style="font-size:11px; color:#888; padding:3px 0;">{{ texto.get_asignatura_display }} · {{ texto.get_tipo_textual_display }}</span>
+        </div>
+        <h3 style="margin:0 0 4px; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ texto.titulo }}</h3>
+        <p style="color:#888; margin:0; font-size:12px;">
+          {{ texto.word_count }} palabras · {{ texto.char_count }} chars
+          {% if texto.cumple_extension %}<span style="color:#155724;">✓ extensión OK</span>{% else %}<span style="color:#dc3545;">⚠ extensión insuficiente</span>{% endif %}
+          · {{ texto.n_banco }} pregunta(s) en banco
+        </p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+        <a href="{% url 'simce:biblioteca_texto_detalle' texto.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px;">Ver detalle</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal generar textos -->
+<div id="modal-generar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 20px;">Generar textos para la biblioteca</h3>
+    <form method="post" action="{% url 'simce:biblioteca_generar' %}" id="formGenerar">
+      {% csrf_token %}
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Asignatura *</label>
+        <select name="asignatura" required style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+          <option value="">Seleccionar...</option>
+          {% for val, label in asignaturas %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">Curso *</label>
+        <select name="curso" required style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+          <option value="">Seleccionar...</option>
+          {% for val, label in cursos %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:24px;">
+        <label style="display:block; font-size:12px; font-weight:600; color:#575760; margin-bottom:6px;">N° de textos</label>
+        <select name="n_textos" style="width:100%; padding:10px 14px; border:1px solid #f0f0f0; border-radius:10px; font-size:13px;">
+          <option value="2">2 textos</option>
+          <option value="3" selected>3 textos</option>
+          <option value="4">4 textos</option>
+          <option value="6">6 textos</option>
+        </select>
+      </div>
+      <p style="font-size:11px; color:#999; margin-bottom:20px;">⏱ La generación ocurre en segundo plano. Los textos aparecerán en esta página al terminar (recarga en 2-3 minutos).</p>
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn-primary" onclick="this.textContent='Generando…'; this.disabled=true; document.getElementById('formGenerar').submit();">Generar con IA</button>
+        <button type="button" onclick="document.getElementById('modal-generar').style.display='none'" class="btn-outline">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
