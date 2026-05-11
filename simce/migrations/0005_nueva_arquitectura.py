@@ -36,6 +36,12 @@ class Migration(migrations.Migration):
             reverse_sql=migrations.RunSQL.noop,
         ),
 
+        # Forzar ejecución de triggers diferidos antes de ALTER TABLE
+        migrations.RunSQL(
+            "SET CONSTRAINTS ALL IMMEDIATE;",
+            reverse_sql=migrations.RunSQL.noop,
+        ),
+
         # ── Pregunta: quitar unique_together viejo ────────────────────
         migrations.AlterUniqueTogether(
             name='pregunta',
