@@ -39,6 +39,23 @@ def admin_dashboard(request):
 
 # ── Admin: Generar textos (Fase 1) ────────────────────────────────
 
+def _set_error(prueba_pk, error_str, tb_str, asignatura='', curso=''):
+    """Escribe estado=error en la prueba, reseteando la conexión primero."""
+    from django.db import connection
+    connection.close()
+    try:
+        prueba = Prueba.objects.get(pk=prueba_pk)
+        prueba.titulo = f'Error: {error_str[:120]}'
+        prueba.estado = 'error'
+        prueba.rubrica_log = {
+            'error': error_str, 'traceback': tb_str,
+            'asignatura': asignatura, 'curso': curso,
+        }
+        prueba.save()
+    except Exception:
+        pass
+
+
 def _hilo_textos(prueba_pk, asignatura, curso):
     from django.db import connection
     try:
@@ -55,16 +72,7 @@ def _hilo_textos(prueba_pk, asignatura, curso):
         prueba.estado = 'revision_textos'
         prueba.save()
     except Exception as e:
-        tb = traceback.format_exc()
-        try:
-            prueba = Prueba.objects.get(pk=prueba_pk)
-            prueba.titulo = f'Error: {str(e)[:120]}'
-            prueba.estado = 'error'
-            prueba.rubrica_log = {'error': str(e), 'traceback': tb,
-                                  'asignatura': asignatura, 'curso': curso}
-            prueba.save()
-        except Exception:
-            pass
+        _set_error(prueba_pk, str(e), traceback.format_exc(), asignatura, curso)
     finally:
         connection.close()
 
@@ -259,14 +267,7 @@ def _hilo_preguntas(prueba_pk, textos_ids, n_nivel1, n_nivel2, n_nivel3):
         prueba.save(update_fields=['titulo'])
 
     except Exception as e:
-        tb = traceback.format_exc()
-        try:
-            prueba = Prueba.objects.get(pk=prueba_pk)
-            prueba.estado     = 'error'
-            prueba.rubrica_log = {'error': str(e), 'traceback': tb}
-            prueba.save()
-        except Exception:
-            pass
+        _set_error(prueba_pk, str(e), traceback.format_exc())
     finally:
         connection.close()
 
@@ -325,6 +326,17 @@ def admin_aprobar(request, pk):
     prueba.aprobada_en  = timezone.now()
     prueba.save()
     messages.success(request, f'Prueba aprobada: {prueba.titulo}')
+    return redirect('simce:admin_dashboard')
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def admin_eliminar(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+    titulo = prueba.titulo
+    prueba.delete()
+    messages.success(request, f'Prueba eliminada: {titulo}')
     return redirect('simce:admin_dashboard')
 
 

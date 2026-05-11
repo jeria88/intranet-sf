@@ -16,6 +16,7 @@ urlpatterns = [
     path('revisar/<int:pk>/',             views.admin_revisar,         name='admin_revisar'),
     path('aprobar/<int:pk>/',             views.admin_aprobar,         name='admin_aprobar'),
     path('publicar/<int:pk>/',            views.admin_publicar,        name='admin_publicar'),
+    path('eliminar/<int:pk>/',            views.admin_eliminar,        name='admin_eliminar'),
 
     # Estudiante — el modo va en la URL para que el profe comparta el link correcto
     path('rendir/<int:pk>/<str:modo>/',                              views.prueba_identificacion, name='prueba_identificacion'),
