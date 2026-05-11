@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}{% if editando %}Editar texto{% else %}Crear texto{% endif %} — Biblioteca SIMCE{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:28px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:20px; }
+.form-field { margin-bottom:18px; }
+.form-field label { display:block; font-size:11px; font-weight:600; color:#575760; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+.form-field input, .form-field select, .form-field textarea {
+  width:100%; padding:10px 14px; border:1px solid #e8e8e8; border-radius:10px;
+  font-size:13px; box-sizing:border-box; font-family:inherit;
+}
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+  outline:none; border-color:var(--accent);
+}
+.form-field textarea { resize:vertical; min-height:320px; line-height:1.7; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:11px 26px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline  { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:9px 20px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.word-count { font-size:11px; color:#aaa; margin-top:5px; }
+</style>
+
+<div style="max-width:780px; margin:0 auto; padding-bottom:60px;">
+  <div style="margin-bottom:24px;">
+    {% if editando %}
+      <a href="{% url 'simce:biblioteca_texto_detalle' texto.pk %}" style="color:#888; font-size:12px; text-decoration:none;">← Volver al texto</a>
+    {% else %}
+      <a href="{% url 'simce:biblioteca_list' %}" style="color:#888; font-size:12px; text-decoration:none;">← Biblioteca</a>
+    {% endif %}
+    <h2 style="margin:6px 0 0; font-size:22px;">
+      {% if editando %}Editar texto{% else %}Crear texto manualmente{% endif %}
+    </h2>
+    <p style="color:#888; margin:4px 0 0; font-size:13px;">Los campos marcados con * son obligatorios</p>
+  </div>
+
+  <form method="post" action="{% if editando %}{% url 'simce:biblioteca_texto_editar' texto.pk %}{% else %}{% url 'simce:biblioteca_texto_crear' %}{% endif %}">
+    {% csrf_token %}
+
+    <div class="card">
+      <div class="grid-2">
+        <div class="form-field">
+          <label>Asignatura *</label>
+          <select name="asignatura" required>
+            <option value="">Seleccionar…</option>
+            {% for val, lbl in asignaturas %}
+            <option value="{{ val }}" {% if editando and texto.asignatura == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Tipo textual *</label>
+          <select name="tipo_textual" required>
+            <option value="">Seleccionar…</option>
+            {% for val, lbl in tipos_textuales %}
+            <option value="{{ val }}" {% if editando and texto.tipo_textual == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-field">
+          <label>Título *</label>
+          <input type="text" name="titulo" required placeholder="Título del texto"
+                 value="{% if editando %}{{ texto.titulo }}{% endif %}">
+        </div>
+        <div class="form-field">
+          <label>Dificultad</label>
+          <select name="dificultad">
+            {% for val, lbl in dificultades %}
+            <option value="{{ val }}" {% if editando and texto.dificultad == val %}selected{% elif not editando and val == 2 %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Contenido *</label>
+        <textarea name="contenido" required id="txt-contenido"
+                  placeholder="Escribe o pega el contenido del texto aquí…">{% if editando %}{{ texto.contenido }}{% endif %}</textarea>
+        <div class="word-count" id="word-count">
+          {% if editando %}{{ texto.word_count }} palabras · {{ texto.char_count }} caracteres{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <button type="submit" class="btn-primary">
+        {% if editando %}Guardar cambios{% else %}Crear texto{% endif %}
+      </button>
+      {% if editando %}
+        <a href="{% url 'simce:biblioteca_texto_detalle' texto.pk %}" class="btn-outline">Cancelar</a>
+      {% else %}
+        <a href="{% url 'simce:biblioteca_list' %}" class="btn-outline">Cancelar</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+const ta = document.getElementById('txt-contenido');
+const wc = document.getElementById('word-count');
+function updateCount() {
+  const txt = ta.value.trim();
+  const words = txt ? txt.split(/\s+/).length : 0;
+  wc.textContent = words + ' palabras · ' + txt.length + ' caracteres';
+}
+ta.addEventListener('input', updateCount);
+</script>
+{% endblock %}

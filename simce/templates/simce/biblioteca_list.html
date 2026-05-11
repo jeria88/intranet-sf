@@ -23,7 +23,10 @@
       <h2 style="margin:6px 0 0; font-size:22px;">📚 Biblioteca de Textos</h2>
       <p style="color:#888; margin:4px 0 0; font-size:13px;">Textos independientes reutilizables en múltiples pruebas</p>
     </div>
-    <button onclick="document.getElementById('modal-generar').style.display='flex'" class="btn-primary">+ Generar textos con IA</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="{% url 'simce:biblioteca_texto_crear' %}" class="btn-outline">+ Crear manual</a>
+      <button onclick="document.getElementById('modal-generar').style.display='flex'" class="btn-primary">+ Generar con IA</button>
+    </div>
   </div>
 
   <!-- Filtro asignatura -->

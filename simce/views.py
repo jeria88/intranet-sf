@@ -13,6 +13,7 @@ from .models import (
     Prueba, PruebaTexto, TextoBiblioteca, PreguntaBanco, AlternativaBanco,
     Pregunta, Alternativa, SesionEstudiante, RespuestaEstudiante,
     ASIGNATURA_CHOICES, CURSO_CHOICES, TIPO_TEXTUAL_CHOICES,
+    NIVEL_CHOICES, DIFICULTAD_TEXTO, ALT_CHOICES,
 )
 from .generator import (
     generar_lote_textos_biblioteca, generar_preguntas_banco,
@@ -376,12 +377,25 @@ def biblioteca_generar(request):
 @login_required
 @user_passes_test(is_staff)
 def biblioteca_texto_detalle(request, pk):
+    import json as _json
     texto = get_object_or_404(TextoBiblioteca, pk=pk)
     preguntas_banco = texto.preguntas_banco.prefetch_related('alternativas').order_by('nivel', 'creada_en')
     checklist = CHECKLIST_POR_TIPO.get(texto.tipo_textual, [])
+    preguntas_json = _json.dumps([
+        {
+            'pk':   p.pk,
+            'enunciado': p.enunciado,
+            'nivel': p.nivel,
+            'habilidad': p.habilidad,
+            'alternativa_correcta': p.alternativa_correcta,
+            'alts': {a.letra: a.texto for a in p.alternativas.all()},
+        }
+        for p in preguntas_banco
+    ], ensure_ascii=False)
     ctx = {
         'texto':           texto,
         'preguntas_banco': preguntas_banco,
+        'preguntas_json':  preguntas_json,
         'checklist':       checklist,
         'cursos':          CURSOS_SIMCE,
     }
@@ -418,6 +432,141 @@ def api_pregunta_banco_estado(request, pk):
     pregunta.estado = estado
     pregunta.save(update_fields=['estado'])
     return JsonResponse({'ok': True, 'estado': estado})
+
+
+# ── Biblioteca: CRUD TextoBiblioteca ─────────────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+def biblioteca_texto_crear(request):
+    if request.method == 'POST':
+        asignatura   = request.POST.get('asignatura', '').strip()
+        tipo_textual = request.POST.get('tipo_textual', '').strip()
+        titulo       = request.POST.get('titulo', '').strip()
+        contenido    = request.POST.get('contenido', '').strip()
+        try:
+            dificultad = int(request.POST.get('dificultad', 2))
+        except (TypeError, ValueError):
+            dificultad = 2
+        if asignatura and tipo_textual and titulo and contenido:
+            texto = TextoBiblioteca.objects.create(
+                asignatura=asignatura,
+                tipo_textual=tipo_textual,
+                titulo=titulo,
+                contenido=contenido,
+                dificultad=dificultad,
+                word_count=len(contenido.split()),
+                char_count=len(contenido),
+                creada_por=request.user,
+            )
+            return redirect('simce:biblioteca_texto_detalle', pk=texto.pk)
+    ctx = {
+        'asignaturas':    ASIGNATURA_CHOICES,
+        'tipos_textuales': TIPO_TEXTUAL_CHOICES,
+        'dificultades':   DIFICULTAD_TEXTO,
+        'editando': False,
+    }
+    return render(request, 'simce/biblioteca_texto_form.html', ctx)
+
+
+@login_required
+@user_passes_test(is_staff)
+def biblioteca_texto_editar(request, pk):
+    texto = get_object_or_404(TextoBiblioteca, pk=pk)
+    if request.method == 'POST':
+        texto.asignatura   = request.POST.get('asignatura', texto.asignatura)
+        texto.tipo_textual = request.POST.get('tipo_textual', texto.tipo_textual)
+        texto.titulo       = request.POST.get('titulo', texto.titulo).strip()
+        texto.contenido    = request.POST.get('contenido', texto.contenido).strip()
+        try:
+            texto.dificultad = int(request.POST.get('dificultad', texto.dificultad))
+        except (TypeError, ValueError):
+            pass
+        texto.word_count = len(texto.contenido.split())
+        texto.char_count = len(texto.contenido)
+        texto.save()
+        return redirect('simce:biblioteca_texto_detalle', pk=texto.pk)
+    ctx = {
+        'texto':           texto,
+        'asignaturas':    ASIGNATURA_CHOICES,
+        'tipos_textuales': TIPO_TEXTUAL_CHOICES,
+        'dificultades':   DIFICULTAD_TEXTO,
+        'editando': True,
+    }
+    return render(request, 'simce/biblioteca_texto_form.html', ctx)
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def biblioteca_texto_eliminar(request, pk):
+    texto = get_object_or_404(TextoBiblioteca, pk=pk)
+    texto.delete()
+    return redirect('simce:biblioteca_list')
+
+
+# ── Biblioteca: CRUD PreguntaBanco ───────────────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def pregunta_banco_crear(request, texto_pk):
+    texto      = get_object_or_404(TextoBiblioteca, pk=texto_pk)
+    enunciado  = request.POST.get('enunciado', '').strip()
+    habilidad  = request.POST.get('habilidad', '').strip()
+    try:
+        nivel = int(request.POST.get('nivel', 1))
+    except (TypeError, ValueError):
+        nivel = 1
+    alternativa_correcta = request.POST.get('alternativa_correcta', 'A')
+    if not enunciado:
+        return JsonResponse({'ok': False, 'error': 'Enunciado requerido'}, status=400)
+    pregunta = PreguntaBanco.objects.create(
+        texto=texto,
+        enunciado=enunciado,
+        nivel=nivel,
+        habilidad=habilidad,
+        alternativa_correcta=alternativa_correcta,
+        estado='pendiente',
+    )
+    for letra in ['A', 'B', 'C', 'D']:
+        alt_texto = request.POST.get(f'alt_{letra}', '').strip()
+        AlternativaBanco.objects.create(
+            pregunta=pregunta,
+            letra=letra,
+            texto=alt_texto,
+            es_correcta=(letra == alternativa_correcta),
+        )
+    return JsonResponse({'ok': True, 'pk': pregunta.pk})
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def api_pregunta_banco(request, pk):
+    pregunta = get_object_or_404(PreguntaBanco, pk=pk)
+    accion   = request.POST.get('accion', '')
+    if accion == 'eliminar':
+        pregunta.delete()
+        return JsonResponse({'ok': True})
+    # editar
+    pregunta.enunciado  = request.POST.get('enunciado', pregunta.enunciado).strip()
+    pregunta.habilidad  = request.POST.get('habilidad', pregunta.habilidad).strip()
+    try:
+        pregunta.nivel = int(request.POST.get('nivel', pregunta.nivel))
+    except (TypeError, ValueError):
+        pass
+    alt_correcta = request.POST.get('alternativa_correcta', pregunta.alternativa_correcta)
+    pregunta.alternativa_correcta = alt_correcta
+    pregunta.save()
+    for letra in ['A', 'B', 'C', 'D']:
+        alt_texto = request.POST.get(f'alt_{letra}', '').strip()
+        if alt_texto:
+            AlternativaBanco.objects.filter(pregunta=pregunta, letra=letra).update(
+                texto=alt_texto,
+                es_correcta=(letra == alt_correcta),
+            )
+    return JsonResponse({'ok': True})
 
 
 # ── Admin: Crear test desde biblioteca ───────────────────────────

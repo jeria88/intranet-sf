@@ -18,11 +18,16 @@ urlpatterns = [
     path('crear-test/',                   views.admin_crear_test,       name='admin_crear_test'),
 
     # Admin — Biblioteca de Textos
-    path('biblioteca/',                                  views.biblioteca_list,            name='biblioteca_list'),
-    path('biblioteca/generar/',                          views.biblioteca_generar,         name='biblioteca_generar'),
-    path('biblioteca/texto/<int:pk>/',                   views.biblioteca_texto_detalle,   name='biblioteca_texto_detalle'),
-    path('api/generar-preguntas-banco/<int:pk>/',        views.api_generar_preguntas_banco,name='api_generar_preguntas_banco'),
-    path('api/pregunta-banco-estado/<int:pk>/',          views.api_pregunta_banco_estado,  name='api_pregunta_banco_estado'),
+    path('biblioteca/',                                        views.biblioteca_list,             name='biblioteca_list'),
+    path('biblioteca/generar/',                                views.biblioteca_generar,          name='biblioteca_generar'),
+    path('biblioteca/texto/crear/',                            views.biblioteca_texto_crear,      name='biblioteca_texto_crear'),
+    path('biblioteca/texto/<int:pk>/',                         views.biblioteca_texto_detalle,    name='biblioteca_texto_detalle'),
+    path('biblioteca/texto/<int:pk>/editar/',                  views.biblioteca_texto_editar,     name='biblioteca_texto_editar'),
+    path('biblioteca/texto/<int:pk>/eliminar/',                views.biblioteca_texto_eliminar,   name='biblioteca_texto_eliminar'),
+    path('biblioteca/texto/<int:texto_pk>/pregunta/crear/',    views.pregunta_banco_crear,        name='pregunta_banco_crear'),
+    path('api/generar-preguntas-banco/<int:pk>/',              views.api_generar_preguntas_banco, name='api_generar_preguntas_banco'),
+    path('api/pregunta-banco-estado/<int:pk>/',                views.api_pregunta_banco_estado,   name='api_pregunta_banco_estado'),
+    path('api/pregunta-banco/<int:pk>/',                       views.api_pregunta_banco,          name='api_pregunta_banco'),
 
     # AJAX — Textos
     path('api/ajustar/<int:pk>/',         views.api_ajustar_texto,      name='api_ajustar_texto'),
