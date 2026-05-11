@@ -4,13 +4,16 @@
 <style>
 .simce-card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
 .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
-.badge-generando { background:#e8f0fe; color:#1e3a8a; }
-.badge-borrador  { background:#f0f0f0; color:#888; }
-.badge-error     { background:#f8d7da; color:#721c24; }
-.badge-revision  { background:#fff3cd; color:#856404; }
-.badge-aprobada  { background:#d1ecf1; color:#0c5460; }
-.badge-publicada { background:#d4edda; color:#155724; }
-.badge-cerrada   { background:#e2e3e5; color:#383d41; }
+.badge-generando            { background:#e8f0fe; color:#1e3a8a; }
+.badge-generando_textos     { background:#e8f0fe; color:#1e3a8a; }
+.badge-revision_textos      { background:#fff3cd; color:#856404; }
+.badge-generando_preguntas  { background:#e8f0fe; color:#1e3a8a; }
+.badge-borrador             { background:#f0f0f0; color:#888; }
+.badge-error                { background:#f8d7da; color:#721c24; }
+.badge-revision             { background:#fff3cd; color:#856404; }
+.badge-aprobada             { background:#d1ecf1; color:#0c5460; }
+.badge-publicada            { background:#d4edda; color:#155724; }
+.badge-cerrada              { background:#e2e3e5; color:#383d41; }
 .btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
 .btn-outline { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
 .rubrica-ok  { color:#155724; font-size:12px; }
@@ -62,12 +65,14 @@
         </p>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        {% if prueba.estado == 'generando' %}
+        {% if prueba.estado == 'generando' or prueba.estado == 'generando_textos' or prueba.estado == 'generando_preguntas' %}
           <a href="{% url 'simce:prueba_generando' prueba.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px;">⏳ Ver progreso</a>
         {% elif prueba.estado == 'error' %}
           <span style="font-size:12px; color:#dc3545;">Error de generación</span>
+        {% elif prueba.estado == 'revision_textos' %}
+          <a href="{% url 'simce:admin_revisar_textos' prueba.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px; border-color:#856404; color:#856404;">📝 Revisar textos</a>
         {% else %}
-        <a href="{% url 'simce:admin_revisar' prueba.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px;">Revisar</a>
+          <a href="{% url 'simce:admin_revisar' prueba.pk %}" class="btn-outline" style="font-size:12px; padding:7px 14px;">Revisar</a>
         {% endif %}
         {% if prueba.estado == 'revision' %}
           <form method="post" action="{% url 'simce:admin_aprobar' prueba.pk %}" style="display:inline;">

@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% block title %}Revisar textos — {{ prueba.titulo }}{% endblock %}
+{% block content %}
+<style>
+.card { background:#fff; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:20px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-pendiente  { background:#f0f0f0; color:#888; }
+.badge-aprobado   { background:#d4edda; color:#155724; }
+.badge-rechazado  { background:#f8d7da; color:#721c24; }
+.badge-dif-1 { background:#d1ecf1; color:#0c5460; }
+.badge-dif-2 { background:#fff3cd; color:#856404; }
+.badge-dif-3 { background:#f8d7da; color:#721c24; }
+.stat-pill { display:inline-block; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; background:#f5f5f5; color:#575760; margin-right:6px; margin-bottom:4px; }
+.btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 22px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-outline  { background:transparent; color:var(--accent); border:1.5px solid var(--accent); padding:8px 18px; border-radius:30px; font-weight:600; font-size:13px; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-sm { padding:5px 14px; font-size:11px; border-radius:20px; border:none; cursor:pointer; font-weight:600; transition:background .15s; }
+.btn-aprobar  { background:#d4edda; color:#155724; } .btn-aprobar:hover  { background:#b8dfc6; }
+.btn-rechazar { background:#f8d7da; color:#721c24; } .btn-rechazar:hover { background:#f1b8be; }
+.btn-ajuste   { background:#e8f0fe; color:var(--accent); } .btn-ajuste:hover { background:#d0e2ff; }
+.texto-content { font-size:13px; line-height:1.7; color:#444; white-space:pre-wrap; background:#fafafa; border-radius:10px; padding:16px; border:1px solid #f0f0f0; max-height:320px; overflow-y:auto; }
+.checklist-item { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:1px solid #f5f5f5; font-size:12px; }
+.checklist-item:last-child { border-bottom:none; }
+.checklist-item label { cursor:pointer; flex:1; line-height:1.4; }
+.cumple-ok  { color:#155724; font-weight:600; }
+.cumple-err { color:#721c24; font-weight:600; }
+
+/* Overlay de carga por tarjeta */
+.card-wrapper { position:relative; }
+.card-loading { display:none; position:absolute; inset:0; background:rgba(255,255,255,0.88); border-radius:14px; z-index:10; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+.card-loading.visible { display:flex; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.mini-spinner { width:36px; height:36px; border:4px solid #e8e8e8; border-top-color:var(--accent); border-radius:50%; animation:spin .9s linear infinite; }
+.card-loading p { font-size:12px; color:#575760; font-weight:600; margin:0; text-align:center; }
+
+/* Panel sticky de progreso */
+.progress-bar-wrap { background:#f0f0f0; border-radius:20px; height:8px; margin:8px 0 4px; overflow:hidden; }
+.progress-bar-fill { background:var(--accent); height:100%; border-radius:20px; transition:width .4s ease; }
+
+/* Modal de configuración de test */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:580px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+.form-field { margin-bottom:14px; }
+.form-field label { display:block; font-size:11px; font-weight:600; color:#575760; margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em; }
+.form-field input[type=number] { width:80px; padding:8px 10px; border:1px solid #e8e8e8; border-radius:8px; font-size:13px; }
+.checkbox-texto { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; margin-bottom:6px; border:1px solid #f0f0f0; cursor:pointer; font-size:13px; }
+.checkbox-texto:hover { background:#f9f9f9; }
+.checkbox-texto input { width:16px; height:16px; cursor:pointer; }
+</style>
+
+<div style="max-width:920px; margin:0 auto; padding-bottom:60px;">
+
+  <!-- Header -->
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <a href="{% url 'simce:admin_dashboard' %}" style="color:#888; font-size:12px; text-decoration:none;">← Panel SIMCE</a>
+      <h2 style="margin:6px 0 0; font-size:20px;">Revisión de textos</h2>
+      <p style="color:#888; margin:4px 0 0; font-size:12px;">
+        {{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }} · {{ prueba.anio }}
+      </p>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:13px; font-weight:600; margin-bottom:4px;">
+        <span id="count-aprobados">{{ n_aprobados }}</span> / {{ n_total }} textos aprobados
+      </div>
+      <div class="progress-bar-wrap" style="width:200px;">
+        <div class="progress-bar-fill" id="barra-progreso" style="width:{% widthratio n_aprobados n_total 100 %}%"></div>
+      </div>
+      <button onclick="abrirModalTest()"
+        id="btn-generar-test"
+        class="btn-primary"
+        style="margin-top:10px; {% if n_aprobados == 0 %}opacity:.5; cursor:not-allowed;{% endif %}"
+        {% if n_aprobados == 0 %}disabled{% endif %}>
+        Configurar y generar test →
+      </button>
+    </div>
+  </div>
+
+  {% for item in textos_con_checklist %}
+  {% with texto=item.texto checklist=item.checklist %}
+  <div class="card-wrapper" id="wrapper-{{ texto.pk }}">
+    <!-- Overlay de carga -->
+    <div class="card-loading" id="loading-{{ texto.pk }}">
+      <div class="mini-spinner"></div>
+      <p id="loading-msg-{{ texto.pk }}">La IA está ajustando el texto…<br>Por favor espera.</p>
+    </div>
+
+    <div class="card" id="card-{{ texto.pk }}">
+      <!-- Cabecera del texto -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div>
+          <span class="badge badge-{{ texto.estado_texto }}" id="badge-estado-{{ texto.pk }}">
+            {% if texto.estado_texto == 'aprobado' %}✓ Aprobado
+            {% elif texto.estado_texto == 'rechazado' %}✗ Rechazado
+            {% else %}Pendiente{% endif %}
+          </span>
+          &nbsp;
+          <span class="badge badge-dif-{{ texto.dificultad }}" id="badge-dif-{{ texto.pk }}">
+            Dificultad: {{ texto.get_dificultad_display }}
+          </span>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn-sm btn-aprobar"  onclick="cambiarEstado({{ texto.pk }}, 'aprobado')">✓ Aprobar</button>
+          <button class="btn-sm btn-rechazar" onclick="cambiarEstado({{ texto.pk }}, 'rechazado')">✗ Rechazar</button>
+        </div>
+      </div>
+
+      <!-- Título y tipo -->
+      <h3 style="margin:0 0 6px; font-size:15px;" id="titulo-{{ texto.pk }}">{{ texto.titulo }}</h3>
+      <p style="margin:0 0 12px; font-size:12px; color:#888;">Texto {{ texto.orden }} — {{ texto.get_tipo_textual_display }}</p>
+
+      <!-- Stats -->
+      <div style="margin-bottom:14px;">
+        <span class="stat-pill">📝 <span id="words-{{ texto.pk }}">{{ texto.word_count }}</span> palabras</span>
+        <span class="stat-pill">🔤 <span id="chars-{{ texto.pk }}">{{ texto.char_count }}</span> caracteres</span>
+        <span class="stat-pill {% if texto.cumple_extension %}cumple-ok{% else %}cumple-err{% endif %}" id="ext-{{ texto.pk }}">
+          {% if texto.cumple_extension %}✓ Extensión OK{% else %}⚠ Extensión insuficiente{% endif %}
+        </span>
+      </div>
+
+      <!-- Botones de ajuste -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="btn-sm btn-ajuste" onclick="ajustar({{ texto.pk }}, 'aumentar_largo')">⬆ Aumentar largo</button>
+        <button class="btn-sm btn-ajuste" onclick="ajustar({{ texto.pk }}, 'disminuir_largo')">⬇ Disminuir largo</button>
+        <button class="btn-sm btn-ajuste" onclick="ajustar({{ texto.pk }}, 'aumentar_dificultad')">🔥 Subir dificultad</button>
+        <button class="btn-sm btn-ajuste" onclick="ajustar({{ texto.pk }}, 'disminuir_dificultad')">💧 Bajar dificultad</button>
+      </div>
+
+      <!-- Contenido del texto -->
+      <details style="margin-bottom:16px;">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600; color:var(--accent); margin-bottom:8px;">
+          Ver contenido del texto
+        </summary>
+        <div class="texto-content" id="contenido-{{ texto.pk }}">{{ texto.contenido }}</div>
+      </details>
+
+      <!-- Checklist MINEDUC -->
+      {% if checklist %}
+      <details>
+        <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#575760; margin-bottom:8px;">
+          📋 Checklist MINEDUC — {{ texto.get_tipo_textual_display }}
+        </summary>
+        <div style="padding:4px 0;">
+          {% for item in checklist %}
+          <div class="checklist-item">
+            <input type="checkbox" id="chk-{{ texto.pk }}-{{ item.id }}" style="margin-top:2px; flex-shrink:0;">
+            <label for="chk-{{ texto.pk }}-{{ item.id }}">{{ item.texto }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+
+</div>
+
+<!-- Modal: configurar test -->
+<div id="modal-test" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="margin:0 0 6px; font-size:17px;">Configurar generación del test</h3>
+    <p style="color:#888; font-size:12px; margin:0 0 20px;">
+      Selecciona qué textos aprobados usará la IA y cuántas preguntas por dificultad generar.
+    </p>
+
+    <form method="post" action="{% url 'simce:admin_lanzar_preguntas' prueba.pk %}" id="form-test">
+      {% csrf_token %}
+
+      <!-- Selección de textos -->
+      <div class="form-field">
+        <label>Textos a incluir en el test</label>
+        <div id="lista-textos-modal">
+          {% for item in textos_con_checklist %}
+          {% if item.texto.estado_texto == 'aprobado' %}
+          <label class="checkbox-texto">
+            <input type="checkbox" name="textos_ids" value="{{ item.texto.pk }}" checked
+              data-pk="{{ item.texto.pk }}" class="chk-texto-modal">
+            <div>
+              <strong>T{{ item.texto.orden }}:</strong> {{ item.texto.titulo }}
+              <span style="color:#888; font-size:11px;"> · {{ item.texto.get_tipo_textual_display }} · {{ item.texto.word_count }} palabras</span>
+            </div>
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <p style="font-size:11px; color:#aaa; margin:6px 0 0;">Solo se muestran textos aprobados.</p>
+      </div>
+
+      <!-- Distribución de dificultad -->
+      <div class="form-field">
+        <label>Preguntas por nivel de dificultad</label>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-dif-1" style="white-space:nowrap;">⭐ Inicial</span>
+            <input type="number" name="n_nivel1" id="n1" value="5" min="0" max="50">
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-dif-2" style="white-space:nowrap;">⭐⭐ Intermedio</span>
+            <input type="number" name="n_nivel2" id="n2" value="5" min="0" max="50">
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge badge-dif-3" style="white-space:nowrap;">⭐⭐⭐ Avanzado</span>
+            <input type="number" name="n_nivel3" id="n3" value="20" min="0" max="50">
+          </div>
+        </div>
+        <p style="font-size:11px; color:#aaa; margin:8px 0 0;">
+          Total: <strong id="total-preguntas">30</strong> preguntas.
+          Por defecto: 5 iniciales, 5 intermedias, 20 avanzadas (estándar SIMCE).
+        </p>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+        <button type="button" onclick="cerrarModalTest()" class="btn-outline">Cancelar</button>
+        <button type="submit" class="btn-primary" id="btn-submit-test">🤖 Generar test con IA</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+const URL_AJUSTAR      = (pk) => `/simce/api/ajustar/${pk}/`;
+const URL_ESTADO_TEXTO = (pk) => `/simce/api/estado-texto/${pk}/`;
+const N_TOTAL_TEXTOS   = {{ n_total }};
+
+// ── Ajustar texto ─────────────────────────────────────────────────
+const MENSAJES_AJUSTE = {
+  'aumentar_largo':      'Ampliando el texto…\nEsto puede tardar 30-60 segundos.',
+  'disminuir_largo':     'Reduciendo el largo del texto…\nEsto puede tardar 30-60 segundos.',
+  'aumentar_dificultad': 'Aumentando la dificultad…\nReescribiendo con vocabulario más avanzado.',
+  'disminuir_dificultad':'Simplificando el texto…\nAdaptando al nivel solicitado.',
+};
+
+function ajustar(pk, accion) {
+  const loading = document.getElementById(`loading-${pk}`);
+  const msgEl   = document.getElementById(`loading-msg-${pk}`);
+  msgEl.innerHTML = (MENSAJES_AJUSTE[accion] || 'La IA está ajustando el texto…').replace('\n', '<br>');
+  loading.classList.add('visible');
+
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('accion', accion);
+
+  fetch(URL_AJUSTAR(pk), { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      loading.classList.remove('visible');
+      if (!d.ok) {
+        alert('Error al ajustar: ' + (d.error || 'desconocido'));
+        return;
+      }
+      // Actualizar contenido
+      document.getElementById(`contenido-${pk}`).textContent = d.contenido;
+      document.getElementById(`titulo-${pk}`).textContent    = d.titulo;
+      document.getElementById(`words-${pk}`).textContent     = d.word_count;
+      document.getElementById(`chars-${pk}`).textContent     = d.char_count;
+      // Dificultad
+      const badgeDif = document.getElementById(`badge-dif-${pk}`);
+      badgeDif.className = `badge badge-dif-${d.dificultad}`;
+      badgeDif.textContent = `Dificultad: ${d.dificultad_display}`;
+      // Extensión
+      const extEl = document.getElementById(`ext-${pk}`);
+      extEl.className = `stat-pill ${d.cumple ? 'cumple-ok' : 'cumple-err'}`;
+      extEl.textContent = d.cumple ? '✓ Extensión OK' : '⚠ Extensión insuficiente';
+      // El texto ya no está aprobado → volver a pendiente visualmente
+      actualizarBadgeEstado(pk, 'pendiente');
+    })
+    .catch(e => {
+      loading.classList.remove('visible');
+      alert('Error de red: ' + e.message);
+    });
+}
+
+// ── Aprobar / rechazar texto ──────────────────────────────────────
+function cambiarEstado(pk, estado) {
+  const form = new FormData();
+  form.append('csrfmiddlewaretoken', CSRF);
+  form.append('estado', estado);
+
+  fetch(URL_ESTADO_TEXTO(pk), { method:'POST', body:form })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      actualizarBadgeEstado(pk, estado);
+      actualizarProgreso(d.n_aprobados, d.n_total);
+    });
+}
+
+function actualizarBadgeEstado(pk, estado) {
+  const badge = document.getElementById(`badge-estado-${pk}`);
+  badge.className = `badge badge-${estado}`;
+  const labels = { aprobado:'✓ Aprobado', rechazado:'✗ Rechazado', pendiente:'Pendiente' };
+  badge.textContent = labels[estado] || estado;
+}
+
+function actualizarProgreso(nAprobados, nTotal) {
+  document.getElementById('count-aprobados').textContent = nAprobados;
+  const pct = nTotal > 0 ? (nAprobados / nTotal * 100) : 0;
+  document.getElementById('barra-progreso').style.width = pct + '%';
+
+  const btn = document.getElementById('btn-generar-test');
+  if (nAprobados > 0) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor  = 'not-allowed';
+  }
+
+  // Actualizar checkboxes del modal
+  actualizarModal();
+}
+
+// ── Modal configuración ───────────────────────────────────────────
+function abrirModalTest() {
+  actualizarModal();
+  document.getElementById('modal-test').classList.add('open');
+}
+function cerrarModalTest() {
+  document.getElementById('modal-test').classList.remove('open');
+}
+
+function actualizarModal() {
+  // Reconstruir lista de textos aprobados en el modal
+  const lista = document.getElementById('lista-textos-modal');
+  const existentes = lista.querySelectorAll('label.checkbox-texto');
+  // Solo quitar los rechazados (si se rechazaron después de abrir)
+  // La lista se carga desde el servidor; para evitar complejidad, recargar si es necesario.
+  // En una sesión normal, el admin aprueba todo y luego abre el modal.
+  actualizarTotalPreguntas();
+}
+
+function actualizarTotalPreguntas() {
+  const n1 = parseInt(document.getElementById('n1').value) || 0;
+  const n2 = parseInt(document.getElementById('n2').value) || 0;
+  const n3 = parseInt(document.getElementById('n3').value) || 0;
+  document.getElementById('total-preguntas').textContent = n1 + n2 + n3;
+}
+
+document.getElementById('n1')?.addEventListener('input', actualizarTotalPreguntas);
+document.getElementById('n2')?.addEventListener('input', actualizarTotalPreguntas);
+document.getElementById('n3')?.addEventListener('input', actualizarTotalPreguntas);
+
+document.getElementById('form-test')?.addEventListener('submit', function(e) {
+  const checks = document.querySelectorAll('.chk-texto-modal:checked');
+  if (checks.length === 0) {
+    e.preventDefault();
+    alert('Selecciona al menos un texto aprobado para generar el test.');
+    return;
+  }
+  const total = parseInt(document.getElementById('total-preguntas').textContent);
+  if (total === 0) {
+    e.preventDefault();
+    alert('La suma de preguntas debe ser mayor a 0.');
+    return;
+  }
+  document.getElementById('btn-submit-test').textContent = 'Lanzando generación…';
+  document.getElementById('btn-submit-test').disabled = true;
+});
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modal-test').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalTest();
+});
+</script>
+{% endblock %}

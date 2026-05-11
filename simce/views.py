@@ -13,7 +13,10 @@ from django.views.decorators.http import require_POST, require_http_methods
 from .models import (Prueba, TextoPrueba, Pregunta, Alternativa,
                      SesionEstudiante, RespuestaEstudiante,
                      ASIGNATURA_CHOICES, CURSO_CHOICES, TIPO_TEXTUAL_CHOICES)
-from .generator import generar_prueba_completa
+from .generator import (generar_textos, generar_preguntas_para_prueba,
+                        ajustar_texto, CHECKLIST_POR_TIPO)
+
+CURSOS_SIMCE = [('4B', '4° Básico'), ('6B', '6° Básico')]
 
 is_staff = lambda u: u.is_staff or u.is_superuser
 
@@ -27,78 +30,38 @@ def admin_dashboard(request):
         n_sesiones=Count('sesiones', filter=Q(sesiones__completada=True))
     )
     ctx = {
-        'pruebas': pruebas,
+        'pruebas':    pruebas,
         'asignaturas': ASIGNATURA_CHOICES,
-        'cursos': CURSO_CHOICES,
+        'cursos':      CURSOS_SIMCE,
     }
     return render(request, 'simce/admin_dashboard.html', ctx)
 
 
-# ── Admin: Generar prueba con IA (async) ─────────────────────────
+# ── Admin: Generar textos (Fase 1) ────────────────────────────────
 
-def _guardar_resultado(prueba, resultado):
-    """Persiste textos y preguntas generados. Llamado desde hilo background."""
+def _hilo_textos(prueba_pk, asignatura, curso):
     from django.db import connection
     try:
-        rubrica = resultado['rubrica']
-        prueba.titulo     = resultado['titulo']
-        prueba.rubrica_ok = rubrica['aprobado']
-        prueba.rubrica_log = rubrica
-        prueba.estado     = 'revision'
-        prueba.save()
-
-        orden_global = 1
-        for t_data in resultado['textos']:
-            texto = TextoPrueba.objects.create(
-                prueba=prueba, orden=t_data['orden'],
-                tipo_textual=t_data['tipo_textual'],
-                titulo=t_data['titulo'], contenido=t_data['contenido'],
-            )
-            for p_data in t_data['preguntas']:
-                pregunta = Pregunta.objects.create(
-                    texto=texto, orden=orden_global,
-                    enunciado=p_data['enunciado'], nivel=p_data['nivel'],
-                    habilidad=p_data['habilidad'],
-                    habilidad_justificacion=p_data.get('habilidad_justificacion', ''),
-                    nivel_justificacion=p_data.get('nivel_justificacion', ''),
-                    alternativa_correcta=p_data['alternativa_correcta'],
-                    pista_1=p_data.get('pista_1', ''),
-                    pista_2=p_data.get('pista_2', ''),
-                )
-                for a_data in p_data['alternativas']:
-                    Alternativa.objects.create(
-                        pregunta=pregunta, letra=a_data['letra'],
-                        texto=a_data['texto'], es_correcta=a_data['es_correcta'],
-                        justificacion=a_data.get('justificacion', ''),
-                    )
-                orden_global += 1
-    except Exception as e:
-        prueba.titulo     = f'Error: {str(e)[:120]}'
-        prueba.estado     = 'error'
-        prueba.rubrica_log = {'error': str(e)}
-        prueba.save()
-    finally:
-        connection.close()
-
-
-def _hilo_generacion(prueba_pk, asignatura, curso, titulo):
-    from django.db import connection
-    try:
-        resultado = generar_prueba_completa(asignatura, curso, titulo)
+        textos = generar_textos(asignatura, curso)
         prueba = Prueba.objects.get(pk=prueba_pk)
-        _guardar_resultado(prueba, resultado)
+        for i, t in enumerate(textos, 1):
+            TextoPrueba.objects.create(
+                prueba=prueba, orden=i,
+                tipo_textual=t['tipo_textual'],
+                titulo=t['titulo'],
+                contenido=t['contenido'],
+                dificultad=t.get('dificultad', 2),
+            )
+        prueba.estado = 'revision_textos'
+        prueba.save()
     except Exception as e:
         tb = traceback.format_exc()
         try:
             prueba = Prueba.objects.get(pk=prueba_pk)
-            prueba.titulo     = f'Error: {str(e)[:120]}'
-            prueba.estado     = 'error'
-            prueba.rubrica_log = {
-                'error':     str(e),
-                'traceback': tb,
-                'asignatura': asignatura,
-                'curso':      curso,
-            }
+            prueba.titulo = f'Error: {str(e)[:120]}'
+            prueba.estado = 'error'
+            prueba.rubrica_log = {'error': str(e), 'traceback': tb,
+                                  'asignatura': asignatura, 'curso': curso}
             prueba.save()
         except Exception:
             pass
@@ -118,27 +81,24 @@ def admin_generar(request):
         messages.error(request, 'Selecciona asignatura y curso.')
         return redirect('simce:admin_dashboard')
 
-    # Crear registro placeholder inmediatamente
     prueba = Prueba.objects.create(
-        titulo     = titulo or f'Generando {asignatura.title()} {curso}…',
+        titulo     = titulo or f'Textos {asignatura.title()} {curso}…',
         asignatura = asignatura,
         curso      = curso,
-        estado     = 'generando',
+        estado     = 'generando_textos',
         creada_por = request.user,
     )
 
-    # Lanzar generación en hilo background
-    t = threading.Thread(
-        target=_hilo_generacion,
-        args=(prueba.pk, asignatura, curso, titulo),
+    threading.Thread(
+        target=_hilo_textos,
+        args=(prueba.pk, asignatura, curso),
         daemon=True,
-    )
-    t.start()
+    ).start()
 
     return redirect('simce:prueba_generando', pk=prueba.pk)
 
 
-# ── Admin: Página de espera durante generación ────────────────────
+# ── Admin: Página de espera (sirve para ambas fases) ──────────────
 
 @login_required
 @user_passes_test(is_staff)
@@ -153,13 +113,190 @@ def api_estado_prueba(request, pk):
     prueba = get_object_or_404(Prueba, pk=pk)
     log = prueba.rubrica_log if isinstance(prueba.rubrica_log, dict) else {}
     return JsonResponse({
-        'estado':    prueba.estado,
-        'titulo':    prueba.titulo,
-        'error':     log.get('error', ''),
-        'traceback': log.get('traceback', ''),
-        'asignatura': log.get('asignatura', ''),
-        'curso':     log.get('curso', ''),
+        'estado':     prueba.estado,
+        'titulo':     prueba.titulo,
+        'error':      log.get('error', ''),
+        'traceback':  log.get('traceback', ''),
+        'asignatura': log.get('asignatura', prueba.asignatura),
+        'curso':      log.get('curso', prueba.curso),
     })
+
+
+# ── Admin: Revisar textos (Fase 2 — antes de generar preguntas) ───
+
+@login_required
+@user_passes_test(is_staff)
+def admin_revisar_textos(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+    textos = prueba.textos.all()
+
+    textos_con_checklist = []
+    for texto in textos:
+        checklist = CHECKLIST_POR_TIPO.get(texto.tipo_textual, [])
+        textos_con_checklist.append({'texto': texto, 'checklist': checklist})
+
+    n_aprobados = textos.filter(estado_texto='aprobado').count()
+    ctx = {
+        'prueba':              prueba,
+        'textos_con_checklist': textos_con_checklist,
+        'n_aprobados':         n_aprobados,
+        'n_total':             textos.count(),
+    }
+    return render(request, 'simce/admin_revisar_textos.html', ctx)
+
+
+# ── AJAX: Ajustar texto (largo o dificultad) ─────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def api_ajustar_texto(request, pk):
+    texto  = get_object_or_404(TextoPrueba, pk=pk)
+    accion = request.POST.get('accion', '')
+    acciones_validas = ('aumentar_largo', 'disminuir_largo',
+                        'aumentar_dificultad', 'disminuir_dificultad')
+    if accion not in acciones_validas:
+        return JsonResponse({'error': 'accion_invalida'}, status=400)
+
+    try:
+        resultado = ajustar_texto(texto, accion)
+        texto.titulo    = resultado['titulo']
+        texto.contenido = resultado['contenido']
+        texto.dificultad = resultado['dificultad']
+        texto.estado_texto = 'pendiente'
+        texto.save()
+        return JsonResponse({
+            'ok':         True,
+            'titulo':     texto.titulo,
+            'contenido':  texto.contenido,
+            'char_count': texto.char_count,
+            'word_count': texto.word_count,
+            'dificultad': texto.dificultad,
+            'dificultad_display': texto.get_dificultad_display(),
+            'cumple':     texto.cumple_extension(),
+        })
+    except Exception as e:
+        tb = traceback.format_exc()
+        return JsonResponse({'error': str(e), 'traceback': tb}, status=500)
+
+
+# ── AJAX: Aprobar / rechazar texto individual ─────────────────────
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def api_estado_texto(request, pk):
+    texto  = get_object_or_404(TextoPrueba, pk=pk)
+    estado = request.POST.get('estado', '')
+    if estado not in ('aprobado', 'rechazado', 'pendiente'):
+        return JsonResponse({'error': 'estado_invalido'}, status=400)
+
+    texto.estado_texto = estado
+    texto.save(update_fields=['estado_texto'])
+
+    n_aprobados = texto.prueba.textos.filter(estado_texto='aprobado').count()
+    return JsonResponse({
+        'ok':          True,
+        'estado':      estado,
+        'n_aprobados': n_aprobados,
+        'n_total':     texto.prueba.textos.count(),
+    })
+
+
+# ── Admin: Lanzar generación de preguntas (Fase 3) ────────────────
+
+def _hilo_preguntas(prueba_pk, textos_ids, n_nivel1, n_nivel2, n_nivel3):
+    from django.db import connection
+    try:
+        prueba = Prueba.objects.get(pk=prueba_pk)
+
+        if textos_ids:
+            textos_qs = prueba.textos.filter(pk__in=textos_ids, estado_texto='aprobado')
+        else:
+            textos_qs = prueba.textos.filter(estado_texto='aprobado')
+
+        if not textos_qs.exists():
+            raise ValueError('No hay textos aprobados para generar preguntas.')
+
+        resultado = generar_preguntas_para_prueba(
+            prueba,
+            textos_override=list(textos_qs.order_by('orden')),
+            n_nivel1=n_nivel1,
+            n_nivel2=n_nivel2,
+            n_nivel3=n_nivel3,
+        )
+
+        rubrica = resultado['rubrica']
+        prueba.rubrica_ok  = rubrica['aprobado']
+        prueba.rubrica_log = rubrica
+        prueba.estado      = 'revision'
+        prueba.save()
+
+        orden_global = 1
+        for t_data in resultado['textos']:
+            texto_obj = t_data['texto_obj']
+            for p_data in t_data['preguntas']:
+                pregunta = Pregunta.objects.create(
+                    texto=texto_obj, orden=orden_global,
+                    enunciado=p_data['enunciado'],
+                    nivel=p_data['nivel'],
+                    habilidad=p_data['habilidad'],
+                    habilidad_justificacion=p_data.get('habilidad_justificacion', ''),
+                    nivel_justificacion=p_data.get('nivel_justificacion', ''),
+                    alternativa_correcta=p_data['alternativa_correcta'],
+                    pista_1=p_data.get('pista_1', ''),
+                    pista_2=p_data.get('pista_2', ''),
+                )
+                for a_data in p_data['alternativas']:
+                    Alternativa.objects.create(
+                        pregunta=pregunta, letra=a_data['letra'],
+                        texto=a_data['texto'], es_correcta=a_data['es_correcta'],
+                        justificacion=a_data.get('justificacion', ''),
+                    )
+                orden_global += 1
+
+        prueba.titulo = prueba.titulo.replace('Textos ', '')
+        prueba.save(update_fields=['titulo'])
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        try:
+            prueba = Prueba.objects.get(pk=prueba_pk)
+            prueba.estado     = 'error'
+            prueba.rubrica_log = {'error': str(e), 'traceback': tb}
+            prueba.save()
+        except Exception:
+            pass
+    finally:
+        connection.close()
+
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def admin_lanzar_preguntas(request, pk):
+    prueba = get_object_or_404(Prueba, pk=pk)
+
+    textos_ids = request.POST.getlist('textos_ids')
+    textos_ids = [int(x) for x in textos_ids if x.isdigit()]
+
+    try:
+        n_nivel1 = max(0, int(request.POST.get('n_nivel1', 5)))
+        n_nivel2 = max(0, int(request.POST.get('n_nivel2', 5)))
+        n_nivel3 = max(0, int(request.POST.get('n_nivel3', 20)))
+    except (ValueError, TypeError):
+        n_nivel1, n_nivel2, n_nivel3 = 5, 5, 20
+
+    prueba.estado = 'generando_preguntas'
+    prueba.save(update_fields=['estado'])
+
+    threading.Thread(
+        target=_hilo_preguntas,
+        args=(prueba.pk, textos_ids, n_nivel1, n_nivel2, n_nivel3),
+        daemon=True,
+    ).start()
+
+    return redirect('simce:prueba_generando', pk=prueba.pk)
 
 
 # ── Admin: Revisar prueba ─────────────────────────────────────────

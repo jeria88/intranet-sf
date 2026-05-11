@@ -5,13 +5,17 @@ app_name = 'simce'
 
 urlpatterns = [
     # Admin
-    path('',                          views.admin_dashboard,    name='admin_dashboard'),
-    path('generar/',                  views.admin_generar,      name='admin_generar'),
-    path('generando/<int:pk>/',       views.prueba_generando,   name='prueba_generando'),
-    path('api/estado/<int:pk>/',      views.api_estado_prueba,  name='api_estado_prueba'),
-    path('revisar/<int:pk>/',         views.admin_revisar,      name='admin_revisar'),
-    path('aprobar/<int:pk>/',         views.admin_aprobar,      name='admin_aprobar'),
-    path('publicar/<int:pk>/',        views.admin_publicar,     name='admin_publicar'),
+    path('',                              views.admin_dashboard,       name='admin_dashboard'),
+    path('generar/',                      views.admin_generar,         name='admin_generar'),
+    path('generando/<int:pk>/',           views.prueba_generando,      name='prueba_generando'),
+    path('api/estado/<int:pk>/',          views.api_estado_prueba,     name='api_estado_prueba'),
+    path('revisar-textos/<int:pk>/',      views.admin_revisar_textos,  name='admin_revisar_textos'),
+    path('api/ajustar/<int:pk>/',         views.api_ajustar_texto,     name='api_ajustar_texto'),
+    path('api/estado-texto/<int:pk>/',    views.api_estado_texto,      name='api_estado_texto'),
+    path('lanzar-preguntas/<int:pk>/',    views.admin_lanzar_preguntas,name='admin_lanzar_preguntas'),
+    path('revisar/<int:pk>/',             views.admin_revisar,         name='admin_revisar'),
+    path('aprobar/<int:pk>/',             views.admin_aprobar,         name='admin_aprobar'),
+    path('publicar/<int:pk>/',            views.admin_publicar,        name='admin_publicar'),
 
     # Estudiante — el modo va en la URL para que el profe comparta el link correcto
     path('rendir/<int:pk>/<str:modo>/',                              views.prueba_identificacion, name='prueba_identificacion'),

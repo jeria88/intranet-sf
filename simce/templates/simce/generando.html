@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
-{% block title %}Generando prueba…{% endblock %}
+{% block title %}Procesando…{% endblock %}
 {% block content %}
 <style>
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
 .spinner { width:56px; height:56px; border:5px solid #e8e8e8; border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px; }
 .step { display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px; color:#888; }
-.step.done  { color:#155724; }
+.step.done   { color:#155724; }
 .step.active { color:var(--accent); font-weight:600; animation:pulse 1.4s ease-in-out infinite; }
-.step .dot  { width:10px; height:10px; border-radius:50%; background:#e0e0e0; flex-shrink:0; }
-.step.done  .dot { background:#28a745; }
+.step .dot   { width:10px; height:10px; border-radius:50%; background:#e0e0e0; flex-shrink:0; }
+.step.done   .dot { background:#28a745; }
 .step.active .dot { background:var(--accent); }
 </style>
 
@@ -18,20 +18,31 @@
 
     <div class="spinner" id="spinner"></div>
 
-    <h2 style="margin:0 0 8px; font-size:20px;">Generando con IA</h2>
+    <h2 style="margin:0 0 8px; font-size:20px;" id="titulo-estado">Generando con IA</h2>
     <p style="color:#888; font-size:13px; margin:0 0 28px;" id="subtitulo">
       {{ prueba.get_asignatura_display }} · {{ prueba.get_curso_display }}
     </p>
 
-    <div style="text-align:left; background:#f9f9f9; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
-      <div class="step done">    <span class="dot"></span> Solicitud recibida</div>
-      <div class="step active" id="step-textos"><span class="dot"></span> Generando 6 textos auténticos…</div>
-      <div class="step" id="step-preguntas"><span class="dot"></span> Creando 30 preguntas con pistas</div>
-      <div class="step" id="step-rubrica">  <span class="dot"></span> Validando rúbrica oficial</div>
-      <div class="step" id="step-guardando"><span class="dot"></span> Guardando en base de datos</div>
+    <!-- Fase: generando textos -->
+    <div id="fase-textos" style="display:none; text-align:left; background:#f9f9f9; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div class="step done"><span class="dot"></span> Solicitud recibida</div>
+      <div class="step active" id="st-1"><span class="dot"></span> Seleccionando tipos textuales apropiados…</div>
+      <div class="step" id="st-2"><span class="dot"></span> Generando textos con IA (puede tardar 1-2 min)</div>
+      <div class="step" id="st-3"><span class="dot"></span> Validando extensión de cada texto</div>
+      <div class="step" id="st-4"><span class="dot"></span> Guardando textos para revisión</div>
     </div>
 
-    <p style="font-size:12px; color:#bbb; margin:0;">El proceso tarda entre 2 y 4 minutos.<br>No cierres esta ventana.</p>
+    <!-- Fase: generando preguntas -->
+    <div id="fase-preguntas" style="display:none; text-align:left; background:#f9f9f9; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+      <div class="step done"><span class="dot"></span> Textos aprobados recibidos</div>
+      <div class="step active" id="sp-1"><span class="dot"></span> Analizando cada texto aprobado…</div>
+      <div class="step" id="sp-2"><span class="dot"></span> Generando preguntas por texto (1-2 min)</div>
+      <div class="step" id="sp-3"><span class="dot"></span> Distribuyendo niveles de dificultad</div>
+      <div class="step" id="sp-4"><span class="dot"></span> Validando rúbrica del instrumento</div>
+      <div class="step" id="sp-5"><span class="dot"></span> Guardando prueba completa</div>
+    </div>
+
+    <p style="font-size:12px; color:#bbb; margin:0;" id="msg-espera">No cierres esta ventana.</p>
 
     <div id="error-box" style="display:none; margin-top:20px; text-align:left;">
       <div style="background:#f8d7da; border-radius:10px; padding:14px; font-size:13px; color:#721c24; margin-bottom:10px;">
@@ -40,9 +51,9 @@
       <div style="background:#1e1e2e; border-radius:10px; padding:14px; font-size:11px; color:#cdd6f4; white-space:pre-wrap; overflow-x:auto; max-height:220px; overflow-y:auto; font-family:monospace; line-height:1.5;" id="error-tb"></div>
       <button onclick="copiarError()"
         style="margin-top:10px; width:100%; background:#575760; color:#fff; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;" id="btn-copiar">
-        📋 Copiar error completo para reportar
+        📋 Copiar error completo
       </button>
-      <a href="{{ request.build_absolute_uri|default:'' }}" id="link-dashboard"
+      <a href="#" id="link-dashboard"
         style="display:block; margin-top:10px; text-align:center; font-size:12px; color:var(--accent);">
         ← Volver al panel
       </a>
@@ -51,68 +62,84 @@
 </div>
 
 <script>
+const PK            = {{ prueba.pk }};
+const URL_ESTADO    = "{% url 'simce:api_estado_prueba' prueba.pk %}";
+const URL_TEXTOS    = "{% url 'simce:admin_revisar_textos' prueba.pk %}";
+const URL_PREGUNTAS = "{% url 'simce:admin_revisar' prueba.pk %}";
+const URL_DASHBOARD = "{% url 'simce:admin_dashboard' %}";
+const ESTADO_INICIAL = "{{ prueba.estado }}";
+
 let errorData = {};
+let elapsed   = 0;
+
 function copiarError() {
-  const txt = [
-    '=== ERROR SIMCE GENERATOR ===',
-    `Asignatura: ${errorData.asignatura}  Curso: ${errorData.curso}`,
-    `Error: ${errorData.error}`,
-    '',
-    errorData.traceback,
-  ].join('\n');
+  const txt = ['=== ERROR SIMCE GENERATOR ===',
+    `Error: ${errorData.error}`, '', errorData.traceback].join('\n');
   navigator.clipboard.writeText(txt).then(() => {
-    document.getElementById('btn-copiar').textContent = '✓ Copiado al portapapeles';
-    setTimeout(() => {
-      document.getElementById('btn-copiar').textContent = '📋 Copiar error completo para reportar';
-    }, 2500);
+    document.getElementById('btn-copiar').textContent = '✓ Copiado';
+    setTimeout(() => { document.getElementById('btn-copiar').textContent = '📋 Copiar error completo'; }, 2500);
   });
 }
-</script>
-<script>
-const PK = {{ prueba.pk }};
-const URL_ESTADO = "{% url 'simce:api_estado_prueba' prueba.pk %}";
-const URL_REVISAR = "{% url 'simce:admin_revisar' prueba.pk %}";
-const URL_DASHBOARD = "{% url 'simce:admin_dashboard' %}";
 
-let elapsed = 0;
-const steps = ['step-textos', 'step-preguntas', 'step-rubrica', 'step-guardando'];
-const stepTimes = [30, 90, 150, 170]; // segundos aproximados por step
+function activarFase(fase) {
+  document.getElementById('fase-textos').style.display    = 'none';
+  document.getElementById('fase-preguntas').style.display = 'none';
+  if (fase === 'textos') {
+    document.getElementById('fase-textos').style.display = 'block';
+    document.getElementById('titulo-estado').textContent  = 'Generando textos con IA';
+    document.getElementById('msg-espera').textContent     = 'El proceso tarda entre 1 y 2 minutos. No cierres esta ventana.';
+  } else if (fase === 'preguntas') {
+    document.getElementById('fase-preguntas').style.display = 'block';
+    document.getElementById('titulo-estado').textContent    = 'Generando preguntas con IA';
+    document.getElementById('msg-espera').textContent       = 'Generando preguntas para cada texto aprobado. No cierres esta ventana.';
+  }
+}
 
-function updateStepVisual() {
-  steps.forEach((id, i) => {
+function avanzarSteps(ids, tiempos) {
+  ids.forEach((id, i) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.className = 'step';
-    if (elapsed >= stepTimes[i] && (i === steps.length - 1 || elapsed < stepTimes[i + 1])) {
+    if (elapsed >= tiempos[i] && (i === ids.length - 1 || elapsed < tiempos[i + 1])) {
       el.classList.add('active');
-    } else if (elapsed >= stepTimes[i]) {
+    } else if (elapsed >= tiempos[i]) {
       el.classList.add('done');
     }
   });
 }
 
+function marcarTodosDone(ids) {
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.className = 'step done'; });
+}
+
 function poll() {
   elapsed += 4;
-  updateStepVisual();
+
+  if (document.getElementById('fase-textos').style.display !== 'none') {
+    avanzarSteps(['st-1','st-2','st-3','st-4'], [0, 10, 60, 90]);
+  } else if (document.getElementById('fase-preguntas').style.display !== 'none') {
+    avanzarSteps(['sp-1','sp-2','sp-3','sp-4','sp-5'], [0, 5, 15, 80, 100]);
+  }
 
   fetch(URL_ESTADO)
     .then(r => r.json())
     .then(d => {
-      if (d.estado === 'revision') {
-        // Listo — marcar todos done y redirigir
-        steps.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.className = 'step done';
-        });
+      if (d.estado === 'revision_textos') {
+        marcarTodosDone(['st-1','st-2','st-3','st-4']);
         document.getElementById('spinner').style.borderTopColor = '#28a745';
-        document.querySelector('h2').textContent = '¡Prueba lista!';
-        setTimeout(() => { window.location.href = URL_REVISAR; }, 800);
+        document.getElementById('titulo-estado').textContent = '¡Textos listos para revisar!';
+        setTimeout(() => { window.location.href = URL_TEXTOS; }, 800);
+
+      } else if (d.estado === 'revision') {
+        marcarTodosDone(['sp-1','sp-2','sp-3','sp-4','sp-5']);
+        document.getElementById('spinner').style.borderTopColor = '#28a745';
+        document.getElementById('titulo-estado').textContent = '¡Prueba lista para revisar!';
+        setTimeout(() => { window.location.href = URL_PREGUNTAS; }, 800);
 
       } else if (d.estado === 'error') {
         document.getElementById('spinner').style.display = 'none';
-        document.querySelector('h2').textContent = 'Error al generar';
-        document.getElementById('subtitulo').style.display = 'none';
-        document.querySelector('.step.active')?.classList.remove('active');
+        document.getElementById('titulo-estado').textContent = 'Error al generar';
+        document.getElementById('subtitulo').style.display  = 'none';
         errorData = d;
         document.getElementById('error-msg').textContent = d.error || 'Error inesperado';
         document.getElementById('error-tb').textContent  = d.traceback || '(sin traceback)';
@@ -120,14 +147,20 @@ function poll() {
         document.getElementById('error-box').style.display = 'block';
 
       } else {
-        // Sigue generando
+        if (d.estado === 'generando_preguntas') activarFase('preguntas');
         setTimeout(poll, 4000);
       }
     })
     .catch(() => setTimeout(poll, 5000));
 }
 
-// Arrancar polling después de 4s
+// Inicializar la fase correcta al cargar
+if (ESTADO_INICIAL === 'generando_preguntas') {
+  activarFase('preguntas');
+} else {
+  activarFase('textos');
+}
+
 setTimeout(poll, 4000);
 </script>
 {% endblock %}

@@ -46,13 +46,28 @@ TIPO_TEXTUAL_CHOICES = [
 ALTERNATIVA_CHOICES = [('A','A'), ('B','B'), ('C','C'), ('D','D')]
 
 ESTADO_PRUEBA = [
-    ('generando', 'Generando…'),
-    ('borrador',  'Borrador'),
-    ('error',     'Error de generación'),
-    ('revision',  'En Revisión'),
-    ('aprobada',  'Aprobada'),
-    ('publicada', 'Publicada'),
-    ('cerrada',   'Cerrada'),
+    ('generando',           'Generando…'),
+    ('generando_textos',    'Generando textos…'),
+    ('revision_textos',     'Revisando textos'),
+    ('generando_preguntas', 'Generando preguntas…'),
+    ('borrador',            'Borrador'),
+    ('error',               'Error de generación'),
+    ('revision',            'En Revisión'),
+    ('aprobada',            'Aprobada'),
+    ('publicada',           'Publicada'),
+    ('cerrada',             'Cerrada'),
+]
+
+DIFICULTAD_TEXTO = [
+    (1, 'Básico'),
+    (2, 'Intermedio'),
+    (3, 'Avanzado'),
+]
+
+ESTADO_TEXTO_CHOICES = [
+    ('pendiente',  'Pendiente'),
+    ('aprobado',   'Aprobado'),
+    ('rechazado',  'Rechazado'),
 ]
 
 MODO_SESION = [
@@ -66,7 +81,7 @@ class Prueba(models.Model):
     asignatura   = models.CharField(max_length=20, choices=ASIGNATURA_CHOICES)
     curso        = models.CharField(max_length=3,  choices=CURSO_CHOICES)
     anio         = models.PositiveSmallIntegerField(default=timezone.now().year, verbose_name='Año')
-    estado       = models.CharField(max_length=12, choices=ESTADO_PRUEBA, default='borrador')
+    estado       = models.CharField(max_length=22, choices=ESTADO_PRUEBA, default='borrador')
     creada_por   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                                      null=True, related_name='pruebas_simce')
     creada_en    = models.DateTimeField(auto_now_add=True)
@@ -97,12 +112,18 @@ class Prueba(models.Model):
 
 
 class TextoPrueba(models.Model):
-    prueba       = models.ForeignKey(Prueba, on_delete=models.CASCADE, related_name='textos')
-    orden        = models.PositiveSmallIntegerField(verbose_name='Orden (1-6)')
-    tipo_textual = models.CharField(max_length=20, choices=TIPO_TEXTUAL_CHOICES)
-    titulo       = models.CharField(max_length=200)
-    contenido    = models.TextField(verbose_name='Contenido del texto')
-    char_count   = models.PositiveIntegerField(default=0, verbose_name='Caracteres sin espacios')
+    prueba          = models.ForeignKey(Prueba, on_delete=models.CASCADE, related_name='textos')
+    orden           = models.PositiveSmallIntegerField(verbose_name='Orden (1-6)')
+    tipo_textual    = models.CharField(max_length=20, choices=TIPO_TEXTUAL_CHOICES)
+    titulo          = models.CharField(max_length=200)
+    contenido       = models.TextField(verbose_name='Contenido del texto')
+    char_count      = models.PositiveIntegerField(default=0, verbose_name='Caracteres sin espacios')
+    word_count      = models.PositiveIntegerField(default=0, verbose_name='Palabras')
+    dificultad      = models.PositiveSmallIntegerField(choices=DIFICULTAD_TEXTO, default=2,
+                                                       verbose_name='Dificultad del texto')
+    estado_texto    = models.CharField(max_length=10, choices=ESTADO_TEXTO_CHOICES,
+                                       default='pendiente', verbose_name='Estado revisión')
+    checklist_admin = models.JSONField(default=dict, verbose_name='Checklist admin')
 
     class Meta:
         ordering = ['orden']
@@ -112,6 +133,7 @@ class TextoPrueba(models.Model):
 
     def save(self, *args, **kwargs):
         self.char_count = len(self.contenido.replace(' ', ''))
+        self.word_count = len(self.contenido.split())
         super().save(*args, **kwargs)
 
     def cumple_extension(self):
