@@ -12,27 +12,199 @@ client = OpenAI(api_key=DEEPSEEK_KEY, base_url='https://api.deepseek.com')
 
 # ── Tipos disponibles por asignatura ──────────────────────────────
 TIPOS_POR_ASIGNATURA = {
-    'lenguaje':   ['cuento', 'fabula', 'noticia', 'reportaje', 'carta_formal',
-                   'carta_director', 'carta_informal', 'soneto', 'oda',
-                   'discontinuo', 'infografia', 'instructivo', 'afiche'],
+    'lenguaje':   ['cuento', 'cuento_folclorico', 'fabula', 'leyenda', 'mito',
+                   'poema', 'soneto', 'oda', 'noticia', 'reportaje',
+                   'articulo_info', 'infografia', 'instructivo', 'receta',
+                   'manual', 'biografia', 'carta_formal', 'carta_director',
+                   'carta_informal', 'afiche', 'discontinuo'],
     'matematica': ['discontinuo', 'infografia', 'instructivo', 'noticia', 'reportaje'],
     'ciencias':   ['articulo_cient', 'discontinuo', 'infografia', 'instructivo',
                    'noticia', 'reportaje', 'receta'],
     'historia':   ['noticia', 'reportaje', 'carta_formal', 'carta_director',
-                   'discontinuo', 'infografia', 'afiche'],
+                   'discontinuo', 'infografia', 'afiche', 'biografia'],
+}
+
+# ── Ejes y habilidades SIMCE Lenguaje (Tabla UTP) ─────────────────
+# Organizados por eje para inyectarlos en los prompts
+EJES_HABILIDADES_LENGUAJE = {
+    'LOCALIZAR': [
+        'Recordar hechos y detalles',
+        'Comprender la secuencia (explícita)',
+    ],
+    'INTERPRETAR': [
+        'Hallar la idea principal',
+        'Reconocer causa y efecto',
+        'Comparar y contrastar',
+        'Hacer predicciones',
+        'Hallar significado de palabras por contexto',
+        'Sacar conclusiones y hacer inferencias',
+        'Interpretar lenguaje figurado',
+    ],
+    'REFLEXIONAR': [
+        'Distinguir entre hecho y opinión',
+        'Identificar el propósito del autor',
+        'Interpretar ideas implícitas y síntesis',
+    ],
+}
+
+# Lista plana para uso en prompts genéricos
+_HAB_LENGUAJE = [h for habs in EJES_HABILIDADES_LENGUAJE.values() for h in habs]
+
+# Plantillas de pregunta por habilidad y nivel (Tabla UTP)
+PLANTILLAS_HABILIDADES_LENGUAJE = {
+    'Recordar hechos y detalles': {
+        1: 'Según el texto, ¿quién / qué / dónde / cuándo [acción o personaje]?\na) [Opción correcta textual]\nb) [Personaje secundario]\nc) [Lugar diferente]\nd) [Acción no mencionada]',
+        2: '¿Qué se afirma en el texto sobre [tema específico]?\na) [Información correcta levemente parafraseada]\nb) [Información de otro párrafo]\nc) [Información similar pero incorrecta]\nd) [No mencionada]',
+        3: 'Según la [tabla/gráfico/infografía], ¿cuál afirmación es correcta?\na) [Dato correcto del texto discontinuo]\nb) [Dato incorrecto]\nc) [Dato verdadero de otro contexto]\nd) [No presente]',
+    },
+    'Comprender la secuencia (explícita)': {
+        1: '¿Qué ocurrió PRIMERO en el texto?\na) [Evento correcto del inicio]\nb) [Evento del medio]\nc) [Evento del final]\nd) [Evento que no ocurre]',
+        2: '¿Qué ocurrió INMEDIATAMENTE ANTES de que [evento referencia]?\na) [Evento correcto anterior]\nb) [Evento posterior]\nc) [Evento de otra parte]\nd) [Evento inventado]',
+        3: 'Si reorganizaras los eventos, ¿cuál NO podría ocurrir al principio sin cambiar el sentido?\na-c) [Eventos que sí podrían ir primero]\nd) [Evento clave que solo tiene sentido al final]',
+    },
+    'Hallar la idea principal': {
+        1: '¿De qué trata PRINCIPALMENTE este texto?\na) [Tema general correcto]\nb) [Detalle secundario]\nc) [Tema no mencionado]\nd) [Personaje o elemento menor]',
+        2: '¿Cuál es la IDEA PRINCIPAL del párrafo [N]?\na) [Idea central correcta del párrafo]\nb) [Detalle de apoyo]\nc) [Idea de otro párrafo]\nd) [No presente]',
+        3: '¿Cuál resume MEJOR el mensaje global del texto?\na) [Síntesis completa que integra varias ideas]\nb) [Solo la idea del primer párrafo]\nc) [Solo la idea del último párrafo]\nd) [Un detalle aislado]',
+    },
+    'Reconocer causa y efecto': {
+        1: 'Según el texto, ¿por qué [evento/acción]?\na) [Causa correcta explícita]\nb) [Consecuencia del evento]\nc) [Causa de otro evento]\nd) [No relacionada]',
+        2: '¿Cuál es la RAZÓN principal por la que [evento]?\na) [Causa inferida correctamente]\nb) [Consecuencia]\nc) [Causa explícita de otro evento]\nd) [Opinión del lector]',
+        3: '¿Cuál describe MEJOR la relación causa-efecto?\na) [A] causó [B], que causó [C] (cadena completa)\nb) Solo A causó B (incompleta)\nc) Invierte la relación\nd) Relación falsa',
+    },
+    'Comparar y contrastar': {
+        1: '[Elemento 1] y [Elemento 2] se parecen en que ambos:\na) [Característica común correcta]\nb) [Solo de elemento 1]\nc) [Solo de elemento 2]\nd) [No presente en ninguno]',
+        2: '¿Cuál es una DIFERENCIA entre [E1] y [E2] según el texto?\na) [Diferencia correcta]\nb) [Semejanza como diferencia]\nc) [Diferencia de otro contexto]\nd) [No mencionada]',
+        3: '¿En qué se DIFERENCIAN fundamentalmente en cuanto a [aspecto]?\na) [Diferencia conceptual profunda]\nb) [Diferencia superficial]\nc) [Semejanza como diferencia]\nd) [No presente]',
+    },
+    'Hacer predicciones': {
+        1: 'Según el título, ¿qué crees que ocurrirá?\na) [Predicción lógica basada en el título]\nb) [Ilógica]\nc) [Descripción sin predicción]\nd) [Evento ya ocurrido]',
+        2: 'Basándote en lo leído, ¿qué es lo MÁS PROBABLE que ocurra después?\na) [Predicción coherente con pistas]\nb) [Evento ya ocurrido]\nc) [Ilógica]\nd) [Deseo del lector sin base]',
+        3: 'Si [evento clave] NO hubiera ocurrido, ¿qué habría pasado?\na) [Consecuencia lógica de eliminar ese evento]\nb) [Sin relación]\nc) [Lo mismo que ocurrió]\nd) [Imposible de predecir]',
+    },
+    'Hallar significado de palabras por contexto': {
+        1: 'En el texto, la palabra "[X]" significa:\na) [Definición correcta del contexto]\nb) [Significado literal de otro contexto]\nc) [Otra palabra no relacionada]\nd) [Inventado]',
+        2: '¿Qué significa la expresión "[X]" en el texto?\na) [Significado inferido del contexto]\nb) [Literal sin contexto]\nc) [Significado de otra expresión]\nd) [Sin relación]',
+        3: '¿Cuál significado de "[X]" es el MÁS ADECUADO según el contexto?\na) [Acepción correcta en este contexto]\nb) [Otra acepción válida pero no aplicable]\nc) [Significado opuesto]\nd) [Inventado]',
+    },
+    'Sacar conclusiones y hacer inferencias': {
+        1: 'Al final, [personaje] se sentía:\na) [Emoción correcta inferida de acciones]\nb) [Emoción opuesta]\nc) [No relacionada]\nd) [Información textual sin inferir]',
+        2: '¿Cómo era [personaje]?\na) [Característica inferida de múltiples acciones]\nb) [Opuesta]\nc) [Literal dicha por otro personaje]\nd) [Sin relación]',
+        3: '¿Cuál expresa MEJOR la enseñanza o moraleja del texto?\na) [Moraleja integrando pistas implícitas]\nb) [Hecho explícito como enseñanza]\nc) [Opinión personal sin base]\nd) [Enseñanza de otro texto]',
+    },
+    'Interpretar lenguaje figurado': {
+        1: 'Cuando el texto dice "[expresión]", quiere decir que:\na) [Interpretación figurada correcta]\nb) [Literal incorrecta]\nc) [Otra expresión del texto]\nd) [Opinión del lector]',
+        2: '¿Qué quiere decir la expresión "[metáfora/personificación]"?\na) [Significado figurado correcto]\nb) [Literal sin figura]\nc) [Significado de otra expresión]\nd) [Definición de diccionario sin contexto]',
+        3: 'El autor usa "[lenguaje figurado]" para:\na) [Efecto/idea que busca transmitir]\nb) [Decorar sin propósito]\nc) [Confundir al lector]\nd) [Referirse a algo literal posterior]',
+    },
+    'Distinguir entre hecho y opinión': {
+        1: '¿Cuál es un HECHO según el texto?\na) [Afirmación verificable presente]\nb) [Opinión del autor o personaje]\nc) [Inventada]\nd) [De otro texto]',
+        2: '¿Cuál es una OPINIÓN del autor o personaje?\na) [Afirmación subjetiva con juicio de valor]\nb) [Dato verificable]\nc) [Hecho científico]\nd) [Información sin juicio]',
+        3: '¿El autor mezcla hechos y opiniones? ¿Con qué propósito?\na) [Sí, para persuadir/convencer]\nb) [No, solo hechos]\nc) [Sí, pero es error del autor]\nd) [No, solo opiniones]',
+    },
+    'Identificar el propósito del autor': {
+        1: 'Este texto fue escrito principalmente para:\na) [Propósito correcto según tipo textual]\nb) [Opuesto al género]\nc) [Sin relación]\nd) [Detalle de contenido como propósito]',
+        2: '¿Cuál es el PROPÓSITO PRINCIPAL del autor?\na) [Propósito inferido: persuadir/informar/entretener/describir]\nb) [Secundario o no principal]\nc) [Opuesto]\nd) [De otro texto similar]',
+        3: 'Si este texto fuera leído por [audiencia diferente], ¿cómo cambiaría su propósito?\na) [Se mantiene, es inherente al texto]\nb) [Cambiaría según la audiencia]\nc) [Se volvería confuso]\nd) [Depende solo del lector]',
+    },
+    'Interpretar ideas implícitas y síntesis': {
+        1: '¿Qué opinas sobre la actitud de [personaje]?\na) [Opinión simple + justificación personal]\nb) [Solo opinión sin justificar]\nc) [Solo repite texto sin opinar]\nd) [Sin relación al texto]',
+        2: '¿Estás de acuerdo con la decisión de [personaje]?\na) [Sí/No + justificación basada EN EL TEXTO]\nb) [Solo experiencia personal]\nc) [Sin justificación]\nd) [No toma postura]',
+        3: 'El título es "[X]". ¿Es adecuado? Fundamenta.\na) [Sí/No + justificación integrando info EXPLÍCITA e IMPLÍCITA]\nb) [Solo explícita]\nc) [Solo personal]\nd) [Sin fundamentar]',
+    },
+}
+
+# Información curricular por tipo textual (Tabla UTP — para inyectar en prompts)
+TIPO_TEXTUAL_INFO = {
+    'cuento': {
+        'definicion': 'Narración breve escrita por un autor identificable, con estructura narrativa clara y personajes definidos.',
+        'estructura': 'Inicio (presentación), desarrollo (conflicto), desenlace (resolución), personajes, narrador, ambiente.',
+        'frecuencia': 'Muy alta',
+    },
+    'cuento_folclorico': {
+        'definicion': 'Narración tradicional de autor anónimo, transmitida oralmente. Incluye cuentos de hadas y maravillosos.',
+        'estructura': 'Inicio típico ("Había una vez…"), desarrollo con elementos mágicos, final feliz, personajes arquetípicos, estructura repetitiva.',
+        'frecuencia': 'Muy alta',
+    },
+    'fabula': {
+        'definicion': 'Narración breve protagonizada por animales, que concluye con una enseñanza o moraleja explícita.',
+        'estructura': 'Introducción breve, conflicto, moraleja explícita al final, personajes animales con rasgos humanos, estructura simple.',
+        'frecuencia': 'Media',
+    },
+    'leyenda': {
+        'definicion': 'Relato que mezcla elementos reales y maravillosos, vinculado a un lugar, cultura o hecho histórico.',
+        'estructura': 'Ambientación real, elementos fantásticos, propósito explicativo, transmisión oral original, personajes históricos o míticos.',
+        'frecuencia': 'Media',
+    },
+    'mito': {
+        'definicion': 'Relato sagrado que explica el origen del mundo o fenómenos naturales, protagonizado por dioses o héroes culturales.',
+        'estructura': 'Protagonistas divinos, tiempo remoto, propósito explicativo cosmogónico, estructura simbólica, pertenece a una cultura específica.',
+        'frecuencia': 'Media',
+    },
+    'poema': {
+        'definicion': 'Texto lírico que usa lenguaje especial (ritmo, rima, lenguaje figurado) para expresar emociones o crear imágenes.',
+        'estructura': 'Versos, estrofas, rima (asonante o consonante) o verso libre, lenguaje figurado (metáforas, personificaciones, símiles).',
+        'frecuencia': 'Alta',
+    },
+    'articulo_info': {
+        'definicion': 'Texto expositivo que presenta información objetiva y verificable sobre un tema (ciencia, historia, naturaleza, tecnología).',
+        'estructura': 'Título, subtítulos, introducción, desarrollo en párrafos, cierre, lenguaje objetivo, vocabulario específico.',
+        'frecuencia': 'Muy alta',
+    },
+    'articulo_cient': {
+        'definicion': 'Texto basado en investigación científica, adaptado para niños. Explica fenómenos, experimentos o descubrimientos.',
+        'estructura': 'Título, introducción (pregunta/problema), metodología, resultados, conclusión, gráficos, tablas, glosario, lenguaje preciso.',
+        'frecuencia': 'Media',
+    },
+    'noticia': {
+        'definicion': 'Relato breve y objetivo de un suceso actual, relevante y verídico, con estructura de pirámide invertida.',
+        'estructura': 'Titular, bajada, lead (qué/quién/cuándo/dónde), cuerpo, foto y epígrafe, fuente, fecha.',
+        'frecuencia': 'Alta',
+    },
+    'infografia': {
+        'definicion': 'Representación visual que combina imágenes, gráficos y textos breves para explicar un tema de manera sintética.',
+        'estructura': 'Título, imágenes/ilustraciones, texto breve, gráficos/diagramas, iconos, flujo secuencial, paleta de colores.',
+        'frecuencia': 'Media',
+    },
+    'instructivo': {
+        'definicion': 'Texto que indica pasos a seguir para realizar una tarea, usar un objeto o resolver un problema.',
+        'estructura': 'Título, lista de materiales o ingredientes, pasos numerados, verbos en imperativo, dibujos/diagramas, advertencias.',
+        'frecuencia': 'Alta',
+    },
+    'receta': {
+        'definicion': 'Tipo específico de instructivo que indica los pasos para preparar un plato o alimento.',
+        'estructura': 'Título, porciones, tiempo de preparación, ingredientes con cantidades, pasos numerados en imperativo, consejos.',
+        'frecuencia': 'Media',
+    },
+    'manual': {
+        'definicion': 'Instructivo extenso y detallado para operar un aparato, armar un mueble o usar un software.',
+        'estructura': 'Portada, índice, advertencias de seguridad, lista de partes con diagramas, pasos detallados, solución de problemas, glosario.',
+        'frecuencia': 'Media',
+    },
+    'biografia': {
+        'definicion': 'Narración de la vida de una persona real o de un acontecimiento histórico relevante.',
+        'estructura': 'Introducción (presenta al personaje/hecho), orden cronológico, hitos relevantes, contexto histórico, cierre con legado, ilustraciones.',
+        'frecuencia': 'Media',
+    },
+    'carta_formal': {
+        'definicion': 'Texto epistolar formal dirigido a un destinatario específico con estructura definida.',
+        'estructura': 'Fecha y lugar, saludo formal (Estimado…), cuerpo, despedida formal (Atentamente…), firma, posdata.',
+        'frecuencia': 'Baja',
+    },
+    'carta_informal': {
+        'definicion': 'Carta dirigida a personas cercanas con lenguaje coloquial y tono personal.',
+        'estructura': 'Fecha, saludo coloquial (Querido…), cuerpo personal, despedida afectuosa, firma.',
+        'frecuencia': 'Baja',
+    },
+    'afiche': {
+        'definicion': 'Texto multimodal con propósito persuasivo: promover un producto, causa, evento o idea.',
+        'estructura': 'Imagen central llamativa, título/eslogan, cuerpo breve, llamada a la acción, logo/marca, colores y tipografía impactantes.',
+        'frecuencia': 'Media',
+    },
 }
 
 HABILIDADES_POR_ASIGNATURA = {
-    'lenguaje': [
-        'Localizar información explícita',
-        'Inferir información implícita',
-        'Interpretar lenguaje figurado',
-        'Identificar propósito comunicativo',
-        'Relacionar información de distintas partes del texto',
-        'Evaluar y reflexionar sobre el contenido',
-        'Reconocer estructura del tipo textual',
-        'Comprender vocabulario en contexto',
-    ],
+    'lenguaje': _HAB_LENGUAJE,
     'matematica': [
         'Resolver operaciones numéricas en contexto',
         'Interpretar datos de tablas y gráficos',
@@ -134,6 +306,54 @@ FORMAT_SPECS = {
     'receta': (
         "NOMBRE del plato · PORCIONES y TIEMPO · "
         "INGREDIENTES con cantidades exactas · PREPARACIÓN numerada en imperativo."
+    ),
+    # Nuevos tipos (Tabla UTP)
+    'cuento_folclorico': (
+        "Narración tradicional anónima transmitida oralmente. "
+        "OBLIGATORIO: inicio con fórmula típica ('Había una vez...'), desarrollo con elementos "
+        "mágicos o maravillosos, personajes arquetípicos (héroe, villano, ayudante mágico), "
+        "estructura repetitiva si corresponde, final feliz o moralizador. "
+        "Lenguaje sencillo y oral."
+    ),
+    'leyenda': (
+        "Relato que mezcla lo real y lo maravilloso. "
+        "Ambientación en lugar real y reconocible (ciudad, río, montaña chilena o latinoamericana). "
+        "Incluir elemento fantástico que explica un fenómeno o el origen de algo. "
+        "Personajes históricos, míticos o mestizos. Tono solemne y épico."
+    ),
+    'mito': (
+        "Relato sagrado de una cultura específica. Protagonistas: dioses, semidioses o héroes culturales. "
+        "Tiempo remoto o primordial. Propósito: explicar el origen del mundo, de un fenómeno natural "
+        "o de una práctica cultural. Estructura simbólica. Mencionar explícitamente la cultura de origen."
+    ),
+    'poema': (
+        "FORMATO POÉTICO OBLIGATORIO: CADA VERSO EN SU PROPIA LÍNEA (no prosa). "
+        "Al menos 4 estrofas de 4 versos, separadas por línea en blanco. "
+        "Usar lenguaje figurado: metáforas, personificaciones o símiles visibles. "
+        "Puede tener rima o ser verso libre. Expresar una emoción, imagen o reflexión central."
+    ),
+    'articulo_info': (
+        "Texto expositivo con lenguaje objetivo. "
+        "ESTRUCTURA: TÍTULO descriptivo · INTRODUCCIÓN al tema · "
+        "2-3 párrafos de DESARROLLO con subtítulos (##) · CIERRE o conclusión. "
+        "Vocabulario preciso pero accesible al nivel. Sin opinión del autor. "
+        "Puede incluir listas o datos numéricos."
+    ),
+    'manual': (
+        "Instructivo extenso. ESTRUCTURA OBLIGATORIA: "
+        "1) PORTADA con nombre del manual. "
+        "2) ADVERTENCIAS DE SEGURIDAD. "
+        "3) LISTA DE PARTES o materiales con etiquetas (Parte 1, Parte 2…). "
+        "4) PASOS numerados con verbos en imperativo. "
+        "5) SOLUCIÓN DE PROBLEMAS (al menos 2 casos comunes). "
+        "Lenguaje claro y directo."
+    ),
+    'biografia': (
+        "Narración en prosa sobre una persona real relevante. "
+        "ESTRUCTURA CRONOLÓGICA: INTRODUCCIÓN (¿quién es y por qué importa?) · "
+        "ORIGEN Y FORMACIÓN · HITOS PRINCIPALES (al menos 3, con fechas) · "
+        "LEGADO o impacto actual. Lenguaje formal pero accesible. "
+        "Incluir contexto histórico o social."
     ),
 }
 
@@ -253,6 +473,46 @@ CHECKLIST_POR_TIPO = {
         {'id': 'ingredientes', 'texto': 'Lista ingredientes con cantidades'},
         {'id': 'pasos',        'texto': 'Los pasos están numerados'},
     ],
+    # Nuevos tipos (Tabla UTP)
+    'cuento_folclorico': [
+        {'id': 'formula',    'texto': 'Inicia con fórmula oral ("Había una vez…")'},
+        {'id': 'magico',     'texto': 'Incluye elementos mágicos o maravillosos'},
+        {'id': 'arquetipo',  'texto': 'Personajes arquetípicos identificables'},
+        {'id': 'final',      'texto': 'Tiene final feliz o moralizador'},
+    ],
+    'leyenda': [
+        {'id': 'lugar',      'texto': 'Ambientada en lugar real y reconocible'},
+        {'id': 'fantastico', 'texto': 'Incluye elemento fantástico que explica algo'},
+        {'id': 'origen',     'texto': 'El relato tiene propósito explicativo claro'},
+    ],
+    'mito': [
+        {'id': 'cultura',    'texto': 'Se menciona la cultura de origen'},
+        {'id': 'divino',     'texto': 'Protagonistas son dioses, semidioses o héroes culturales'},
+        {'id': 'cosmogonia', 'texto': 'Explica el origen de algo (mundo, fenómeno, práctica)'},
+    ],
+    'poema': [
+        {'id': 'versos',     'texto': '⚠ CRÍTICO: Escrito en versos (cada uno en línea propia)'},
+        {'id': 'estrofas',   'texto': 'Los versos se agrupan en estrofas separadas'},
+        {'id': 'figurado',   'texto': 'Usa al menos una figura literaria visible (metáfora, personificación, símil)'},
+        {'id': 'emocion',    'texto': 'Expresa una emoción o imagen central reconocible'},
+    ],
+    'articulo_info': [
+        {'id': 'subtitulos', 'texto': 'Tiene subtítulos que organizan la información'},
+        {'id': 'objetivo',   'texto': 'El lenguaje es objetivo y sin opinión del autor'},
+        {'id': 'cierre',     'texto': 'Tiene cierre o conclusión'},
+    ],
+    'manual': [
+        {'id': 'advertencias', 'texto': 'Incluye advertencias de seguridad'},
+        {'id': 'partes',       'texto': 'Lista las partes o materiales'},
+        {'id': 'pasos',        'texto': 'Pasos numerados con verbos en imperativo'},
+        {'id': 'problemas',    'texto': 'Tiene sección de solución de problemas'},
+    ],
+    'biografia': [
+        {'id': 'intro',      'texto': 'Presenta quién es el personaje y por qué importa'},
+        {'id': 'cronologia', 'texto': 'Sigue orden cronológico con al menos 3 hitos con fechas'},
+        {'id': 'contexto',   'texto': 'Incluye contexto histórico o social'},
+        {'id': 'legado',     'texto': 'Cierra con el legado o impacto del personaje'},
+    ],
 }
 
 
@@ -345,6 +605,34 @@ def generar_lote_textos_biblioteca(asignatura, curso, n=6):
 
 # ── FASE 2: Generar preguntas para un texto del banco ─────────────
 
+def _build_framework_lenguaje(tipo_textual):
+    """
+    Construye el bloque de texto del framework curricular UTP para inyectar en el prompt.
+    """
+    info = TIPO_TEXTUAL_INFO.get(tipo_textual, {})
+    partes = []
+    if info:
+        partes.append(
+            f"TIPO TEXTUAL: {tipo_textual}\n"
+            f"Definición: {info['definicion']}\n"
+            f"Estructura: {info['estructura']}\n"
+            f"Frecuencia SIMCE: {info['frecuencia']}"
+        )
+
+    partes.append("\nEJES Y HABILIDADES SIMCE LENGUAJE:")
+    for eje, habilidades in EJES_HABILIDADES_LENGUAJE.items():
+        partes.append(f"  EJE {eje}: {' | '.join(habilidades)}")
+
+    partes.append("\nPLANTILLAS DE PREGUNTA POR HABILIDAD (úsalas como modelo estructural):")
+    for hab, niveles_dict in PLANTILLAS_HABILIDADES_LENGUAJE.items():
+        partes.append(f"\n  [{hab}]")
+        for nv, tmpl in niveles_dict.items():
+            label = {1: 'Inicial', 2: 'Intermedio', 3: 'Avanzado'}[nv]
+            partes.append(f"    Nivel {label}: {tmpl[:120]}…")
+
+    return "\n".join(partes)
+
+
 def generar_preguntas_banco(texto_obj, n_nivel1=1, n_nivel2=2, n_nivel3=3):
     """
     Genera preguntas para un TextoBiblioteca y las guarda en PreguntaBanco.
@@ -362,10 +650,15 @@ def generar_preguntas_banco(texto_obj, n_nivel1=1, n_nivel2=2, n_nivel3=3):
 
     alts_correctas = _distribuir_alternativas(n_total)
 
+    # Framework curricular del UTP (solo lenguaje)
+    framework_bloque = ""
+    if asignatura == 'lenguaje':
+        framework_bloque = f"\nFRAMEWORK CURRICULAR UTP:\n{_build_framework_lenguaje(texto_obj.tipo_textual)}\n"
+
     prompt = f"""Eres un experto en construcción de ítems SIMCE, Bases Curriculares Chile.
 
 ASIGNATURA: {asignatura.upper()} — {subject_ctx}
-
+{framework_bloque}
 TEXTO DE REFERENCIA:
 Tipo: {texto_obj.tipo_textual}
 Título: {texto_obj.titulo}
@@ -380,10 +673,11 @@ REGLAS:
 - 4 alternativas por pregunta (A, B, C, D), solo una correcta.
 - Distractores plausibles, similar extensión a la correcta.
 - Habilidades variadas de: {', '.join(habilidades)}.
+- Para lenguaje: respetar los ejes SIMCE (LOCALIZAR / INTERPRETAR / REFLEXIONAR) y usar las plantillas como guía estructural.
 - Para matemática: las preguntas deben requerir cálculo u operaciones sobre los datos del texto.
 - Pista 1: orientación sutil sin revelar la respuesta.
 - Pista 2: pista más directa pero que aún requiere razonamiento.
-- Justifica brevemente habilidad y nivel.
+- Justifica brevemente habilidad y nivel (indicar eje SIMCE para lenguaje).
 
 Responde SOLO con JSON válido:
 {{"preguntas": [

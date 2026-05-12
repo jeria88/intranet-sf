@@ -30,21 +30,30 @@ ESTADO_OBJETO = [
 ]
 
 TIPO_TEXTUAL_CHOICES = [
-    ('cuento',         'Cuento'),
-    ('fabula',         'Fábula'),
-    ('noticia',        'Noticia'),
-    ('reportaje',      'Reportaje'),
-    ('articulo_cient', 'Artículo Científico'),
-    ('receta',         'Receta'),
-    ('instructivo',    'Manual / Instructivo'),
-    ('afiche',         'Afiche Publicitario'),
-    ('soneto',         'Soneto'),
-    ('oda',            'Oda'),
-    ('discontinuo',    'Texto Informativo Discontinuo'),
-    ('infografia',     'Infografía'),
-    ('carta_formal',   'Carta Formal'),
-    ('carta_director', 'Carta al Director'),
-    ('carta_informal', 'Carta Informal'),
+    # Literarios
+    ('cuento',           'Cuento de Autor'),
+    ('cuento_folclorico','Cuento Folclórico / Popular'),
+    ('fabula',           'Fábula'),
+    ('leyenda',          'Leyenda'),
+    ('mito',             'Mito'),
+    ('poema',            'Poema'),
+    ('soneto',           'Soneto'),
+    ('oda',              'Oda'),
+    # No Literarios
+    ('noticia',          'Noticia'),
+    ('reportaje',        'Reportaje'),
+    ('articulo_info',    'Artículo Informativo'),
+    ('articulo_cient',   'Artículo Científico (Divulgativo)'),
+    ('infografia',       'Infografía'),
+    ('instructivo',      'Instrucciones / Instructivo'),
+    ('receta',           'Receta de Cocina'),
+    ('manual',           'Manual de Instrucciones'),
+    ('biografia',        'Biografía / Relato Histórico'),
+    ('carta_formal',     'Carta Formal'),
+    ('carta_director',   'Carta al Director'),
+    ('carta_informal',   'Carta Informal'),
+    ('afiche',           'Afiche Publicitario'),
+    ('discontinuo',      'Texto Informativo Discontinuo'),
 ]
 
 ESTADO_PRUEBA = [
