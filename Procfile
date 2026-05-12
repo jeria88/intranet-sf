@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi --workers 1 --timeout 300 --log-file -
+web: python manage.py migrate && python manage.py seed_simce_curriculum && python manage.py collectstatic --noinput && gunicorn config.wsgi --workers 1 --timeout 300 --log-file -
