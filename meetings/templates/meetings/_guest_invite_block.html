@@ -1,0 +1,95 @@
+{% comment %}
+Include reutilizable para generar links de invitado externo.
+Requiere: `booking` en el contexto o como variable pasada con {% include ... with booking=X %}
+Solo visible para request.user.is_staff o is_red_team.
+{% endcomment %}
+{% if request.user.is_staff or request.user.is_red_team %}
+{% if booking %}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin-top:20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <div>
+      <p style="margin:0;font-size:13px;font-weight:700;color:#065f46;">🔗 Link de invitado externo</p>
+      <p style="margin:4px 0 0;font-size:12px;color:#047857;">Genera un link para que alguien sin cuenta pueda unirse a la videollamada.</p>
+    </div>
+    <button onclick="document.getElementById('modal-invitado-{{ booking.pk }}').style.display='flex'"
+      style="background:#0f766e;color:white;padding:8px 18px;border-radius:20px;border:none;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+      🔗 Generar link
+    </button>
+  </div>
+</div>
+
+<!-- Modal invitado externo -->
+<div id="modal-invitado-{{ booking.pk }}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:16px;color:#111;">🔗 Invitar externo</h3>
+    <p style="font-size:13px;color:#64748b;margin:0 0 20px;">{{ booking.room.name }} · {{ booking.scheduled_at|date:"d/m/Y H:i" }}</p>
+    <div id="invite-form-{{ booking.pk }}">
+      <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Etiqueta (opcional)</label>
+      <input type="text" id="invite-label-{{ booking.pk }}" placeholder="Ej: MINEDUC, Apoderado, Superintendencia"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:16px;outline:none;box-sizing:border-box;">
+      <div style="display:flex;gap:10px;">
+        <button onclick="generarInvite('{{ booking.pk }}')" style="flex:1;background:#0f766e;color:white;padding:10px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;">Generar link</button>
+        <button onclick="document.getElementById('modal-invitado-{{ booking.pk }}').style.display='none'" style="padding:10px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;font-size:14px;cursor:pointer;color:#64748b;">Cancelar</button>
+      </div>
+    </div>
+    <div id="invite-result-{{ booking.pk }}" style="display:none;">
+      <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Link generado</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+        <input type="text" id="invite-url-{{ booking.pk }}" readonly
+          style="flex:1;padding:10px 14px;border:1.5px solid #d1fae5;background:#f0fdf4;border-radius:8px;font-size:13px;color:#065f46;outline:none;">
+        <button onclick="copiarInvite('{{ booking.pk }}')" id="btn-copy-{{ booking.pk }}"
+          style="background:#0f766e;color:white;padding:10px 14px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 Copiar</button>
+      </div>
+      <p style="font-size:12px;color:#64748b;margin:0 0 16px;line-height:1.5;">El invitado solo necesita hacer clic, escribir su nombre y entra directo a la videollamada.</p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="nuevoInvite('{{ booking.pk }}')" style="flex:1;background:white;color:#0f766e;padding:8px;border-radius:8px;border:1.5px solid #0f766e;font-size:13px;font-weight:600;cursor:pointer;">+ Otro link</button>
+        <button onclick="document.getElementById('modal-invitado-{{ booking.pk }}').style.display='none'" style="flex:1;background:#f1f5f9;color:#475569;padding:8px;border-radius:8px;border:none;font-size:13px;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const BK = '{{ booking.pk }}';
+  const CSRF = '{{ csrf_token }}';
+  const URL_INVITE = '/reuniones/reserva/' + BK + '/invitar/';
+
+  window.generarInvite = function(pk) {
+    if (pk !== BK) return;
+    const label = document.getElementById('invite-label-' + pk).value;
+    fetch(URL_INVITE, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'label=' + encodeURIComponent(label)
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('invite-url-' + pk).value = data.url;
+      document.getElementById('invite-form-' + pk).style.display = 'none';
+      document.getElementById('invite-result-' + pk).style.display = 'block';
+    })
+    .catch(() => alert('Error al generar el link.'));
+  };
+
+  window.copiarInvite = function(pk) {
+    if (pk !== BK) return;
+    const url = document.getElementById('invite-url-' + pk).value;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('btn-copy-' + pk);
+      btn.textContent = '✅ Copiado';
+      btn.style.background = '#059669';
+      setTimeout(() => { btn.textContent = '📋 Copiar'; btn.style.background = '#0f766e'; }, 2000);
+    });
+  };
+
+  window.nuevoInvite = function(pk) {
+    if (pk !== BK) return;
+    document.getElementById('invite-form-' + pk).style.display = 'block';
+    document.getElementById('invite-result-' + pk).style.display = 'none';
+    document.getElementById('invite-label-' + pk).value = '';
+  };
+})();
+</script>
+{% endif %}
+{% endif %}

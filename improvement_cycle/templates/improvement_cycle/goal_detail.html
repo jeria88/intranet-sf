@@ -225,6 +225,10 @@
                     <p style="font-size:13px; margin:5px 0 0;"><strong>Fecha:</strong> {{ goal.created_at|date:"d/m/Y" }}</p>
                 </div>
             </div>
+
+            {% if goal.associated_booking %}
+            {% include 'meetings/_guest_invite_block.html' with booking=goal.associated_booking %}
+            {% endif %}
         </div>
     </div>
 </div>

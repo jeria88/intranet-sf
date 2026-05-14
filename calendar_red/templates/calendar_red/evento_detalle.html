@@ -34,6 +34,10 @@
         {% endif %}
         <p style="font-size:12px;color:#b2b2be;margin-top:16px;">Creado por {% firstof event.created_by.get_full_name event.created_by.username "Sistema" %} · {{ event.created_at|date:"d/m/Y" }}</p>
 
+        {% with booking=event.meeting_booking.first %}
+        {% include 'meetings/_guest_invite_block.html' %}
+        {% endwith %}
+
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px; justify-content: flex-end;">
             <a href="{% url 'calendar_red:evento_editar' event.pk %}" 
                style="padding: 10px 20px; border-radius: 10px; background: #f8fafc; color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #e2e8f0;">
