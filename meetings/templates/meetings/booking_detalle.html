@@ -65,11 +65,100 @@
         <p style="font-size:13px;color:#575760;margin:0;">📅 {{ booking.scheduled_at|date:"d/m/Y H:i" }} · {{
             booking.get_status_display }}</p>
     </div>
-    <a href="{% url 'meetings:meeting_room' booking.room.slug %}"
-        style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">
-        📹 Entrar a la Sala
-    </a>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <a href="{% url 'meetings:meeting_room' booking.room.slug %}"
+          style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">
+          📹 Entrar a la Sala
+      </a>
+      {% if request.user.is_staff or request.user.is_red_team %}
+      <button onclick="abrirModalInvitado()" style="background:#0f766e;color:white;padding:10px 20px;border-radius:20px;border:none;font-size:14px;font-weight:600;cursor:pointer;">
+        🔗 Generar link de invitado
+      </button>
+      {% endif %}
+    </div>
 </div>
+
+{% if request.user.is_staff or request.user.is_red_team %}
+<!-- Modal: Generar link de invitado externo -->
+<div id="modal-invitado" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 8px;font-size:16px;color:#111;">🔗 Link de invitado externo</h3>
+    <p style="font-size:13px;color:#64748b;margin:0 0 20px;line-height:1.5;">
+      Genera un link para que alguien externo pueda unirse a esta reunión sin tener cuenta en la plataforma.
+    </p>
+    <div id="invitado-form">
+      <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Etiqueta (opcional)</label>
+      <input type="text" id="invitado-label" placeholder="Ej: MINEDUC, Apoderado, Superintendencia"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:16px;outline:none;">
+      <div style="display:flex;gap:10px;">
+        <button onclick="generarLink()" style="flex:1;background:#0f766e;color:white;padding:10px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;">Generar link</button>
+        <button onclick="cerrarModalInvitado()" style="padding:10px 16px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;font-size:14px;cursor:pointer;color:#64748b;">Cancelar</button>
+      </div>
+    </div>
+    <div id="invitado-result" style="display:none;">
+      <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Link generado</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="invitado-url" readonly
+          style="flex:1;padding:10px 14px;border:1.5px solid #d1fae5;background:#f0fdf4;border-radius:8px;font-size:13px;color:#065f46;outline:none;">
+        <button onclick="copiarLink()" id="btn-copiar" style="background:#0f766e;color:white;padding:10px 14px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 Copiar</button>
+      </div>
+      <p style="font-size:12px;color:#64748b;margin:12px 0 16px;line-height:1.5;">
+        Compartí este link por email o WhatsApp. El invitado solo necesita hacer clic y escribir su nombre.
+      </p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="generarOtro()" style="flex:1;background:white;color:#0f766e;padding:8px;border-radius:8px;border:1.5px solid #0f766e;font-size:13px;font-weight:600;cursor:pointer;">+ Otro link</button>
+        <button onclick="cerrarModalInvitado()" style="flex:1;background:#f1f5f9;color:#475569;padding:8px;border-radius:8px;border:none;font-size:13px;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const INVITE_URL = "{% url 'meetings:generate_guest_invite' booking.pk %}";
+const CSRF = "{{ csrf_token }}";
+
+function abrirModalInvitado() {
+  document.getElementById('modal-invitado').style.display = 'flex';
+  document.getElementById('invitado-label').focus();
+}
+function cerrarModalInvitado() {
+  document.getElementById('modal-invitado').style.display = 'none';
+  document.getElementById('invitado-form').style.display = 'block';
+  document.getElementById('invitado-result').style.display = 'none';
+  document.getElementById('invitado-label').value = '';
+}
+function generarLink() {
+  const label = document.getElementById('invitado-label').value;
+  fetch(INVITE_URL, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'label=' + encodeURIComponent(label)
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('invitado-url').value = data.url;
+    document.getElementById('invitado-form').style.display = 'none';
+    document.getElementById('invitado-result').style.display = 'block';
+  })
+  .catch(() => alert('Error al generar el link. Intentá de nuevo.'));
+}
+function copiarLink() {
+  const url = document.getElementById('invitado-url').value;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('btn-copiar');
+    btn.textContent = '✅ Copiado';
+    btn.style.background = '#059669';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.style.background = '#0f766e'; }, 2000);
+  });
+}
+function generarOtro() {
+  document.getElementById('invitado-form').style.display = 'block';
+  document.getElementById('invitado-result').style.display = 'none';
+  document.getElementById('invitado-label').value = '';
+  document.getElementById('invitado-label').focus();
+}
+</script>
+{% endif %}
 
 {% if booking.agenda %}
 <div class="section-card" style="margin-bottom:20px;">

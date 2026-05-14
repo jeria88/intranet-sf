@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unirse a Reunión — Red SFA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 40px 36px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo {
+      width: 56px;
+      height: 56px;
+      background: #1e73be;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+    }
+    h1 { font-size: 20px; color: #111; margin-bottom: 6px; font-weight: 700; }
+    .meta { font-size: 13px; color: #64748b; margin-bottom: 28px; line-height: 1.6; }
+    .meta strong { color: #1e293b; }
+    .label { display: block; font-size: 12px; font-weight: 600; color: #64748b; text-align: left; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #1e293b;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 20px;
+    }
+    input[type="text"]:focus { border-color: #1e73be; }
+    .btn-join {
+      width: 100%;
+      padding: 14px;
+      background: #1e73be;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-join:hover { background: #1558a0; }
+    .btn-join:active { transform: scale(0.98); }
+    .note { font-size: 12px; color: #94a3b8; margin-top: 16px; line-height: 1.5; }
+    .cancelled-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 20px;
+      color: #dc2626;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 24px 0; }
+    .brand { font-size: 12px; color: #cbd5e1; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">📹</div>
+
+    {% if cancelled %}
+      <h1>Reunión cancelada</h1>
+      <div class="cancelled-box" style="margin-top:16px;">
+        Esta reunión fue cancelada. Consultá con quien te envió la invitación.
+      </div>
+
+    {% else %}
+      <h1>Unirse a la reunión</h1>
+      <p class="meta">
+        <strong>{{ booking.room.name }}</strong><br>
+        📅 {{ booking.scheduled_at|date:"d/m/Y \a \l\a\s H:i" }}
+        {% if booking.agenda %}· {{ booking.agenda|truncatechars:60 }}{% endif %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <label class="label" for="guest_name">Tu nombre completo</label>
+        <input
+          type="text"
+          id="guest_name"
+          name="guest_name"
+          placeholder="Ej: María González"
+          required
+          autofocus
+          maxlength="100"
+        >
+        <button type="submit" class="btn-join">📹 Entrar a la reunión</button>
+      </form>
+
+      <p class="note">
+        Al hacer clic serás redirigido/a a la sala de videollamada.<br>
+        No necesitás tener una cuenta en la plataforma.
+      </p>
+    {% endif %}
+
+    <hr class="divider">
+    <p class="brand">Red SFA — Congregación Hermanas Terceras Franciscanas</p>
+  </div>
+</body>
+</html>

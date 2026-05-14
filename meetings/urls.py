@@ -28,4 +28,8 @@ urlpatterns = [
     path('reserva/<int:pk>/participantes-pdf/', views.participants_report_print, name='participants_pdf'),
     path('reserva/<int:pk>/acta-pdf/', views.acta_report_print, name='acta_pdf'),
     path('reserva/<int:pk>/acuerdos-pdf/', views.acuerdos_report_print, name='acuerdos_pdf'),
+
+    # Invitaciones externas
+    path('reserva/<int:pk>/invitar/', views.generate_guest_invite, name='generate_guest_invite'),
+    path('invitado/<uuid:token>/', views.guest_join, name='guest_join'),
 ]

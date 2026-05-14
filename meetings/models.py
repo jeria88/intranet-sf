@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 
@@ -157,3 +158,21 @@ class MeetingAgreement(models.Model):
 
     def __str__(self):
         return f"{self.description[:50]}... ({self.get_status_display()})"
+
+
+class GuestInvite(models.Model):
+    """Link de invitación para externos sin cuenta que necesitan unirse a una reunión."""
+    booking = models.ForeignKey(MeetingBooking, on_delete=models.CASCADE, related_name='guest_invites')
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    label = models.CharField(max_length=100, blank=True, verbose_name='Etiqueta', help_text='Ej: MINEDUC, Superintendencia')
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Invitación Externo'
+        verbose_name_plural = 'Invitaciones Externos'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Invitación '{self.label or str(self.token)[:8]}' — {self.booking}"

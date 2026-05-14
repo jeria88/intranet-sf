@@ -10,7 +10,7 @@ from collections import defaultdict
 from django.utils import timezone
 from django.conf import settings
 import requests
-from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement, MeetingParticipant
+from .models import MeetingRoom, MeetingBooking, MeetingAttendance, MeetingDocument, MeetingAgreement, MeetingParticipant, GuestInvite
 from improvement_cycle.models import ImprovementGoal
 
 MONTHLY_QUOTA = 4  # Reuniones máximas por usuario por mes (salvo RED)
@@ -835,3 +835,51 @@ def meeting_create_manual(request):
 
     rooms = MeetingRoom.objects.all()
     return render(request, 'meetings/meeting_form_manual.html', {'rooms': rooms})
+
+
+# ── Links de invitación para externos ─────────────────────────────────────
+
+@login_required
+def generate_guest_invite(request, pk):
+    """Genera un link de invitación para un externo sin cuenta. Solo staff / RED."""
+    if not (request.user.is_staff or request.user.is_red_team):
+        return JsonResponse({'error': 'Sin permiso'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    booking = get_object_or_404(MeetingBooking, pk=pk)
+    label = request.POST.get('label', '').strip()
+    invite = GuestInvite.objects.create(booking=booking, created_by=request.user, label=label)
+    invite_url = request.build_absolute_uri(
+        reverse('meetings:guest_join', kwargs={'token': str(invite.token)})
+    )
+    return JsonResponse({'url': invite_url, 'token': str(invite.token), 'label': invite.label})
+
+
+def guest_join(request, token):
+    """Vista pública para externos. No requiere login.
+    Valida el token, pide nombre al invitado y redirige a Daily.co.
+    """
+    invite = get_object_or_404(GuestInvite, token=token, is_active=True)
+    booking = invite.booking
+    room = booking.room
+
+    if booking.status == 'cancelada':
+        return render(request, 'meetings/guest_join.html', {
+            'cancelled': True, 'booking': booking,
+        })
+
+    if request.method == 'POST':
+        guest_name = request.POST.get('guest_name', '').strip() or 'Invitado externo'
+        daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
+        daily_token = _generate_daily_token(room.daily_identifier, guest_name, is_owner=False)
+        if daily_token:
+            daily_url = f"{daily_url}?t={daily_token}"
+        return redirect(daily_url)
+
+    return render(request, 'meetings/guest_join.html', {
+        'invite': invite,
+        'booking': booking,
+        'room': room,
+        'cancelled': False,
+    })
