@@ -842,12 +842,18 @@ def meeting_create_manual(request):
 @login_required
 def generate_guest_invite(request, pk):
     """Genera un link de invitación para un externo sin cuenta. Solo staff / RED."""
-    if not (request.user.is_staff or request.user.is_red_team):
-        return JsonResponse({'error': 'Sin permiso'}, status=403)
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     booking = get_object_or_404(MeetingBooking, pk=pk)
+    can_invite = (
+        request.user.is_staff or
+        request.user.is_red_team or
+        request.user == booking.booked_by or
+        request.user.role == booking.room.target_role
+    )
+    if not can_invite:
+        return JsonResponse({'error': 'Sin permiso'}, status=403)
     label = request.POST.get('label', '').strip()
     invite = GuestInvite.objects.create(booking=booking, created_by=request.user, label=label)
     invite_url = request.build_absolute_uri(
