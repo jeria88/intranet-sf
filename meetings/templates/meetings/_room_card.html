@@ -15,6 +15,12 @@
            style="background: #28a745;" target="_blank">
             Unirse ahora
         </a>
+        {% if request.user.is_staff or request.user.is_red_team %}
+        <a href="{% url 'meetings:booking_detalle' room.active_booking.pk %}"
+           style="display:block;margin-top:8px;text-align:center;background:#0f766e;color:white;padding:7px 10px;border-radius:16px;font-size:12px;font-weight:600;text-decoration:none;">
+            🔗 Generar link de invitado
+        </a>
+        {% endif %}
 
     {% elif room.status_label == 'PROXIMA' %}
         <p style="color: #856404; font-weight: 700; font-size: 11px;">
@@ -25,13 +31,25 @@
            style="background: #eab308; color: #5d4803;" target="_blank">
             Entrar antes (Libre)
         </a>
+        {% if request.user.is_staff or request.user.is_red_team %}
+        <a href="{% url 'meetings:booking_detalle' room.next_booking.pk %}"
+           style="display:block;margin-top:8px;text-align:center;background:#0f766e;color:white;padding:7px 10px;border-radius:16px;font-size:12px;font-weight:600;text-decoration:none;">
+            🔗 Generar link de invitado
+        </a>
+        {% endif %}
 
     {% else %}
         <p style="color: #6c757d; font-weight: 700; font-size: 11px;">⚪ DISPONIBLE</p>
-        <p style="font-size: 11px; margin-bottom: 15px;">No hay reuniones programadas ahora.</p>
+        <p style="font-size: 11px; margin-bottom: 8px;">No hay reuniones programadas ahora.</p>
         <a href="{% url 'meetings:meeting_room' room.slug %}" class="btn-enter"
            style="background: #6c757d;" target="_blank">
             Entrar ahora
         </a>
+        {% if request.user.is_staff or request.user.is_red_team %}
+        <a href="{% url 'meetings:booking_crear' room.slug %}"
+           style="display:block;margin-top:8px;text-align:center;background:#1e40af;color:white;padding:7px 10px;border-radius:16px;font-size:12px;font-weight:600;text-decoration:none;">
+            📅 Reservar y crear invitación
+        </a>
+        {% endif %}
     {% endif %}
 </div>
