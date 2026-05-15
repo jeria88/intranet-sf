@@ -13,4 +13,5 @@ urlpatterns = [
     path('meta/<int:goal_pk>/accion/nueva/', views.action_create, name='action_create'),
 
     path('accion/<int:pk>/toggle/', views.action_toggle, name='action_toggle'),
+    path('meta/<int:pk>/agendar-reunion/', views.goal_agendar_reunion, name='goal_agendar_reunion'),
 ]

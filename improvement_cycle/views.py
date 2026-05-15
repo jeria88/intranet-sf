@@ -6,6 +6,7 @@ from users.models import User
 from django.db.models import Count
 from django.contrib import messages
 from .utils import generate_cycle_content_ai
+from meetings.models import MeetingRoom, MeetingBooking
 
 
 @login_required
@@ -84,7 +85,9 @@ def meta_crear(request):
             )
         except Exception as e:
             print(f"Error sincronizando calendario: {e}")
-        
+
+        if goal.is_meeting_cycle:
+            return redirect('improvement_cycle:goal_agendar_reunion', pk=goal.pk)
         return redirect(f'/mejora/?ee={ee or "RED"}')
 
 
@@ -266,3 +269,57 @@ def goal_delete(request, pk):
         return redirect(f'/mejora/?ee={ee or "RED"}')
     
     return render(request, 'improvement_cycle/goal_confirm_delete.html', {'goal': goal})
+
+
+@login_required
+def goal_agendar_reunion(request, pk):
+    """Crea una reserva de videollamada y la vincula al ciclo de mejora."""
+    if not (request.user.is_staff or request.user.is_red_team):
+        messages.error(request, "Sin permiso.")
+        return redirect('improvement_cycle:goal_detail', pk=pk)
+
+    goal = get_object_or_404(ImprovementGoal, pk=pk)
+    rooms = MeetingRoom.objects.filter(room_type='daily').order_by('name')
+
+    if request.method == 'POST':
+        room_pk = request.POST.get('room')
+        scheduled_str = request.POST.get('scheduled_at')
+        agenda = request.POST.get('agenda', '').strip() or goal.title
+
+        room = get_object_or_404(MeetingRoom, pk=room_pk)
+        from datetime import datetime
+        try:
+            scheduled_at = timezone.make_aware(datetime.fromisoformat(scheduled_str))
+        except (ValueError, TypeError):
+            messages.error(request, "Fecha y hora inválidas.")
+            return render(request, 'improvement_cycle/goal_agendar_reunion.html',
+                          {'goal': goal, 'rooms': rooms})
+
+        from calendar_red.models import CalendarEvent
+        event = CalendarEvent.objects.create(
+            title=f"Videollamada: {room.name}",
+            description=f"Agenda: {agenda}",
+            event_date=scheduled_at.date(),
+            event_time=scheduled_at.time(),
+            event_type='interno',
+            applies_to_roles=[request.user.role],
+            applies_to_establishments=[request.user.establishment],
+            created_by=request.user,
+        )
+        booking = MeetingBooking.objects.create(
+            room=room,
+            booked_by=request.user,
+            scheduled_at=scheduled_at,
+            agenda=agenda,
+            calendar_event=event,
+            processing_status='sin_grabacion',
+        )
+        goal.associated_booking = booking
+        goal.is_meeting_cycle = True
+        goal.save(update_fields=['associated_booking', 'is_meeting_cycle'])
+
+        messages.success(request, "Videollamada agendada correctamente.")
+        return redirect('improvement_cycle:goal_detail', pk=goal.pk)
+
+    return render(request, 'improvement_cycle/goal_agendar_reunion.html',
+                  {'goal': goal, 'rooms': rooms})

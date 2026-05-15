@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Agendar Videollamada | {{ goal.title }}{% endblock %}
+{% block content %}
+<div style="max-width:540px;margin:0 auto;">
+  <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}" style="color:var(--accent);font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin-bottom:20px;">
+    ← Volver al ciclo
+  </a>
+  <div style="background:white;border-radius:16px;padding:32px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+    <h2 style="margin:0 0 6px;font-size:20px;color:var(--contrast);">📹 Agendar videollamada</h2>
+    <p style="font-size:13px;color:var(--contrast-2);margin:0 0 28px;">Ciclo: <strong>{{ goal.title }}</strong></p>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--contrast-2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Sala de videollamada</label>
+      <select name="room" required style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:var(--contrast);margin-bottom:20px;background:white;outline:none;">
+        <option value="">— Seleccionar sala —</option>
+        {% for room in rooms %}
+        <option value="{{ room.pk }}">{{ room.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--contrast-2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Fecha y hora</label>
+      <input type="datetime-local" name="scheduled_at" required
+        style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:var(--contrast);margin-bottom:20px;outline:none;box-sizing:border-box;">
+
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--contrast-2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Agenda (opcional)</label>
+      <textarea name="agenda" rows="3" placeholder="Temas a tratar en la reunión..."
+        style="width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:var(--contrast);margin-bottom:24px;resize:vertical;outline:none;box-sizing:border-box;">{{ goal.title }}</textarea>
+
+      <div style="display:flex;gap:10px;">
+        <button type="submit" style="flex:1;background:var(--accent);color:white;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Agendar reunión</button>
+        <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}" style="padding:12px 20px;border-radius:10px;border:1.5px solid #e2e8f0;background:white;font-size:14px;color:var(--contrast-2);text-decoration:none;display:flex;align-items:center;">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
