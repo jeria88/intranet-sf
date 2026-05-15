@@ -259,7 +259,7 @@ def booking_crear(request, slug):
                 if goal:
                     generate_cycle_content_ai(goal)
 
-                return redirect('meetings:meeting_list')
+                return redirect('meetings:booking_detalle', pk=booking.pk)
             except (ValueError, TypeError):
                 error = 'Fecha y hora inválidas.'
 
