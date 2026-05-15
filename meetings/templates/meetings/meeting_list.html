@@ -171,7 +171,7 @@
                 <th>Sala</th>
                 <th>Anfitrión</th>
                 <th>Estado</th>
-                {% if request.user.is_staff or request.user.is_red_team %}<th></th>{% endif %}
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -185,15 +185,15 @@
                 <td>
                     <span class="status-badge badge-upcoming">{{ booking.get_status_display }}</span>
                 </td>
-                {% if request.user.is_staff or request.user.is_red_team %}
                 <td>
+                {% if request.user.is_staff or request.user.is_red_team or request.user == booking.booked_by or request.user.role == booking.room.target_role %}
                     <button onclick="mlOpenModal({{ booking.pk }})" style="background:#0f766e;color:white;padding:5px 12px;border-radius:16px;border:none;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">🔗 Invitar</button>
-                </td>
                 {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="{% if request.user.is_staff or request.user.is_red_team %}7{% else %}6{% endif %}" style="text-align: center; color: var(--contrast-3); padding: 20px;">
+                <td colspan="7" style="text-align: center; color: var(--contrast-3); padding: 20px;">
                     📭 No hay reuniones programadas próximamente.
                 </td>
             </tr>
@@ -202,9 +202,9 @@
     </table>
 </div>
 
-{% if request.user.is_staff or request.user.is_red_team %}
 <!-- Modales de invitado externo para cada reserva próxima -->
 {% for booking in upcoming_bookings %}
+{% if request.user.is_staff or request.user.is_red_team or request.user == booking.booked_by or request.user.role == booking.room.target_role %}
 <div id="ml-modal-{{ booking.pk }}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:white;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
     <h3 style="margin:0 0 6px;font-size:16px;color:#111;">🔗 Invitar externo</h3>
@@ -234,6 +234,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endfor %}
 
 <script>
@@ -275,7 +276,6 @@ function mlNuevo(pk) {
   document.getElementById('ml-label-' + pk).value = '';
 }
 </script>
-{% endif %}
 
 <!-- Room Cards Grid -->
 <div style="display: grid; grid-template-columns: 1fr; gap: 40px;">

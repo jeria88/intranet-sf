@@ -389,6 +389,7 @@
                 <a href="{% url 'library:document_list' %}" class="btn-accent">Ver Archivos</a>
             </div>
 
+            {% if request.user.is_staff %}
             <!-- SIMCE -->
             <div class="module-card">
                 <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
@@ -396,6 +397,7 @@
                 <p>Generación IA, revisión y reportes por establecimiento.</p>
                 <a href="{% url 'simce:admin_dashboard' %}" class="btn-accent">Acceder</a>
             </div>
+            {% endif %}
 
             <!-- Calendar -->
             <div class="module-card">

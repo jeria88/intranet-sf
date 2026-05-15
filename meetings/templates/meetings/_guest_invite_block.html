@@ -3,7 +3,7 @@ Include reutilizable para generar links de invitado externo.
 Requiere: `booking` en el contexto o como variable pasada con {% include ... with booking=X %}
 Solo visible para request.user.is_staff o is_red_team.
 {% endcomment %}
-{% if request.user.is_staff or request.user.is_red_team %}
+{% if request.user.is_staff or request.user.is_red_team or request.user == booking.booked_by or request.user.role == booking.room.target_role %}
 {% if booking %}
 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin-top:20px;">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">

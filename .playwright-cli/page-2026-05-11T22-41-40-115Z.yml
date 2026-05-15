@@ -1,0 +1,138 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - img
+  - banner:
+    - navigation "Navegación principal":
+      - link "Endonautas - Inicio" [ref=e2] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e3]
+        - text: Endo
+        - generic [ref=e4]: nautas
+      - link "Primera exploración" [ref=e5] [cursor=pointer]:
+        - /url: "#guia"
+  - main [ref=e6]:
+    - region "El mapa del mundo interior." [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: La Cartografía Interior
+        - heading "El mapa del mundo interior." [level=1] [ref=e10]:
+          - text: El mapa del
+          - text: mundo
+          - emphasis [ref=e11]: interior.
+        - paragraph [ref=e12]: Para quienes ya saben que el problema no está afuera, pero todavía no tienen el lenguaje para leer lo que ocurre adentro.
+        - generic [ref=e13]:
+          - link "Recibir la guía gratuita" [ref=e14] [cursor=pointer]:
+            - /url: "#guia"
+          - link "Explorar el método" [ref=e15] [cursor=pointer]:
+            - /url: "#metodo"
+    - generic [ref=e17]:
+      - paragraph [ref=e18]: "\"Hay un lugar al que no llegas viajando. Solo cerrando los ojos y aprendiendo a navegar.\""
+      - generic [ref=e19]: — Franco Jeria, Endonautica
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]: El Enfoque
+        - heading "No es autoayuda. No es terapia clínica." [level=2] [ref=e23]:
+          - text: No es autoayuda.
+          - text: No es terapia clínica.
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: La autoayuda te dice qué hacer. La terapia clínica trabaja el diagnóstico. Endonautas trabaja el mapa.
+          - paragraph [ref=e26]: El conjunto de patrones, creencias y máscaras que aprendiste para sobrevivir lo que viviste — y que sigues usando aunque ya no sean necesarios. Cuando puedes ver el mapa con claridad, puedes elegir una ruta distinta.
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: 01. Patrón
+          - generic [ref=e30]: Tiene un origen
+          - generic [ref=e31]: Cada conducta que se repite tiene una raíz. No para revivir el pasado — para dejar de repetirlo.
+        - generic [ref=e32]:
+          - generic [ref=e33]: 02. Sombra
+          - generic [ref=e34]: Lo que rechazas
+          - generic [ref=e35]: Navegar la sombra no es destruirla. Es integrarla. Ahí vive la parte de ti que dejaste atrás.
+        - generic [ref=e36]:
+          - generic [ref=e37]: 03. Máscara
+          - generic [ref=e38]: Tu antiguo aliado
+          - generic [ref=e39]: Fue necesario. El trabajo es aprender cuándo sigues usándola cuando ya no hace falta.
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: Tres Territorios
+        - heading "Un proceso. Ningún atajo." [level=2] [ref=e43]
+        - paragraph [ref=e44]: El trabajo se mueve en espiral — volviendo a cada territorio con más claridad cada vez.
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - img [ref=e48]
+          - heading "Origen" [level=3] [ref=e51]
+          - paragraph [ref=e52]: Cada patrón tiene una raíz. Ver el origen es el primer paso para actualizarlo y detener la repetición automática.
+        - generic [ref=e53]:
+          - img [ref=e55]
+          - heading "Sombra" [level=3] [ref=e57]
+          - paragraph [ref=e58]: Lo que rechazas de ti guarda la forma exacta de lo que más necesitas. No se destruye, se integra en luz.
+        - generic [ref=e59]:
+          - img [ref=e61]
+          - heading "Máscara" [level=3] [ref=e65]
+          - paragraph [ref=e66]: La armadura que te salvó, ahora te encierra. El trabajo es aprender a quitártela cuando el peligro ya pasó.
+    - generic [ref=e67]:
+      - img "Franco Jeria" [ref=e69]
+      - generic [ref=e71]:
+        - generic [ref=e72]: El Autor
+        - heading "Franco Jeria" [level=2] [ref=e73]
+        - generic [ref=e74]:
+          - paragraph [ref=e75]: Terapeuta en salud integrativa con más de una década acompañando procesos de transformación personal. Acompañé a personas que, desde afuera, lo tenían todo. Trabajo, relaciones, propósito. Y sin embargo algo adentro no encajaba.
+          - paragraph [ref=e76]: No estaban rotas. Estaban navegando con un mapa viejo — uno que aprendieron muy temprano y que nadie les había enseñado a leer.
+          - paragraph [ref=e77]: "Endonautica nació de ese trabajo: de cientos de horas de conversación con personas que necesitaban un lenguaje nuevo para lo que ya sentían."
+        - generic [ref=e78]:
+          - generic [ref=e79]: +10 años en acompañamiento terapéutico
+          - generic [ref=e80]: Especialización en psicología integrativa y trabajo con la sombra
+          - generic [ref=e81]: Formación en terapia narrativa y desarrollo personal
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - generic [ref=e84]: El Libro
+        - heading "Endonautica" [level=2] [ref=e85]
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: "El libro que da origen al método. No es un manual de instrucciones — es una exploración del lenguaje interior: los patrones, la sombra y las máscaras que aprendiste para sobrevivir lo que viviste."
+          - paragraph [ref=e88]: Para quienes quieren ir más allá de la guía y trabajar el mapa completo.
+        - generic [ref=e89]:
+          - generic [ref=e90]: El lenguaje del inconsciente y cómo leerlo.
+          - generic [ref=e91]: El trabajo con la sombra para integrar tu historia.
+          - generic [ref=e92]: Las máscaras que usas y lo que protegen.
+        - link "Obtener el mapa completo" [ref=e94] [cursor=pointer]:
+          - /url: https://pay.hotmart.com/E105767129H?checkoutMode=2
+      - img "Libro Endonautica" [ref=e96]
+    - region "Lo que dicen quienes ya navegaron." [ref=e97]:
+      - generic [ref=e98]:
+        - generic [ref=e99]: Lectores
+        - heading "Lo que dicen quienes ya navegaron." [level=2] [ref=e100]
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - generic "5 estrellas" [ref=e103]
+          - paragraph [ref=e109]: "\"Por primera vez sentí que alguien describía con palabras exactas lo que yo siempre supe que estaba pasando pero no podía nombrar.\""
+          - text: — Valentina R., Santiago
+        - generic [ref=e110]:
+          - generic "5 estrellas" [ref=e111]
+          - paragraph [ref=e117]: "\"No es otro libro de autoayuda. Es un espejo incómodo y necesario. Lo leí dos veces en la misma semana.\""
+          - text: — Matías L., Buenos Aires
+        - generic [ref=e118]:
+          - generic "5 estrellas" [ref=e119]
+          - paragraph [ref=e125]: "\"Después de años en terapia, este libro me dio el lenguaje que me faltaba para entender mis propios patrones.\""
+          - text: — Catalina M., Medellín
+    - region "Descubre tu Máscara" [ref=e126]:
+      - generic [ref=e127]:
+        - generic [ref=e128]: Guía Gratuita
+        - heading "Descubre tu Máscara" [level=2] [ref=e129]
+        - paragraph [ref=e130]: Una guía breve para identificar la máscara que más usas — esa forma de ser que aprendiste para protegerte y que hoy puede estar limitándote. El primer paso antes de leer el mapa completo.
+        - generic [ref=e131]:
+          - textbox "Tu nombre" [ref=e132]:
+            - /placeholder: Tu nombre...
+          - textbox "Tu correo electrónico" [ref=e133]:
+            - /placeholder: Tu correo electrónico...
+          - button "Quiero la guía" [ref=e134] [cursor=pointer]
+        - paragraph [ref=e135]: Cero spam. Solo correos de alto valor.
+    - contentinfo [ref=e136]:
+      - link "Endonautas - Inicio" [ref=e137] [cursor=pointer]:
+        - /url: "#"
+        - text: Endo
+        - generic [ref=e138]: nautas
+      - generic [ref=e139]:
+        - link "hola@endonautas.cl" [ref=e140] [cursor=pointer]:
+          - /url: mailto:hola@endonautas.cl
+        - link "Política de privacidad" [ref=e141] [cursor=pointer]:
+          - /url: /privacidad
+        - link "Términos de uso" [ref=e142] [cursor=pointer]:
+          - /url: /terminos
+      - generic [ref=e143]: © 2026 Franco Jeria

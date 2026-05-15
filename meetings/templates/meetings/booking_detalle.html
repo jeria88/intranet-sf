@@ -70,7 +70,7 @@
           style="background:#1e73be;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:600;">
           📹 Entrar a la Sala
       </a>
-      {% if request.user.is_staff or request.user.is_red_team %}
+      {% if request.user.is_staff or request.user.is_red_team or request.user == booking.booked_by or request.user.role == booking.room.target_role %}
       <button onclick="abrirModalInvitado()" style="background:#0f766e;color:white;padding:10px 20px;border-radius:20px;border:none;font-size:14px;font-weight:600;cursor:pointer;">
         🔗 Generar link de invitado
       </button>
@@ -78,7 +78,7 @@
     </div>
 </div>
 
-{% if request.user.is_staff or request.user.is_red_team %}
+{% if request.user.is_staff or request.user.is_red_team or request.user == booking.booked_by or request.user.role == booking.room.target_role %}
 <!-- Modal: Generar link de invitado externo -->
 <div id="modal-invitado" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:white;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
