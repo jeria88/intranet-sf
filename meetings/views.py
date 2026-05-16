@@ -43,7 +43,8 @@ def _generate_daily_token(room_name, user_name, is_owner=False):
         "properties": {
             "room_name": room_name,
             "user_name": user_name,
-            "is_owner": is_owner
+            "is_owner": is_owner,
+            "start_cloud_recording": True,
         }
     }
 
