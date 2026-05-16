@@ -183,6 +183,15 @@ function generarOtro() {
             </div>
         </div>
     {% elif booking.processing_status == 'completado' %}
+        {% if booking.recording_r2_url %}
+        <div style="margin-bottom: 24px;">
+            <h5 style="font-size: 14px; color: #374151; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">🎬 Grabación de la Reunión</h5>
+            <video controls style="width:100%; border-radius:10px; background:#000; max-height:360px;">
+                <source src="{{ booking.recording_r2_url }}" type="video/mp4">
+                Tu navegador no soporta reproducción de video.
+            </video>
+        </div>
+        {% endif %}
         <div style="margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h5 style="font-size: 14px; color: #1e73be; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📄 Acta de la Reunión</h5>

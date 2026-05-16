@@ -266,6 +266,15 @@
                 <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:var(--contrast-2);text-transform:uppercase;letter-spacing:0.04em;">Entregables de la reunión</p>
 
                 {% if b.processing_status == 'completado' %}
+                <!-- Grabación R2 -->
+                {% if b.recording_r2_url %}
+                <div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                  <p style="margin:0 0 8px;font-size:13px;color:#374151;font-weight:600;">🎬 Grabación</p>
+                  <video controls style="width:100%;border-radius:8px;background:#000;max-height:180px;">
+                    <source src="{{ b.recording_r2_url }}" type="video/mp4">
+                  </video>
+                </div>
+                {% endif %}
                 <!-- Acta -->
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;">
                   <span style="font-size:14px;color:#111;">📄 Acta</span>
