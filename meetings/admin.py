@@ -39,7 +39,7 @@ class MeetingBookingAdmin(admin.ModelAdmin):
         'booked_by__first_name', 'booked_by__last_name',
         'booked_by__username', 'room__name', 'agenda'
     ]
-    readonly_fields = ['month_year', 'transcript', 'acta', 'acuerdos_text', 'recording_id', 'recording_url']
+    readonly_fields = ['month_year', 'transcript', 'acta', 'acuerdos_text']
     date_hierarchy = 'scheduled_at'
     inlines = [MeetingParticipantInline, MeetingAgreementInline]
     fieldsets = (

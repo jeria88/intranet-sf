@@ -175,20 +175,20 @@ def meeting_room(request, slug):
             return redirect('meetings:meeting_list')
 
         # Entrada Libre: Creamos una reserva "al vuelo" para auditoría y acuerdos
-        if not request.user.is_staff:
-            if not _check_quota(request.user, room):
-                messages.error(request, "No tienes cupo para iniciar una reunión ahora.")
-                return redirect('meetings:meeting_list')
+        # Staff omite la validación de cuota pero sí necesita booking para el pipeline de grabación
+        if not request.user.is_staff and not _check_quota(request.user, room):
+            messages.error(request, "No tienes cupo para iniciar una reunión ahora.")
+            return redirect('meetings:meeting_list')
 
-            booking = MeetingBooking.objects.create(
-                room=room,
-                booked_by=request.user,
-                scheduled_at=now,
-                duration_minutes=60,
-                status='activa',
-                agenda='Reunión espontánea (Sin agenda previa)',
-                processing_status='sin_grabacion'  # Solo cambia a 'pendiente' al llegar el webhook
-            )
+        booking = MeetingBooking.objects.create(
+            room=room,
+            booked_by=request.user,
+            scheduled_at=now,
+            duration_minutes=60,
+            status='activa',
+            agenda='Reunión espontánea (Sin agenda previa)',
+            processing_status='sin_grabacion'  # Solo cambia a 'pendiente' al llegar el webhook
+        )
 
     # Redirección a Daily.co
     daily_url = f"{settings.DAILY_BASE_URL}{room.daily_identifier}"
