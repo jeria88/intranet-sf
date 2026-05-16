@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 import json
-import threading
 from collections import defaultdict
 from django.utils import timezone
 from django.conf import settings
@@ -398,53 +397,10 @@ def recording_webhook(request):
                     return JsonResponse({"status": "ignored", "reason": "no_recent_booking"})
 
         elif event_type == 'meeting-started':
-            # Devolvemos 200 INMEDIATAMENTE y disparamos la grabación en background
-            # Daily puede enviar el campo como 'room' o 'room_name' según la versión
+            # La grabación la inicia Daily automáticamente (enable_recording='cloud' en la sala).
+            # Este evento solo se loguea para trazabilidad.
             room_id = payload.get('room') or payload.get('room_name')
-            print(f"🟢 Reunión iniciada: sala={room_id} → disparando grabación en background...")
-
-            def _start_recording_async(room_name):
-                """
-                Inicia la grabación en Daily sin bloquear el webhook.
-                Espera 5s antes del primer intento (Daily necesita que la sala esté lista)
-                y reintenta hasta 3 veces con 5s de pausa entre intentos.
-                """
-                import time
-                api_key = (settings.DAILY_API_KEY or '').strip()
-                if not api_key:
-                    print(f"   ❌ DAILY_API_KEY no configurada — no se puede iniciar grabación")
-                    return
-
-                time.sleep(5)  # Esperar que Daily confirme la sala activa
-
-                for attempt in range(1, 4):  # 3 intentos
-                    try:
-                        res = requests.post(
-                            f'https://api.daily.co/v1/rooms/{room_name}/recordings/start',
-                            headers={
-                                'Authorization': f'Bearer {api_key}',
-                                'Content-Type': 'application/json'
-                            },
-                            json={},
-                            timeout=10
-                        )
-                        if res.status_code in [200, 201]:
-                            print(f"   ✅ Grabación iniciada automáticamente: {room_name} (intento {attempt})")
-                            return
-                        else:
-                            print(f"   ⚠️ Intento {attempt}/3 — Error al iniciar grabación: {res.status_code} - {res.text[:100]}")
-                    except Exception as e:
-                        print(f"   ❌ Intento {attempt}/3 — Excepción en grabación async: {e}")
-
-                    if attempt < 3:
-                        time.sleep(5)  # Pausa entre reintentos
-
-                print(f"   ❌ No se pudo iniciar la grabación para {room_name} tras 3 intentos")
-
-            if room_id:
-                t = threading.Thread(target=_start_recording_async, args=(room_id,), daemon=True)
-                t.start()
-
+            print(f"🟢 Reunión iniciada: sala={room_id} (grabación cloud automática activa)")
             return JsonResponse({"status": "received", "event": "meeting-started"})
 
         elif event_type == 'meeting-ended':
