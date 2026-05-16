@@ -365,7 +365,8 @@ def recording_webhook(request):
         event_type = data.get('type')
         payload = data.get('payload', {})
 
-        print(f"📥 Webhook recibido de Daily: {event_type}")
+        # Catch-all log para depuración — registra TODOS los tipos de evento que llegan
+        print(f"📥 Webhook recibido de Daily: tipo={event_type!r} | payload_keys={list(payload.keys()) if payload else []}")
 
         if event_type == 'recording.ready-to-download':
             room_id = payload.get('room_name')
@@ -397,30 +398,47 @@ def recording_webhook(request):
 
         elif event_type == 'meeting-started':
             # Devolvemos 200 INMEDIATAMENTE y disparamos la grabación en background
-            room_id = payload.get('room')
+            # Daily puede enviar el campo como 'room' o 'room_name' según la versión
+            room_id = payload.get('room') or payload.get('room_name')
             print(f"🟢 Reunión iniciada: sala={room_id} → disparando grabación en background...")
 
             def _start_recording_async(room_name):
-                """Inicia la grabación en Daily sin bloquear el webhook."""
+                """
+                Inicia la grabación en Daily sin bloquear el webhook.
+                Espera 5s antes del primer intento (Daily necesita que la sala esté lista)
+                y reintenta hasta 3 veces con 5s de pausa entre intentos.
+                """
+                import time
                 api_key = (settings.DAILY_API_KEY or '').strip()
                 if not api_key:
+                    print(f"   ❌ DAILY_API_KEY no configurada — no se puede iniciar grabación")
                     return
-                try:
-                    res = requests.post(
-                        f'https://api.daily.co/v1/rooms/{room_name}/recordings/start',
-                        headers={
-                            'Authorization': f'Bearer {api_key}',
-                            'Content-Type': 'application/json'
-                        },
-                        json={},
-                        timeout=10
-                    )
-                    if res.status_code in [200, 201]:
-                        print(f"   ✅ Grabación iniciada automáticamente: {room_name}")
-                    else:
-                        print(f"   ⚠️ Error al iniciar grabación: {res.status_code} - {res.text[:100]}")
-                except Exception as e:
-                    print(f"   ❌ Error en grabación async: {e}")
+
+                time.sleep(5)  # Esperar que Daily confirme la sala activa
+
+                for attempt in range(1, 4):  # 3 intentos
+                    try:
+                        res = requests.post(
+                            f'https://api.daily.co/v1/rooms/{room_name}/recordings/start',
+                            headers={
+                                'Authorization': f'Bearer {api_key}',
+                                'Content-Type': 'application/json'
+                            },
+                            json={},
+                            timeout=10
+                        )
+                        if res.status_code in [200, 201]:
+                            print(f"   ✅ Grabación iniciada automáticamente: {room_name} (intento {attempt})")
+                            return
+                        else:
+                            print(f"   ⚠️ Intento {attempt}/3 — Error al iniciar grabación: {res.status_code} - {res.text[:100]}")
+                    except Exception as e:
+                        print(f"   ❌ Intento {attempt}/3 — Excepción en grabación async: {e}")
+
+                    if attempt < 3:
+                        time.sleep(5)  # Pausa entre reintentos
+
+                print(f"   ❌ No se pudo iniciar la grabación para {room_name} tras 3 intentos")
 
             if room_id:
                 t = threading.Thread(target=_start_recording_async, args=(room_id,), daemon=True)
@@ -633,7 +651,14 @@ def api_update_meeting(request, pk):
         if body.get('recording_id'):
             booking.recording_id = body.get('recording_id')
 
-        booking.save()
+        if body.get('r2_url'):
+            booking.recording_r2_url = body.get('r2_url')
+
+        update_fields = [
+            'transcript', 'acta', 'acuerdos_text', 'processing_status',
+            'recording_id', 'recording_r2_url',
+        ]
+        booking.save(update_fields=update_fields)
 
         # --- REPOSITORY INTEGRATION: Save deliverables as documents ---
         from django.core.files.base import ContentFile
