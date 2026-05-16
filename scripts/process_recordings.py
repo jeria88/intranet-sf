@@ -101,6 +101,7 @@ def process_meeting(m):
     download_url = m['recording_url']
     recording_id = m['recording_id']
     room_name = m['room_name']
+    attendees = m.get('attendees', [])
 
     print(f"\n{'='*50}")
     print(f"  Procesando Reunión ID {booking_id} — Sala: {room_name}")
@@ -155,33 +156,42 @@ def process_meeting(m):
                 )
                 return
 
-            # 4. Acta y Acuerdos con DeepSeek
-            print("🤖 Generando acta con DeepSeek...")
+            # 4. Relatoría y Resumen con DeepSeek
+            participants_str = ", ".join(attendees) if attendees else "participantes no identificados"
+            print(f"👥 Participantes desde Django: {participants_str}")
+
+            print("🤖 Generando relatoría con DeepSeek...")
             acta = generate_ai_content(
                 transcript,
-                "Redacta un acta formal de esta reunión escolar chilena. "
-                "Incluye: fecha inferida, participantes mencionados, puntos tratados, y conclusiones."
+                f"Eres un secretario de actas. Los participantes de esta reunión son: {participants_str}. "
+                "Tu tarea es FORMATEAR la siguiente transcripción como una relatoría de reunión. "
+                "REGLAS ESTRICTAS: "
+                "1. NO omitas ningún contenido — incluye todo lo que se dijo. "
+                "2. NO traduzcas — mantén el idioma original (español). "
+                "3. NO resumas ni interpretes — transcribe fielmente lo dicho. "
+                "4. Atribuye cada intervención al participante correcto cuando puedas identificarlo "
+                "   (por el nombre mencionado, el contexto, quién responde a quién). "
+                "5. Si no puedes identificar al hablante, usa 'Hablante A:', 'Hablante B:', etc. "
+                "6. Formato: NOMBRE: [texto de la intervención]. Una línea por intervención."
             )
 
-            print("📋 Extrayendo acuerdos...")
+            print("📋 Generando resumen de la reunión...")
             acuerdos = generate_ai_content(
                 transcript,
-                "Extrae los acuerdos y compromisos de esta reunión como una lista numerada. "
-                "Para cada acuerdo indica: descripción, responsable (si se menciona), y plazo (si se indica)."
+                "Genera un resumen ejecutivo de esta reunión escolar chilena. "
+                "Incluye: (1) Temas principales tratados, (2) Decisiones tomadas, "
+                "(3) Compromisos y responsables mencionados, (4) Próximos pasos si se mencionan. "
+                "Sé conciso y claro. Usa lenguaje formal."
             )
 
-            # 5. Obtener participantes de Daily
-            print("👥 Obteniendo participantes de Daily...")
-            participants = fetch_daily_participants(recording_id)
-            print(f"   {len(participants)} participante(s) detectado(s).")
-
-            # 6. Enviar resultados a Django
+            # 5. Enviar resultados a Django
             print("🚀 Enviando resultados al servidor...")
+            participants_payload = [{"name": name} for name in attendees]
             payload = {
                 "transcript": transcript,
                 "acta": acta,
                 "acuerdos_text": acuerdos,
-                "participants": participants,
+                "participants": participants_payload,
                 "status": "completed",
             }
             if r2_url:
@@ -265,49 +275,6 @@ def generate_ai_content(transcript, prompt):
         return res.json()['choices'][0]['message']['content']
     return f"Error IA: {res.status_code} — {res.text[:200]}"
 
-
-def fetch_daily_participants(recording_id):
-    """
-    Consulta la API de Daily.co para obtener los participantes reales de la sesión.
-    """
-    if not recording_id or not DAILY_API_KEY:
-        return []
-
-    headers = {"Authorization": f"Bearer {DAILY_API_KEY}"}
-
-    try:
-        # 1. Obtener detalles de la grabación para encontrar el session_id
-        rec_url = f"https://api.daily.co/v1/recordings/{recording_id}"
-        res = requests.get(rec_url, headers=headers, timeout=10)
-        if res.status_code != 200:
-            print(f"   ⚠️ No se pudo obtener info de grabación {recording_id}: {res.status_code}")
-            return []
-
-        session_id = res.json().get('session_id')
-        if not session_id:
-            print(f"   ⚠️ No se encontró session_id para la grabación {recording_id}")
-            return []
-
-        # 2. Obtener presencia de la sesión (quién estuvo y cuánto tiempo)
-        pres_url = f"https://api.daily.co/v1/sessions/{session_id}/presence"
-        res = requests.get(pres_url, headers=headers, timeout=10)
-        if res.status_code != 200:
-            print(f"   ⚠️ No se pudo obtener presencia de sesión {session_id}: {res.status_code}")
-            return []
-
-        participants = []
-        for p in res.json().get('data', []):
-            participants.append({
-                "name": p.get('user_name') or p.get('user_id') or "Participante Anónimo",
-                "joined_at": p.get('join_time'),
-                "left_at": p.get('leave_time'),
-                "duration_seconds": p.get('duration', 0)
-            })
-        return participants
-
-    except Exception as e:
-        print(f"   ❌ Error al consultar participantes en Daily: {e}")
-        return []
 
 
 if __name__ == "__main__":

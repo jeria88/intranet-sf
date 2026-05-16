@@ -570,15 +570,20 @@ def api_pending_meetings(request):
     pending = MeetingBooking.objects.filter(
         processing_status__in=['pendiente', 'fallido'],
         recording_url__isnull=False
-    ).exclude(recording_url='').select_related('room')[:10]  # Máx. 10 por ciclo
+    ).exclude(recording_url='').select_related('room').prefetch_related('attendances__user')[:10]
 
     data = []
     for p in pending:
+        attendees = [
+            a.user.get_full_name() or a.user.username
+            for a in p.attendances.all()
+        ]
         data.append({
             "id": p.id,
             "recording_url": p.recording_url,
             "room_name": p.room.daily_identifier,
-            "recording_id": p.recording_id
+            "recording_id": p.recording_id,
+            "attendees": attendees,
         })
 
     return JsonResponse({"meetings": data})
