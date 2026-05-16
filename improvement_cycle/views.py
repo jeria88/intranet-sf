@@ -66,8 +66,13 @@ def meta_crear(request):
 
         # Generar contenido IA sincrónicamente — Gunicorn tiene timeout 300s, DeepSeek tarda ~10s
         if has_objectives:
-            generate_cycle_content_ai(goal)
+            generate_cycle_content_ai(goal)  # Incluye create_meeting_default_actions si is_meeting_cycle
             messages.success(request, "Ciclo de mejora creado con plan de acción generado por IA.")
+        elif goal.is_meeting_cycle:
+            # Sin objetivos estratégicos, pero es un ciclo de reunión: crear acciones de seguimiento
+            from improvement_cycle.utils import create_meeting_default_actions
+            create_meeting_default_actions(goal)
+            messages.success(request, "Ciclo de reunión creado. Agenda la videollamada para activar el seguimiento.")
         
         # Sincronizar con Calendario
         try:
