@@ -156,24 +156,12 @@ def process_meeting(m):
                 )
                 return
 
-            # 4. Relatoría y Resumen con DeepSeek
-            participants_str = ", ".join(attendees) if attendees else "participantes no identificados"
+            # 4. Acta = transcripción verbatim. Resumen con DeepSeek.
+            participants_str = ", ".join(attendees) if attendees else "no registrados"
             print(f"👥 Participantes desde Django: {participants_str}")
 
-            print("🤖 Generando relatoría con DeepSeek...")
-            acta = generate_ai_content(
-                transcript,
-                f"Eres un secretario de actas. Los participantes de esta reunión son: {participants_str}. "
-                "Tu tarea es FORMATEAR la siguiente transcripción como una relatoría de reunión. "
-                "REGLAS ESTRICTAS: "
-                "1. NO omitas ningún contenido — incluye todo lo que se dijo. "
-                "2. NO traduzcas — mantén el idioma original (español). "
-                "3. NO resumas ni interpretes — transcribe fielmente lo dicho. "
-                "4. Atribuye cada intervención al participante correcto cuando puedas identificarlo "
-                "   (por el nombre mencionado, el contexto, quién responde a quién). "
-                "5. Si no puedes identificar al hablante, usa 'Hablante A:', 'Hablante B:', etc. "
-                "6. Formato: NOMBRE: [texto de la intervención]. Una línea por intervención."
-            )
+            # El acta ES la transcripción — contraste con video para identificar hablantes
+            acta = transcript
 
             print("📋 Generando resumen de la reunión...")
             acuerdos = generate_ai_content(
