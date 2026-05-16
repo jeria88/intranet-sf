@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ── Verificación temprana: ¿hay reuniones pendientes? ──────────────────
       # Si no hay nada que procesar, terminamos aquí y nos ahorramos ~60s de
