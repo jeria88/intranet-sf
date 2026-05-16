@@ -64,12 +64,10 @@ def meta_crear(request):
         )
 
         
-        # Disparar generación por IA en segundo plano para evitar 502 por timeout
+        # Generar contenido IA sincrónicamente — Gunicorn tiene timeout 300s, DeepSeek tarda ~10s
         if goal.strategic_objectives:
-            import threading
-            thread = threading.Thread(target=generate_cycle_content_ai, args=(goal,))
-            thread.start()
-            messages.success(request, "Ciclo de mejora creado. La IA está procesando los objetivos en segundo plano.")
+            generate_cycle_content_ai(goal)
+            messages.success(request, "Ciclo de mejora creado con plan de acción generado por IA.")
         
         # Sincronizar con Calendario
         try:
