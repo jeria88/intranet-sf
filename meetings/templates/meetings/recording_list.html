@@ -191,10 +191,24 @@
                 <span>⏰ Hora: {{ booking.scheduled_at|date:"H:i" }} hrs</span>
             </div>
 
+            <!-- Badge de estado IA -->
+            {% if booking.processing_status == 'completado' %}
+            <div style="display:inline-block;background:#d1fae5;color:#065f46;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:10px;">✅ Acta lista</div>
+            {% elif booking.processing_status == 'pendiente' or booking.processing_status == 'procesando' %}
+            <div style="display:inline-block;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:10px;">⏳ Procesando…</div>
+            {% elif booking.processing_status == 'fallido' %}
+            <div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:10px;">❌ Error al procesar</div>
+            {% endif %}
+
+            {% if booking.processing_status == 'completado' %}
+            <a href="{% url 'meetings:booking_detalle' booking.id %}" style="display:block;text-align:center;background:#0f766e;color:white;text-decoration:none;padding:10px;border-radius:8px;font-weight:600;font-size:13px;margin-bottom:8px;">📋 Ver Acta & Acuerdos</a>
+            {% endif %}
+
             <a href="{% url 'meetings:download_recording' booking.id %}" target="_blank" class="btn-watch">Descargar Grabación 📥</a>
-            
+
             {% if user.is_staff or user.is_red_team %}
             <div style="display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+                <a href="{% url 'meetings:booking_detalle' booking.id %}" style="flex: 1; text-align: center; font-size: 11px; text-decoration: none; color: #0f766e; font-weight: 600;">🔍 Detalle</a>
                 <a href="{% url 'meetings:meeting_edit' booking.id %}" style="flex: 1; text-align: center; font-size: 11px; text-decoration: none; color: var(--contrast-2); font-weight: 600;">✏️ Editar</a>
                 <a href="{% url 'meetings:meeting_delete' booking.id %}" style="flex: 1; text-align: center; font-size: 11px; text-decoration: none; color: #dc3545; font-weight: 600;">🗑️ Eliminar</a>
             </div>
