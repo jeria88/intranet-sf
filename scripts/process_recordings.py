@@ -13,6 +13,13 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
 DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
 
+# Cloudflare R2 — usando nombres idénticos a settings.py
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')
+CLOUDFLARE_R2_PUBLIC_URL = os.environ.get('CLOUDFLARE_R2_PUBLIC_URL', '')
+
 # Umbral de silencio: chunks más silenciosos que esto se omiten (evita costos innecesarios en Whisper)
 SILENCE_THRESHOLD_DBFS = -40  # dB
 
@@ -24,6 +31,51 @@ def get_headers():
         "X-Internal-API-Key": INTERNAL_API_KEY,
         "Content-Type": "application/json"
     }
+
+
+def upload_to_r2(local_path, booking_id):
+    """
+    Sube el archivo de grabación a Cloudflare R2 y retorna la URL pública permanente.
+    Si las credenciales R2 no están configuradas, retorna None sin fallar.
+    """
+    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_ENDPOINT_URL]):
+        print("   ⚠️ Variables R2 no configuradas — se omite subida a R2")
+        return None
+
+    try:
+        import boto3
+        from botocore.config import Config
+
+        s3 = boto3.client(
+            's3',
+            endpoint_url=AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            config=Config(signature_version='s3v4'),
+            region_name='auto',
+        )
+
+        key = f"recordings/{booking_id}/recording.mp4"
+        print(f"   ☁️  Subiendo a R2: {AWS_STORAGE_BUCKET_NAME}/{key}")
+
+        with open(local_path, 'rb') as f:
+            s3.upload_fileobj(
+                f,
+                AWS_STORAGE_BUCKET_NAME,
+                key,
+                ExtraArgs={'ContentType': 'video/mp4'},
+            )
+
+        # Construir URL pública
+        base = CLOUDFLARE_R2_PUBLIC_URL.rstrip('/')
+        r2_url = f"{base}/{key}" if base else None
+
+        print(f"   ✅ Subido a R2: {r2_url}")
+        return r2_url
+
+    except Exception as e:
+        print(f"   ❌ Error al subir a R2: {e}")
+        return None
 
 
 def process_all_pending():
@@ -85,6 +137,10 @@ def process_meeting(m):
                     total_bytes += len(chunk)
             print(f"   Descargados {total_bytes / 1024 / 1024:.1f} MB")
 
+            # 2b. Subir a Cloudflare R2 para almacenamiento permanente
+            print("☁️  Subiendo grabación a Cloudflare R2...")
+            r2_url = upload_to_r2(audio_path, booking_id)
+
             # 3. Transcribir con Whisper (chunking + detección de silencio)
             print("🎙️ Transcribiendo con Whisper...")
             transcript = transcribe_audio(audio_path, tmpdir)
@@ -126,8 +182,10 @@ def process_meeting(m):
                 "acta": acta,
                 "acuerdos_text": acuerdos,
                 "participants": participants,
-                "status": "completed"
+                "status": "completed",
             }
+            if r2_url:
+                payload["r2_url"] = r2_url
             res = requests.post(
                 f"{DJANGO_API_URL}/update/{booking_id}/",
                 headers=get_headers(),
