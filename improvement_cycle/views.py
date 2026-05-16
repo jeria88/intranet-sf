@@ -48,6 +48,7 @@ def meta_crear(request):
         # Limpiar objetivos vacíos
         objectives = [obj.strip() for obj in objectives if obj.strip()]
 
+        has_objectives = bool(objectives)
         goal = ImprovementGoal.objects.create(
             establishment=ee,
             profile_role=request.user.role or '',
@@ -60,12 +61,11 @@ def meta_crear(request):
             measurement_unit='%',
             deadline=request.POST.get('deadline'),
             created_by=request.user,
-            is_generating=True,
+            is_generating=has_objectives,  # Solo True si hay objetivos que generar
         )
 
-        
         # Generar contenido IA sincrónicamente — Gunicorn tiene timeout 300s, DeepSeek tarda ~10s
-        if goal.strategic_objectives:
+        if has_objectives:
             generate_cycle_content_ai(goal)
             messages.success(request, "Ciclo de mejora creado con plan de acción generado por IA.")
         

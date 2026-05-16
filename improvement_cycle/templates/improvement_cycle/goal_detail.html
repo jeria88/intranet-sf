@@ -87,9 +87,16 @@
                 <script>
                     // Simulación visual de progreso
                     setTimeout(() => { document.getElementById('ai-progress-sim').style.width = '95%'; }, 100);
-                    
-                    // Polling para detectar cuando termine
+
+                    // Safety net: recarga forzada a los 2 minutos para evitar quedarse pegado
+                    const MAX_WAIT = 120000;
+                    const startedAt = Date.now();
+
                     async function checkAIStatus() {
+                        if (Date.now() - startedAt >= MAX_WAIT) {
+                            location.reload();
+                            return;
+                        }
                         try {
                             const res = await fetch(window.location.href);
                             const text = await res.text();
