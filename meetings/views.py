@@ -370,10 +370,11 @@ def recording_webhook(request):
 
         if event_type == 'recording.ready-to-download':
             room_id = payload.get('room_name')
-            download_url = payload.get('download_url')
             recording_id = payload.get('recording_id')
 
-            if room_id and download_url:
+            # Daily NO envía download_url en el webhook — solo room_name + recording_id
+            # El pipeline resuelve el link real via GET /recordings/{id}/access-link
+            if room_id and recording_id:
                 room = MeetingRoom.objects.filter(daily_identifier=room_id).first()
                 if not room:
                     print(f"⚠️ Webhook: Sala '{room_id}' no encontrada en la base de datos.")
@@ -386,11 +387,11 @@ def recording_webhook(request):
                 ).order_by('-scheduled_at').first()
 
                 if booking:
-                    booking.recording_url = download_url
+                    booking.recording_url = f"daily_id:{recording_id}"
                     booking.recording_id = recording_id
                     booking.processing_status = 'pendiente'
                     booking.save(update_fields=['recording_url', 'recording_id', 'processing_status'])
-                    print(f"✅ Grabación vinculada a Booking ID: {booking.id}")
+                    print(f"✅ Grabación vinculada a Booking ID: {booking.id} (recording_id={recording_id})")
                     return JsonResponse({"status": "linked", "booking_id": booking.id})
                 else:
                     print(f"⚠️ Webhook: No se encontró reserva reciente para sala '{room_id}'.")
