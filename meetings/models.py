@@ -72,6 +72,11 @@ class MeetingBooking(models.Model):
         verbose_name='URL de Grabación',
         help_text='Enlace al video o identificador de Daily (daily_id:xxx)'
     )
+    recording_r2_url = models.URLField(
+        max_length=1000, blank=True, null=True,
+        verbose_name='URL de Grabación en R2',
+        help_text='Enlace permanente al video en Cloudflare R2'
+    )
     # Para control de cuota (4 reuniones/mes por rol, excepto RED)
     month_year = models.CharField(max_length=7, verbose_name='Mes-Año (YYYY-MM)', editable=False)
 
