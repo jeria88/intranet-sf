@@ -290,11 +290,13 @@ def booking_detalle(request, pk):
                     booking=booking, title=title,
                     file=f, uploaded_by=request.user,
                 )
+    goal = booking.improvement_cycles.first()
     return render(request, 'meetings/booking_detalle.html', {
         'booking': booking,
         'agreements': agreements,
         'documents': documents,
         'attendances': attendances,
+        'goal': goal,
     })
 
 

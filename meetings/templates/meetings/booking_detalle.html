@@ -59,8 +59,12 @@
 <div
     style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
     <div>
-        <a href="{% url 'meetings:meeting_list' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr;
-            Volver a Salas</a>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+            <a href="{% url 'meetings:meeting_list' %}" style="color:#1e73be;font-size:13px;text-decoration:none;">&larr; Volver a Salas</a>
+            {% if goal %}
+            <a href="{% url 'improvement_cycle:goal_detail' goal.pk %}" style="color:#0f766e;font-size:13px;text-decoration:none;font-weight:600;">↩ Volver al Ciclo de Mejora: {{ goal.title|truncatechars:50 }}</a>
+            {% endif %}
+        </div>
         <h2 style="margin:8px 0 4px;">Reunión: {{ booking.room.name }}</h2>
         <p style="font-size:13px;color:#575760;margin:0;">📅 {{ booking.scheduled_at|date:"d/m/Y H:i" }} · {{
             booking.get_status_display }}</p>
