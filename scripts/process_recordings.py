@@ -8,9 +8,9 @@ from openai import OpenAI
 # Configuración desde variables de entorno (Secretos de GitHub)
 DJANGO_API_URL = os.environ.get('DJANGO_API_URL')  # Ej: https://tudominio.railway.app/meetings/api
 INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY')
-DAILY_API_KEY = os.environ.get('DAILY_API_KEY')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
+DAILY_API_KEY = (os.environ.get('DAILY_API_KEY') or '').strip()
+OPENAI_API_KEY = (os.environ.get('OPENAI_API_KEY') or '').strip()
+DEEPSEEK_API_KEY = (os.environ.get('DEEPSEEK_API_KEY') or '').strip()
 DEEPSEEK_BASE_URL = os.environ.get('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
 
 # Cloudflare R2 — usando nombres idénticos a settings.py
