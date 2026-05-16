@@ -40,7 +40,7 @@ jobs:
         if: steps.check.outputs.pending_count != '0'
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install requests pydub openai
+          pip install requests pydub openai boto3
 
       # ── Procesamiento ──────────────────────────────────────────────────────
       - name: Run processing script
@@ -51,6 +51,11 @@ jobs:
           DAILY_API_KEY: ${{ secrets.DAILY_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+          AWS_S3_ENDPOINT_URL: ${{ secrets.AWS_S3_ENDPOINT_URL }}
+          CLOUDFLARE_R2_PUBLIC_URL: ${{ secrets.CLOUDFLARE_R2_PUBLIC_URL }}
         run: python scripts/process_recordings.py
 
       - name: Skip (no pending meetings)
