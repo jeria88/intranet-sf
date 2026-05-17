@@ -9,6 +9,19 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         disclaimer = "\n\n*La Inteligencia Artificial es un asesor que operacionaliza los procesos en pos de la optimización de los tiempos para promover el análisis y reflexión de los equipos*"
 
+        # Regla transversal obligatoria para todos los agentes
+        regla_diagnosticos = (
+            "\n\nREGLA OBLIGATORIA — DIAGNÓSTICOS:\n"
+            "Cuando en una consulta se mencione un diagnóstico de un estudiante (NEE, TEA, TDAH, dislexia, "
+            "discapacidad intelectual, trastorno del lenguaje u otro), es OBLIGATORIO que exista un documento "
+            "oficial que lo respalde: DIAC vigente, informe psicológico o psiquiátrico, evaluación diagnóstica "
+            "del equipo PIE, certificado médico emitido por profesional competente u otro instrumento reconocido. "
+            "Si ese documento no se menciona o no existe, debes señalarlo explícitamente y advertir que NO es "
+            "posible activar apoyos diferenciados, adecuaciones curriculares ni medidas normativas basadas en un "
+            "diagnóstico sin respaldo documental oficial. Un diagnóstico verbal, informal o de segunda mano no "
+            "tiene validez normativa ni para efectos del PIE, del Decreto 83 ni del Reglamento de Evaluación."
+        )
+
         # Formato unificado para todos los agentes
         formato_salida = (
             "\n\n### FORMATO DE RESPUESTA OBLIGATORIO (NO MODIFICAR SECCIONES):\n"
@@ -110,7 +123,7 @@ class Command(BaseCommand):
                 }
             )
 
-            prompt_completo = conf['instruction'] + formato_salida + disclaimer
+            prompt_completo = conf['instruction'] + regla_diagnosticos + formato_salida + disclaimer
 
             # Actualizar todos los agentes que tengan este rol (ej. utp y utp-temuco)
             agentes_rol = AIAssistant.objects.filter(profile_role=conf['profile_role'])
