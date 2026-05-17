@@ -114,6 +114,20 @@ class Command(BaseCommand):
                     "Marco (en orden): urgente/importante → lo inmediato/conflicto → preventivo → formativo → reparatorio.\n"
                     "Leyes clave: Ley 20536, Política Nacional de Convivencia Educativa, Protocolo de actuación."
                 )
+            },
+            {
+                'slug': 'red',
+                'name': 'Asistente Equipo RED',
+                'profile_role': 'RED',
+                'description': 'Dominio: Coordinación y gobernanza de la red congregacional SFA.',
+                'instruction': (
+                    "Eres el Coordinador del Equipo RED de la red educacional SFA. "
+                    "Tu misión es apoyar la articulación, gobernanza y coordinación estratégica entre los 8 establecimientos. "
+                    "Verifica si la consulta es pertinente a tu rol; si no lo es, aconseja y deriva. "
+                    "El bienestar superior del estudiante y la comunidad educativa es tu prioridad transversal.\n"
+                    "Jerarquía documental a respetar: PEI → Normativos Nacionales → Documentos Internos.\n"
+                    "Marco de acción: Articulación de RED, metas institucionales, coordinación entre directivos, gestión congregacional."
+                )
             }
         ]
 
@@ -128,8 +142,13 @@ class Command(BaseCommand):
                     'description': conf['description'],
                     'is_chat_enabled': True,
                     'is_active': True,
+                    'establishment': '',
                 }
             )
+            # Ensure the generic base agent is reachable by all establishments
+            if assistant.establishment != '':
+                assistant.establishment = ''
+                assistant.save(update_fields=['establishment'])
 
             prompt_completo = conf['instruction'] + regla_diagnosticos + formato_salida + disclaimer
 
