@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Evento | Intranet SFA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 720px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+        padding: 36px 40px;
+    }
+    .form-container h2 { margin: 0 0 6px; }
+    .form-container .subtitle { color: var(--contrast-2); font-size: 14px; margin: 0 0 30px; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--contrast-3);
+        margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: var(--contrast);
+        background: #f8fafc;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: white;
+    }
+    .form-group textarea { resize: vertical; min-height: 120px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .tipo-selector { display: flex; gap: 12px; }
+    .tipo-option {
+        flex: 1;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+    }
+    .tipo-option input[type="radio"] { display: none; }
+    .tipo-option .icon { font-size: 28px; display: block; margin-bottom: 6px; }
+    .tipo-option .label { font-size: 14px; font-weight: 700; color: var(--contrast); }
+    .tipo-option.selected-cultural  { border-color: #ec4899; background: #fdf2f8; }
+    .tipo-option.selected-deportivo { border-color: #10b981; background: #f0fdf4; }
+
+    .status-select select {
+        background: #f8fafc;
+    }
+
+    .img-preview {
+        margin-top: 10px;
+        border-radius: 10px;
+        max-height: 180px;
+        object-fit: cover;
+        display: none;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid #f1f5f9;
+    }
+    .btn-cancel {
+        padding: 11px 24px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: var(--contrast-2);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-save {
+        padding: 11px 28px;
+        border-radius: 10px;
+        border: none;
+        background: var(--accent);
+        color: white;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(30,115,190,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>{{ action }} Evento</h2>
+    <p class="subtitle">Eventos Culturales y Deportivos · Colegio Angol</p>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#fee2e2; color:#991b1b; padding:11px 16px; border-radius:8px; margin-bottom:18px; font-size:13px; font-weight:600;">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label>Tipo de Evento *</label>
+            <div class="tipo-selector">
+                <label class="tipo-option {% if not evento or evento.tipo == 'cultural' %}selected-cultural{% endif %}" id="opt-cultural">
+                    <input type="radio" name="tipo" value="cultural" {% if not evento or evento.tipo == 'cultural' %}checked{% endif %}>
+                    <span class="icon">🎭</span>
+                    <span class="label">Cultural</span>
+                </label>
+                <label class="tipo-option {% if evento and evento.tipo == 'deportivo' %}selected-deportivo{% endif %}" id="opt-deportivo">
+                    <input type="radio" name="tipo" value="deportivo" {% if evento and evento.tipo == 'deportivo' %}checked{% endif %}>
+                    <span class="icon">⚽</span>
+                    <span class="label">Deportivo</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Título *</label>
+            <input type="text" name="titulo" value="{{ evento.titulo|default:'' }}" placeholder="Nombre del evento" required>
+        </div>
+
+        <div class="form-group">
+            <label>Descripción *</label>
+            <textarea name="descripcion" placeholder="Describe el evento: actividades, objetivos, participantes esperados...">{{ evento.descripcion|default:'' }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Fecha *</label>
+                <input type="date" name="fecha" value="{{ evento.fecha|date:'Y-m-d'|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label>Hora</label>
+                <input type="time" name="hora" value="{{ evento.hora|date:'H:i'|default:'' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Lugar *</label>
+            <input type="text" name="lugar" value="{{ evento.lugar|default:'' }}" placeholder="Ej: Gimnasio, Patio central, Cancha municipal..." required>
+        </div>
+
+        <div class="form-group">
+            <label>Imagen / Afiche</label>
+            <input type="file" name="imagen" accept="image/*" id="imgInput">
+            {% if evento and evento.imagen %}
+            <div style="margin-top:10px;">
+                <img src="{{ evento.imagen.url }}" style="max-height:140px; border-radius:10px; object-fit:cover;">
+                <p style="font-size:12px; color:var(--contrast-3); margin-top:4px;">Sube una nueva imagen para reemplazarla.</p>
+            </div>
+            {% endif %}
+            <img id="imgPreview" class="img-preview">
+        </div>
+
+        <div class="form-group status-select">
+            <label>Estado</label>
+            <select name="status">
+                <option value="borrador" {% if not evento or evento.status == 'borrador' %}selected{% endif %}>Borrador (solo tú puedes verlo)</option>
+                <option value="publicado" {% if evento and evento.status == 'publicado' %}selected{% endif %}>Publicado (visible para toda la red)</option>
+                <option value="finalizado" {% if evento and evento.status == 'finalizado' %}selected{% endif %}>Finalizado</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'eventos:evento_list' %}" class="btn-cancel">Cancelar</a>
+            <button type="submit" class="btn-save">{{ action }} Evento</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Tipo selector visual
+    document.querySelectorAll('input[name="tipo"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            document.getElementById('opt-cultural').className = 'tipo-option';
+            document.getElementById('opt-deportivo').className = 'tipo-option';
+            if (radio.value === 'cultural') {
+                document.getElementById('opt-cultural').classList.add('selected-cultural');
+            } else {
+                document.getElementById('opt-deportivo').classList.add('selected-deportivo');
+            }
+        });
+    });
+
+    // Preview de imagen
+    document.getElementById('imgInput').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const preview = document.getElementById('imgPreview');
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

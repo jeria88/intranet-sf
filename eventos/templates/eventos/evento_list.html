@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Eventos Culturales y Deportivos | Intranet SFA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ev-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 28px;
+    }
+    .ev-header h1 { margin: 0 0 4px; }
+    .ev-header p { margin: 0; color: var(--contrast-2); font-size: 14px; }
+
+    .status-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .status-borrador   { background: #f1f5f9; color: #475569; }
+    .status-publicado  { background: #dcfce7; color: #166534; }
+    .status-finalizado { background: #e0e7ff; color: #3730a3; }
+
+    .tipo-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+    .tipo-cultural  { background: #fce7f3; color: #9d174d; }
+    .tipo-deportivo { background: #d1fae5; color: #065f46; }
+
+    .ev-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .ev-table thead th {
+        background: #f8fafc;
+        padding: 14px 18px;
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--contrast-3);
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .ev-table tbody td {
+        padding: 14px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+    .ev-table tbody tr:last-child td { border-bottom: none; }
+    .ev-table tbody tr:hover { background: #fcfdfe; }
+
+    .img-thumb {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+    .img-placeholder {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .action-btns { display: flex; gap: 6px; }
+    .btn-sm {
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-edit   { background: #e0e7ff; color: #3730a3; }
+    .btn-delete { background: #fee2e2; color: #991b1b; }
+    .btn-view   { background: #f0fdf4; color: #166534; }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--contrast-2);
+    }
+    .empty-state .icon { font-size: 56px; margin-bottom: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ev-header">
+    <div>
+        <h1>Eventos Culturales y Deportivos</h1>
+        <p>Colegio Angol · Gestión de eventos de la comunidad</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a href="{% url 'eventos:calendario_eventos' %}"
+           style="background:#f1f5f9; color:var(--contrast); padding:10px 20px; border-radius:30px; text-decoration:none; font-weight:600; font-size:14px;">
+            Ver Calendario
+        </a>
+        <a href="{% url 'eventos:evento_crear' %}"
+           style="background:var(--accent); color:white; padding:10px 22px; border-radius:30px; text-decoration:none; font-weight:700; font-size:14px; box-shadow:0 4px 12px rgba(30,115,190,0.3);">
+            + Nuevo Evento
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div style="background:{% if msg.tags == 'success' %}#dcfce7{% else %}#fee2e2{% endif %}; color:{% if msg.tags == 'success' %}#166534{% else %}#991b1b{% endif %}; padding:12px 18px; border-radius:10px; margin-bottom:16px; font-size:14px; font-weight:600;">
+    {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if eventos %}
+<table class="ev-table">
+    <thead>
+        <tr>
+            <th>Imagen</th>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Lugar</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ev in eventos %}
+        <tr>
+            <td>
+                {% if ev.imagen %}
+                <img src="{{ ev.imagen.url }}" class="img-thumb" alt="{{ ev.titulo }}">
+                {% else %}
+                <div class="img-placeholder">{% if ev.tipo == 'cultural' %}🎭{% else %}⚽{% endif %}</div>
+                {% endif %}
+            </td>
+            <td style="font-weight:600; color:var(--contrast); max-width:220px;">
+                {{ ev.titulo }}
+                <div style="font-size:12px; color:var(--contrast-2); margin-top:2px;">{{ ev.descripcion|truncatechars:60 }}</div>
+            </td>
+            <td><span class="tipo-badge tipo-{{ ev.tipo }}">{{ ev.get_tipo_display }}</span></td>
+            <td>{{ ev.fecha|date:"d/m/Y" }}</td>
+            <td>{% if ev.hora %}{{ ev.hora|date:"H:i" }} hrs{% else %}<span style="color:var(--contrast-3)">—</span>{% endif %}</td>
+            <td>{{ ev.lugar }}</td>
+            <td><span class="status-badge status-{{ ev.status }}">{{ ev.get_status_display }}</span></td>
+            <td>
+                <div class="action-btns">
+                    <a href="{% url 'eventos:evento_detalle' ev.pk %}" class="btn-sm btn-view">Ver</a>
+                    <a href="{% url 'eventos:evento_editar' ev.pk %}" class="btn-sm btn-edit">Editar</a>
+                    <a href="{% url 'eventos:evento_eliminar' ev.pk %}" class="btn-sm btn-delete">Eliminar</a>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="icon">🎭</div>
+    <p style="font-size:16px; font-weight:600; margin-bottom:8px;">No hay eventos creados aún</p>
+    <p>Crea el primer evento cultural o deportivo del colegio.</p>
+    <a href="{% url 'eventos:evento_crear' %}"
+       style="display:inline-block; margin-top:14px; background:var(--accent); color:white; padding:10px 24px; border-radius:20px; text-decoration:none; font-weight:600;">
+        + Crear primer evento
+    </a>
+</div>
+{% endif %}
+{% endblock %}

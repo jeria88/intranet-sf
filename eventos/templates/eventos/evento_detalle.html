@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ evento.titulo }} | Intranet SFA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detalle-card {
+        max-width: 780px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+        overflow: hidden;
+    }
+    .detalle-hero {
+        position: relative;
+        height: 260px;
+        background: linear-gradient(135deg, #7c3aed, #db2777);
+        display: flex;
+        align-items: flex-end;
+        padding: 24px;
+    }
+    .detalle-hero.deportivo {
+        background: linear-gradient(135deg, #065f46, #10b981);
+    }
+    .detalle-hero img {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0.35;
+    }
+    .detalle-hero-content { position: relative; z-index: 1; color: white; }
+    .detalle-hero-content .tipo-chip {
+        display: inline-block;
+        background: rgba(255,255,255,0.25);
+        border: 1px solid rgba(255,255,255,0.4);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+    .detalle-hero-content h1 { margin: 0; font-size: 26px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+    .detalle-body { padding: 32px 36px; }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .meta-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+    .meta-item .meta-icon { font-size: 22px; margin-bottom: 6px; }
+    .meta-item .meta-label { font-size: 11px; text-transform: uppercase; color: var(--contrast-3); font-weight: 700; letter-spacing: 0.06em; }
+    .meta-item .meta-value { font-size: 15px; font-weight: 700; color: var(--contrast); margin-top: 3px; }
+
+    .status-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+    }
+    .status-borrador   { background: #f1f5f9; color: #475569; }
+    .status-publicado  { background: #dcfce7; color: #166534; }
+    .status-finalizado { background: #e0e7ff; color: #3730a3; }
+
+    .desc-section { margin-bottom: 24px; }
+    .desc-section h3 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--contrast-3);
+        margin: 0 0 10px;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 8px;
+    }
+    .desc-section p { font-size: 15px; line-height: 1.7; color: var(--contrast); white-space: pre-line; }
+
+    .detalle-actions {
+        display: flex;
+        gap: 10px;
+        padding-top: 20px;
+        border-top: 1px solid #f1f5f9;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+    <a href="{% url 'eventos:calendario_eventos' %}" style="color:var(--accent); text-decoration:none; font-size:14px; font-weight:600;">
+        ← Volver al Calendario
+    </a>
+    {% if can_manage %}
+    &nbsp;·&nbsp;
+    <a href="{% url 'eventos:evento_list' %}" style="color:var(--contrast-2); text-decoration:none; font-size:14px;">Gestión de Eventos</a>
+    {% endif %}
+</div>
+
+<div class="detalle-card">
+    <div class="detalle-hero {% if evento.tipo == 'deportivo' %}deportivo{% endif %}">
+        {% if evento.imagen %}
+        <img src="{{ evento.imagen.url }}" alt="{{ evento.titulo }}">
+        {% endif %}
+        <div class="detalle-hero-content">
+            <span class="tipo-chip">{% if evento.tipo == 'cultural' %}🎭{% else %}⚽{% endif %} {{ evento.get_tipo_display }}</span>
+            <h1>{{ evento.titulo }}</h1>
+        </div>
+    </div>
+
+    <div class="detalle-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
+            <span class="status-badge status-{{ evento.status }}">{{ evento.get_status_display }}</span>
+            {% if evento.created_by %}
+            <span style="font-size:12px; color:var(--contrast-3);">
+                Creado por {{ evento.created_by.get_full_name|default:evento.created_by.username }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-item">
+                <div class="meta-icon">📅</div>
+                <div class="meta-label">Fecha</div>
+                <div class="meta-value">{{ evento.fecha|date:"d/m/Y" }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-icon">🕐</div>
+                <div class="meta-label">Hora</div>
+                <div class="meta-value">{% if evento.hora %}{{ evento.hora|date:"H:i" }} hrs{% else %}Por definir{% endif %}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-icon">📍</div>
+                <div class="meta-label">Lugar</div>
+                <div class="meta-value">{{ evento.lugar }}</div>
+            </div>
+        </div>
+
+        <div class="desc-section">
+            <h3>Descripción</h3>
+            <p>{{ evento.descripcion }}</p>
+        </div>
+
+        {% if can_manage %}
+        <div class="detalle-actions">
+            <a href="{% url 'eventos:evento_editar' evento.pk %}"
+               style="padding:10px 22px; background:var(--accent); color:white; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">
+                Editar Evento
+            </a>
+            <a href="{% url 'eventos:evento_eliminar' evento.pk %}"
+               style="padding:10px 22px; background:#fee2e2; color:#991b1b; border-radius:10px; text-decoration:none; font-weight:600; font-size:14px;">
+                Eliminar
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

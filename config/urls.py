@@ -16,6 +16,7 @@ urlpatterns = [
     path('notificaciones/', include('notifications.urls')),
     path('usuarios/', include('users.urls')),
     path('simce/', include('simce.urls')),
+    path('eventos/', include('eventos.urls')),
 ]
 
 if settings.DEBUG:
