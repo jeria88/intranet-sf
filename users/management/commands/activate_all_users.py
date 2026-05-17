@@ -89,12 +89,21 @@ class Command(BaseCommand):
             user.is_active = True
             changed = True
 
+        # Si el usuario aún no cambió su contraseña, forzamos 123456
+        # (puede venir de un deploy anterior con otra clave inicial)
+        pending = has_mcp and getattr(user, 'must_change_password', False)
+        if pending:
+            from django.contrib.auth.hashers import check_password
+            if not check_password(USER_PASSWORD, user.password):
+                user.set_password(USER_PASSWORD)
+                changed = True
+
         if username == 'utp.temuco':
             if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
                 user.first_name = 'Luis Humberto'
                 user.last_name = 'Jeria Castro'
                 changed = True
-        elif has_mcp and getattr(user, 'must_change_password', False) and (user.first_name or user.last_name):
+        elif pending and (user.first_name or user.last_name):
             user.first_name = ''
             user.last_name = ''
             changed = True
