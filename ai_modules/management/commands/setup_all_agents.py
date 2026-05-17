@@ -1,3 +1,4 @@
+import traceback
 import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -7,6 +8,13 @@ class Command(BaseCommand):
     help = 'Configura los 5 agentes IA (Director, UTP, Representante, Inspector, Convivencia)'
 
     def handle(self, *args, **options):
+        try:
+            self._run()
+        except Exception:
+            self.stderr.write('=== ERROR en setup_all_agents ===')
+            self.stderr.write(traceback.format_exc())
+
+    def _run(self):
         disclaimer = "\n\n*La Inteligencia Artificial es un asesor que operacionaliza los procesos en pos de la optimización de los tiempos para promover el análisis y reflexión de los equipos*"
 
         # Regla transversal obligatoria para todos los agentes
