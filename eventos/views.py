@@ -7,7 +7,7 @@ from .models import EventoCultural
 
 
 def _can_manage(user):
-    return user.is_staff or (user.role == 'DIRECTOR' and user.establishment == 'ANGOL')
+    return user.is_staff or user.role == 'RED'
 
 
 def _sync_to_calendar(evento):

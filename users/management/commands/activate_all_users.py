@@ -62,6 +62,10 @@ class Command(BaseCommand):
         self.stdout.write(f'=== Listo: {created} creados | {updated} actualizados | {errors} errores ===')
 
     def _process(self, username, role, ee, has_mcp):
+        # director.angol pertenece al equipo RED, no al establecimiento Angol
+        if username == 'director.angol':
+            role, ee = 'RED', 'RED'
+
         try:
             user = User.objects.get(username=username)
             created = False
@@ -105,6 +109,12 @@ class Command(BaseCommand):
 
         # Determinar si el usuario aún no completó el primer ingreso
         pending = has_legacy or must_change
+
+        # Corregir rol/establecimiento de director.angol → RED
+        if user.role != role or user.establishment != ee:
+            user.role = role
+            user.establishment = ee
+            changed = True
 
         if username == 'utp.temuco':
             if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':

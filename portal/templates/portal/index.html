@@ -415,12 +415,12 @@
                 <a href="{% url 'improvement_cycle:dashboard_ee' %}" class="btn-accent">Pizarra de Metas</a>
             </div>
 
-            {% if request.user.is_staff or request.user.role == 'DIRECTOR' and request.user.establishment == 'ANGOL' %}
+            {% if request.user.is_staff or request.user.role == 'RED' %}
             <!-- Eventos Culturales y Deportivos -->
             <div class="module-card" style="border-top: 4px solid #ec4899;">
                 <div style="font-size: 48px; margin-bottom: 10px;">🎭</div>
-                <h3>Eventos Culturales</h3>
-                <p>Gestiona eventos culturales y deportivos del colegio Angol.</p>
+                <h3>Eventos Culturales y Deportivos</h3>
+                <p>Gestiona los eventos culturales y deportivos de toda la red SFA.</p>
                 <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
                     <a href="{% url 'eventos:evento_list' %}" class="btn-accent">Gestionar</a>
                     <a href="{% url 'eventos:calendario_eventos' %}"
