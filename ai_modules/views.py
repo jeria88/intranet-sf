@@ -32,13 +32,7 @@ def _extract_case_components(text):
 @login_required
 def ai_list(request):
     """Redirige automáticamente según el rol y establecimiento del usuario."""
-    # 1. Redirección prioritaria para el Piloto: 
-    # Todos los directores (8 directores + presentador director.admin) usan el mismo modelo general.
-    # Esto asegura el "un solo clic" incluso para el presentador si tiene rol DIRECTOR.
-    if request.user.role == 'DIRECTOR':
-        return redirect('ai_modules:ai_chat', slug='director-general')
-
-    # 2. Admins ven la lista completa (Petición del usuario: "el único que puede verlos todos es el admin")
+    # Admins ven la lista completa
     if request.user.is_staff:
         assistants = AIAssistant.objects.filter(is_active=True).order_by('name')
         return render(request, 'ai_modules/ai_list.html', {'assistants': assistants})
@@ -210,15 +204,10 @@ def ai_chat(request, slug):
     # Verificación de seguridad estricta
     has_access = request.user.is_staff
     if not has_access:
-        # Los directores tienen acceso al modelo general
-        if request.user.role == 'DIRECTOR' and slug == 'director-general':
+        role_match = (request.user.role == assistant.profile_role)
+        establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
+        if role_match and establishment_match:
             has_access = True
-        else:
-            role_match = (request.user.role == assistant.profile_role)
-            establishment_match = (not assistant.establishment or assistant.establishment == request.user.establishment)
-            
-            if role_match and establishment_match:
-                has_access = True
 
     if not has_access:
         return render(request, 'ai_modules/no_access.html')
@@ -316,9 +305,9 @@ def case_repository(request, slug=None):
             models.Q(establishment=request.user.establishment) | models.Q(establishment='')
         ).order_by('-establishment').first()
         
-        # Fallback para directores (Piloto)
+        # Fallback para directores sin asistente específico
         if not assistant and request.user.role == 'DIRECTOR':
-            assistant = AIAssistant.objects.filter(slug='director-general').first()
+            assistant = AIAssistant.objects.filter(profile_role='DIRECTOR', is_active=True, establishment='').first()
             
         # Si aún no hay asistente (ej. Admin sin rol asignado), tomar el primero activo
         if not assistant:
@@ -373,9 +362,9 @@ def save_as_case(request):
                 models.Q(establishment=request.user.establishment) | models.Q(establishment='')
             ).order_by('-establishment').first()
             
-        # 3. Último recurso: Asistente director-general
+        # 3. Último recurso: cualquier asistente activo del rol del usuario
         if not assistant:
-            assistant = AIAssistant.objects.filter(slug='director-general', is_active=True).first()
+            assistant = AIAssistant.objects.filter(profile_role=request.user.role, is_active=True).first()
             
         if not assistant:
             return JsonResponse({'status': 'error', 'message': 'No se encontró un asistente válido'}, status=404)

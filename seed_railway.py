@@ -73,7 +73,7 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente de Disciplina e Inspectoría - Temuco', 
+        'name': 'Asistente de Inspector General - Temuco',
         'slug': 'inspector-temuco', 
         'profile_role': 'INSPECTOR', 
         'establishment': 'TEMUCO',

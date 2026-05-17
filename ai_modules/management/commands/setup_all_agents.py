@@ -171,9 +171,11 @@ class Command(BaseCommand):
             # Actualizar todos los agentes que tengan este rol (ej. utp y utp-temuco)
             agentes_rol = AIAssistant.objects.filter(profile_role=conf['profile_role'])
             for ag in agentes_rol:
-                # Corrección terminológica obligatoria por legislación
+                # Correcciones terminológicas obligatorias
                 if 'Convivencia Escolar' in ag.name:
                     ag.name = ag.name.replace('Convivencia Escolar', 'Convivencia Educativa')
+                if 'Disciplina e Inspectoría' in ag.name:
+                    ag.name = ag.name.replace('Disciplina e Inspectoría', 'Inspector General')
                 ag.description = conf['description']
                 ag.is_chat_enabled = True
                 ag.is_active = True

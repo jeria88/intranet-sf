@@ -18,7 +18,7 @@ class AIAssistantAdmin(admin.ModelAdmin):
             'fields': ('slug', 'name', 'profile_role', 'establishment', 'is_active')
         }),
         ('Contenido IA', {
-            'fields': ('system_instruction', 'context_text', 'notebook_url', 'description', 'use_cases', 'image_name'),
+            'fields': ('system_instruction', 'context_text', 'is_chat_enabled', 'description', 'use_cases', 'image_name'),
             'description': 'Configure las instrucciones y revise el contexto acumulado de los PDFs.'
         }),
     )

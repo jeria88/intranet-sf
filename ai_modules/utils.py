@@ -191,7 +191,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
     # 1. Convertir la consulta en embedding
     query_embedding = get_openai_embedding(query)
     if not query_embedding:
-        return "!!! ERROR !!!\nFallo al generar embedding de consulta."
+        return "No hay contexto documental disponible. Responde con base en tu conocimiento general de normativa educacional chilena vigente."
 
     # 2. Intentar cargar desde caché (Memoria RAM persistente en el proceso)
     cached = _VECTOR_RESOURCES.get(assistant.slug)
@@ -286,7 +286,7 @@ def get_relevant_chunks(assistant, query, top_n=10):
 
         db_count = queryset.count()
         if db_count == 0:
-            return "!!! ERROR !!!\nLa base de datos no tiene fragmentos procesados."
+            return "No hay documentos específicos cargados para este asistente. Responde con base en tu conocimiento general de normativa educacional chilena vigente."
 
         # Usar memmap para reconstruir la matriz directamente en disco sin saturar la RAM
         matrix = np.memmap(matrix_path, dtype='float32', mode='w+', shape=(db_count, 1536))
