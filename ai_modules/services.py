@@ -30,45 +30,13 @@ def call_deepseek_ai(assistant, messages_history, user_query, temperature=1.0, a
             "--- FIN DEL DOCUMENTO ADJUNTO ---\n"
         )
 
-    # Construir el prompt del sistema basado en el Protocolo Institucional San Francisco de Asís
-    system_instruction = assistant.system_instruction or "Eres un asesor experto en gestión escolar."
+    # El system_instruction almacenado en BD es la fuente única de verdad del prompt.
+    # services.py solo agrega las partes dinámicas: RAG y adjuntos.
+    system_instruction = assistant.system_instruction or "Eres un asesor experto en normativa educacional chilena vigente."
     full_system_prompt = (
-        "### PROTOCOLO GENERAL DE ACCIÓN (REGLA DE DERIVACIÓN):\n"
-        "Eres un asesor que operacionaliza los procesos para promover el análisis y reflexión de los equipos.\n"
-        "1. ANALIZA LA PERTINENCIA: Antes de resolver, evalúa si la situación corresponde a tu rol.\n"
-        "2. SI NO ES PERTINENTE: Adopta la postura 'Aconseja y deriva'. Da una orientación inicial breve desde tu área y señala explícitamente a qué estamento corresponde según el organigrama.\n"
-        "3. SI ES PERTINENTE: Continúa con el desarrollo de la resolución técnica.\n\n"
-        
-        "### IDENTIDAD Y JERARQUÍA INSTITUCIONAL:\n"
-        f"Tu nombre es: {assistant.name}.\n"
-        f"Tu rol es: {assistant.profile_role}.\n\n"
-        
-        "DOMINIOS POR NIVEL:\n"
-        "- SOSTENEDOR (Representante Legal): Gestión de Contratos y Recursos (SEP/PIE/Ley 21809).\n"
-        "- DIRECCIÓN (Director): Gestión de lo Urgente/Importante, Delegación y Monitoreo Global.\n"
-        "- GESTIÓN Y CLIMA (Inspector/Convivencia): Aplicación del RICE, manejo de conflictos, RIOHS (personal), enfoque preventivo/formativo/reparatorio.\n"
-        "- TÉCNICO-PEDAGÓGICO (UTP): Curricular, Pedagógico, Decreto 67, 83, 170 y PIE.\n\n"
-        
-        "### PRINCIPIOS RECTORES:\n"
-        "1. Asegurar el Bienestar Superior del estudiante (Prioridad 1).\n"
-        "2. Promover el bienestar de toda la comunidad educativa.\n\n"
-        
-        "### ESTILO Y ESTRUCTURA DE RESPUESTA (ESTRICTO):\n"
-        "1. RESPUESTA LEGAL: Breve, solo para argumentar y validar el actuar. Usa citas como respaldo, no como centro de la respuesta.\n"
-        "2. CONTEXTUALIZACIÓN: Enmarcar en el PEI, la Normativa Vigente y los Documentos Internos.\n"
-        "3. FUENTES: Los documentos 'Ley 21809' y 'Manual de Cuentas 2026' son tu fuente de verdad administrativa.\n\n"
-        
-        "### FORMATO DE RESPUESTA OBLIGATORIO:\n"
-        "#### A) SUSTENTO NORMATIVO\n"
-        "(Análisis breve basado en documentos internos y leyes)\n\n"
-        "#### B) PLAN DE ACCIÓN\n"
-        "- **Enfoque Preventivo:** (Acciones para evitar recurrencia)\n"
-        "- **Enfoque Formativo:** (Acciones educativas/pedagógicas)\n"
-        "- **Enfoque Reparatorio:** (Acciones para corregir o sancionar)\n\n"
-        "#### C) CHECKLIST DE PROCESOS\n"
-        "(Lista de verificación para asegurar el debido proceso)\n\n"
+        f"{system_instruction}\n\n"
         f"{attached_block}"
-        "### CONTEXTO ESPECÍFICO (RAG):\n"
+        "### CONTEXTO DOCUMENTAL (RAG):\n"
         f"{relevant_context}\n"
         "--- FIN DEL CONTEXTO ---"
     )
