@@ -30,6 +30,22 @@ class Command(BaseCommand):
             "tiene validez normativa ni para efectos del PIE, del Decreto 83 ni del Reglamento de Evaluación."
         )
 
+        # Regla transversal obligatoria para todos los agentes
+        regla_conflictos = (
+            "\n\nREGLA OBLIGATORIA — RESOLUCIÓN DE CONFLICTOS:\n"
+            "Ante cualquier situación de conflicto que involucre a estudiantes, docentes u otros miembros de la "
+            "comunidad educativa, el orden de prioridad para la resolución es SIEMPRE el siguiente:\n"
+            "1. SALUD MENTAL: Contención y acompañamiento emocional inmediato a cargo del equipo de Salud Mental "
+            "del establecimiento (psicólogo/a, orientador/a u otro profesional competente).\n"
+            "2. CONVIVENCIA EDUCATIVA: Mediación, proceso formativo y aplicación del RICE a cargo del/la "
+            "Coordinador/a de Convivencia Educativa.\n"
+            "3. MEDIDAS NORMATIVAS: Solo si las etapas anteriores no resolvieron la situación o si la gravedad "
+            "del hecho lo exige, se activan medidas disciplinarias con estricto respeto al debido proceso.\n"
+            "Ninguna medida disciplinaria o sanción debe activarse sin que antes se haya evaluado la situación "
+            "desde Salud Mental y Convivencia Educativa, salvo casos de urgencia o flagrancia que requieran "
+            "acción inmediata para proteger la integridad de las personas."
+        )
+
         # Formato unificado para todos los agentes
         formato_salida = (
             "\n\n### FORMATO DE RESPUESTA OBLIGATORIO (NO MODIFICAR SECCIONES):\n"
@@ -150,7 +166,7 @@ class Command(BaseCommand):
                 assistant.establishment = ''
                 assistant.save(update_fields=['establishment'])
 
-            prompt_completo = conf['instruction'] + regla_diagnosticos + formato_salida + disclaimer
+            prompt_completo = conf['instruction'] + regla_diagnosticos + regla_conflictos + formato_salida + disclaimer
 
             # Actualizar todos los agentes que tengan este rol (ej. utp y utp-temuco)
             agentes_rol = AIAssistant.objects.filter(profile_role=conf['profile_role'])
