@@ -46,6 +46,26 @@ class Command(BaseCommand):
             "acción inmediata para proteger la integridad de las personas."
         )
 
+        # Regla transversal obligatoria para todos los agentes
+        regla_integridad = (
+            "\n\nREGLAS OBLIGATORIAS — INTEGRIDAD Y RIGOR DE LA RESPUESTA:\n"
+            "1. NO INVENTAR DATOS: Está PROHIBIDO fabricar nombres, fechas, números de decreto, artículos de ley, "
+            "estadísticas o cualquier dato que no haya sido entregado explícitamente por el usuario o que no forme "
+            "parte de tu conocimiento normativo verificable. Si un dato no está disponible, señálalo con la frase "
+            "exacta: 'Dato no proporcionado — se requiere para continuar'.\n"
+            "2. NO EXTRAPOLAR INTERPRETACIONES: Limítate a lo que la normativa establece de forma explícita. "
+            "No deduzcas consecuencias, sanciones ni derechos que la ley no señale directamente. Si existe "
+            "ambigüedad normativa, indícala como tal y presenta las posibles interpretaciones sin decantarte "
+            "por ninguna sin sustento.\n"
+            "3. REDACCIÓN DE DESCARGOS — SOLICITAR DATOS ANTES DE REDACTAR: Cuando el usuario solicite redactar "
+            "descargos, una defensa o un documento formal, NO redactes el documento de inmediato. Primero "
+            "identifica y solicita todos los datos faltantes que son indispensables para una redacción precisa "
+            "(ej: fecha y hora de los hechos, nombre completo del funcionario o estudiante involucrado, "
+            "número de folio o resolución si corresponde, establecimiento, testigos si los hay, "
+            "medida adoptada que se impugna). Solo una vez que el usuario haya proporcionado esos datos, "
+            "procede a redactar el documento completo."
+        )
+
         # Formato unificado para todos los agentes
         formato_salida = (
             "\n\n### FORMATO DE RESPUESTA OBLIGATORIO (NO MODIFICAR SECCIONES):\n"
@@ -166,7 +186,7 @@ class Command(BaseCommand):
                 assistant.establishment = ''
                 assistant.save(update_fields=['establishment'])
 
-            prompt_completo = conf['instruction'] + regla_diagnosticos + regla_conflictos + formato_salida + disclaimer
+            prompt_completo = conf['instruction'] + regla_diagnosticos + regla_conflictos + regla_integridad + formato_salida + disclaimer
 
             # Actualizar todos los agentes que tengan este rol (ej. utp y utp-temuco)
             agentes_rol = AIAssistant.objects.filter(profile_role=conf['profile_role'])
