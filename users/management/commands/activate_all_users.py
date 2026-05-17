@@ -1,3 +1,4 @@
+import traceback
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 
@@ -20,70 +21,88 @@ USER_PASSWORD = '123456'
 
 
 class Command(BaseCommand):
-    help = 'Crea/activa todos los usuarios de todos los establecimientos. Seguro para correr en cada deploy.'
+    help = 'Crea/activa todos los usuarios de la red SFA. Seguro para correr en cada deploy.'
 
     def handle(self, *args, **options):
-        created_count = 0
-        updated_count = 0
+        # Envuelto en try/except global para que NUNCA falle el startCommand de Railway
+        try:
+            self._run()
+        except Exception:
+            self.stderr.write('=== ERROR CRÍTICO en activate_all_users ===')
+            self.stderr.write(traceback.format_exc())
+            self.stderr.write('El deploy continúa, pero los usuarios pueden no haberse creado.')
+            # No relanzamos la excepción → exit code 0 → el deploy no se detiene
+
+    def _run(self):
+        # Detectar si la columna must_change_password ya existe en el esquema real
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='users_user' AND column_name='must_change_password'")
+            has_mcp = cursor.fetchone() is not None
+
+        self.stdout.write(f'=== activate_all_users | must_change_password en DB: {has_mcp} ===')
 
         all_combos = [(role, ee) for ee in ESTABLISHMENTS for role in ROLES]
         all_combos.append(('RED', 'RED'))
 
+        created = updated = errors = 0
+
         for role, ee in all_combos:
             username = f"{role.lower()}.{ee.lower()}"
+            try:
+                result = self._process(username, role, ee, has_mcp)
+                if result == 'created':
+                    created += 1
+                elif result == 'updated':
+                    updated += 1
+            except Exception:
+                errors += 1
+                self.stderr.write(f'  ERROR {username}: {traceback.format_exc()}')
 
-            user, created = User.objects.get_or_create(
+        self.stdout.write(f'=== Listo: {created} creados | {updated} actualizados | {errors} errores ===')
+
+    def _process(self, username, role, ee, has_mcp):
+        try:
+            user = User.objects.get(username=username)
+            created = False
+        except User.DoesNotExist:
+            user = User(
                 username=username,
-                defaults={
-                    'role': role,
-                    'establishment': ee,
-                    'email': f"{username}@intranet-sfa.cl",
-                    'is_active': True,
-                    'first_name': '',
-                    'last_name': '',
-                    'must_change_password': True,
-                }
+                role=role,
+                establishment=ee,
+                email=f'{username}@intranet-sfa.cl',
+                is_active=True,
+                first_name='',
+                last_name='',
             )
-
-            if created:
-                user.set_password(USER_PASSWORD)
+            user.set_password(USER_PASSWORD)
+            if has_mcp:
                 user.must_change_password = True
-                user.save()
-                created_count += 1
-                self.stdout.write(f'  CREADO      {username}')
-                continue
+            user.save()
+            self.stdout.write(f'  CREADO      {username}')
+            return 'created'
 
-            # Para usuarios existentes: solo tocar lo estrictamente necesario
-            changed = False
+        # Usuario existente — solo tocar lo mínimo necesario
+        changed = False
 
-            if not user.is_active:
-                user.is_active = True
+        if not user.is_active:
+            user.is_active = True
+            changed = True
+
+        if username == 'utp.temuco':
+            if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
+                user.first_name = 'Luis Humberto'
+                user.last_name = 'Jeria Castro'
                 changed = True
+        elif has_mcp and getattr(user, 'must_change_password', False) and (user.first_name or user.last_name):
+            user.first_name = ''
+            user.last_name = ''
+            changed = True
 
-            # UTP Temuco: nombre siempre fijo
-            if username == 'utp.temuco':
-                if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
-                    user.first_name = 'Luis Humberto'
-                    user.last_name = 'Jeria Castro'
-                    changed = True
-            # Resto: solo limpiar nombre si el usuario AÚN no cambió su contraseña
-            # (si ya la cambió, respetamos el nombre que haya registrado)
-            elif user.must_change_password and (user.first_name or user.last_name):
-                user.first_name = ''
-                user.last_name = ''
-                changed = True
+        if changed:
+            user.save()
+            self.stdout.write(f'  ACTUALIZADO {username}')
+            return 'updated'
 
-            if changed:
-                user.save()
-                updated_count += 1
-                self.stdout.write(f'  ACTUALIZADO {username}')
-            else:
-                self.stdout.write(self.style.SUCCESS(f'  OK          {username}'))
-
-        self.stdout.write('')
-        self.stdout.write(self.style.SUCCESS(
-            f'Completado: {created_count} creados, {updated_count} actualizados.'
-        ))
-        self.stdout.write(
-            f'Contraseña inicial: {USER_PASSWORD}  (los usuarios la cambian al primer ingreso)'
-        )
+        self.stdout.write(self.style.SUCCESS(f'  OK          {username}'))
+        return 'ok'
