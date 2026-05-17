@@ -66,6 +66,20 @@ class Command(BaseCommand):
             "procede a redactar el documento completo."
         )
 
+        # Regla transversal obligatoria para todos los agentes
+        regla_rice = (
+            "\n\nREGLA OBLIGATORIA — APLICACIÓN DEL REGLAMENTO INTERNO DE CONVIVENCIA EDUCATIVA (RICE):\n"
+            "En la evaluación de pertinencia de cada consulta, si la situación planteada involucra conductas, "
+            "conflictos, faltas o situaciones que afecten la convivencia de la comunidad educativa, es OBLIGATORIO "
+            "que la respuesta incluya explícitamente qué señala el Reglamento Interno de Convivencia Educativa (RICE) "
+            "del establecimiento para ese caso: la tipificación de la falta (leve, grave, gravísima), el procedimiento "
+            "establecido (protocolos de actuación, plazos, responsables) y las medidas formativas o disciplinarias "
+            "que correspondan según el mismo reglamento. "
+            "Si el RICE específico del establecimiento no está disponible en el contexto, indica que el protocolo "
+            "de respuesta debe ajustarse al RICE institucional vigente y describe el marco general que debe contener "
+            "todo RICE según la Política Nacional de Convivencia Educativa y la Ley 20.536."
+        )
+
         # Formato unificado para todos los agentes
         formato_salida = (
             "\n\n### FORMATO DE RESPUESTA OBLIGATORIO (NO MODIFICAR SECCIONES):\n"
@@ -186,7 +200,7 @@ class Command(BaseCommand):
                 assistant.establishment = ''
                 assistant.save(update_fields=['establishment'])
 
-            prompt_completo = conf['instruction'] + regla_diagnosticos + regla_conflictos + regla_integridad + formato_salida + disclaimer
+            prompt_completo = conf['instruction'] + regla_diagnosticos + regla_conflictos + regla_integridad + regla_rice + formato_salida + disclaimer
 
             # Actualizar todos los agentes que tengan este rol (ej. utp y utp-temuco)
             agentes_rol = AIAssistant.objects.filter(profile_role=conf['profile_role'])
