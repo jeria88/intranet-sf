@@ -91,25 +91,17 @@ class Command(BaseCommand):
 
         from django.contrib.auth.hashers import check_password as chk
 
-        has_old_pwd     = chk('Admin1234!', user.password)   # contraseña del primer deploy
         has_correct_pwd = chk(USER_PASSWORD, user.password)  # 123456
 
-        # Caso A: usuario tiene la contraseña vieja Admin1234! (creado antes de la migración)
-        #         → resetear a 123456 y activar must_change_password
-        if has_old_pwd:
+        # Si la contraseña no es 123456 (sea cual sea la anterior) → resetear
+        if not has_correct_pwd:
             user.set_password(USER_PASSWORD)
             if has_mcp:
                 user.must_change_password = True
             changed = True
 
-        # Caso B: must_change_password=True pero contraseña no es 123456
-        #         (deploy parcial / corrupción)
-        elif has_mcp and getattr(user, 'must_change_password', False) and not has_correct_pwd:
-            user.set_password(USER_PASSWORD)
-            changed = True
-
         # Determinar si el usuario aún no completó el primer ingreso
-        pending = has_old_pwd or (has_mcp and getattr(user, 'must_change_password', False))
+        pending = (not has_correct_pwd) or (has_mcp and getattr(user, 'must_change_password', False))
 
         if username == 'utp.temuco':
             if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
