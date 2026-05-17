@@ -16,7 +16,7 @@ ROLES = [
     'REPRESENTANTE',
 ]
 
-DEFAULT_PASSWORD = 'Admin1234!'
+USER_PASSWORD = '123456'
 
 
 class Command(BaseCommand):
@@ -27,7 +27,6 @@ class Command(BaseCommand):
         updated_count = 0
 
         all_combos = [(role, ee) for ee in ESTABLISHMENTS for role in ROLES]
-        # Equipo Red
         all_combos.append(('RED', 'RED'))
 
         for role, ee in all_combos:
@@ -42,6 +41,7 @@ class Command(BaseCommand):
                     'is_active': True,
                     'first_name': '',
                     'last_name': '',
+                    'must_change_password': True,
                 }
             )
 
@@ -51,7 +51,7 @@ class Command(BaseCommand):
                 user.is_active = True
                 changed = True
 
-            # Limpiar nombre de todos excepto UTP Temuco
+            # UTP Temuco conserva su nombre; el resto en blanco
             if username == 'utp.temuco':
                 if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
                     user.first_name = 'Luis Humberto'
@@ -64,20 +64,21 @@ class Command(BaseCommand):
                     changed = True
 
             if created:
-                user.set_password(DEFAULT_PASSWORD)
+                user.set_password(USER_PASSWORD)
+                user.must_change_password = True
                 user.save()
                 created_count += 1
-                self.stdout.write(f'  CREADO   {username}')
+                self.stdout.write(f'  CREADO      {username}')
             elif changed:
                 user.save()
                 updated_count += 1
                 self.stdout.write(f'  ACTUALIZADO {username}')
             else:
-                self.stdout.write(self.style.SUCCESS(f'  OK       {username}'))
+                self.stdout.write(self.style.SUCCESS(f'  OK          {username}'))
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS(
             f'Completado: {created_count} creados, {updated_count} actualizados.'
         ))
-        self.stdout.write(f'Contraseña por defecto: {DEFAULT_PASSWORD}')
-        self.stdout.write('Recuerda que cada usuario debe cambiar su nombre al ingresar.')
+        self.stdout.write(f'Contraseña inicial: {USER_PASSWORD}  (los usuarios deben cambiarla al primer ingreso)')
+        self.stdout.write('El admin conserva su contraseña Admin1234!')

@@ -12,4 +12,5 @@ urlpatterns = [
     ), name='login'),
     path('logout/', views.custom_logout, name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('cambiar-contrasena/', views.change_password, name='change_password'),
 ]
