@@ -15,12 +15,10 @@
            style="background: #28a745;" target="_blank">
             Unirse ahora
         </a>
-        {% if request.user.is_staff or request.user.is_red_team or request.user == room.active_booking.booked_by or request.user.role == room.target_role and request.user.establishment == room.active_booking.booked_by.establishment %}
         <a href="{% url 'meetings:booking_detalle' room.active_booking.pk %}"
            style="display:block;margin-top:8px;text-align:center;background:#0f766e;color:white;padding:7px 10px;border-radius:16px;font-size:12px;font-weight:600;text-decoration:none;">
             🔗 Generar link de invitado
         </a>
-        {% endif %}
 
     {% elif room.status_label == 'PROXIMA' %}
         <p style="color: #856404; font-weight: 700; font-size: 11px;">
@@ -31,12 +29,10 @@
            style="background: #eab308; color: #5d4803;" target="_blank">
             Entrar antes (Libre)
         </a>
-        {% if request.user.is_staff or request.user.is_red_team or request.user == room.next_booking.booked_by or request.user.role == room.target_role and request.user.establishment == room.next_booking.booked_by.establishment %}
         <a href="{% url 'meetings:booking_detalle' room.next_booking.pk %}"
            style="display:block;margin-top:8px;text-align:center;background:#0f766e;color:white;padding:7px 10px;border-radius:16px;font-size:12px;font-weight:600;text-decoration:none;">
             🔗 Generar link de invitado
         </a>
-        {% endif %}
 
     {% else %}
         <p style="color: #6c757d; font-weight: 700; font-size: 11px;">⚪ DISPONIBLE</p>
