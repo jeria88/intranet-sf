@@ -17,6 +17,7 @@ urlpatterns = [
     path('usuarios/', include('users.urls')),
     path('simce/', include('simce.urls')),
     path('eventos/', include('eventos.urls')),
+    path('encuesta/', include('encuesta.urls')),
 ]
 
 if settings.DEBUG:

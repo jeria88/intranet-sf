@@ -428,6 +428,16 @@
                 </div>
             </div>
             {% endif %}
+
+            {% if request.user.is_staff %}
+            <!-- Evaluación LiderA+ (solo admin/staff) -->
+            <div class="module-card" style="border-top: 4px solid #6d28d9;">
+                <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                <h3>Evaluación LiderA+</h3>
+                <p>Resultados de evaluación semanal de la plataforma.</p>
+                <a href="{% url 'encuesta:resultados' %}" class="btn-accent">Ver resultados</a>
+            </div>
+            {% endif %}
         </div>
     </main>
 

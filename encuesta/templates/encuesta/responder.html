@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Evaluación Semanal LiderA+ | Intranet SFA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .encuesta-hero {
+        background: linear-gradient(135deg, #3b82f6 0%, #6d28d9 100%);
+        border-radius: 20px;
+        padding: 40px 36px;
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 24px rgba(109, 40, 217, 0.25);
+    }
+    .encuesta-hero h1 {
+        font-size: 28px;
+        font-weight: 800;
+        margin: 0 0 8px;
+        letter-spacing: -0.5px;
+    }
+    .encuesta-hero p {
+        font-size: 16px;
+        opacity: 0.9;
+        margin: 0 0 16px;
+    }
+    .encuesta-aviso {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 30px;
+        padding: 8px 22px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .pregunta-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        border-left: 5px solid #6d28d9;
+    }
+    .pregunta-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    .pregunta-num {
+        background: linear-gradient(135deg, #3b82f6, #6d28d9);
+        color: white;
+        border-radius: 50%;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 16px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    .pregunta-titulo {
+        font-size: 17px;
+        font-weight: 700;
+        color: #1e1b4b;
+        margin: 0 0 6px;
+    }
+    .pregunta-texto {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    .likert-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 20px 0 20px;
+    }
+    .likert-option {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 18px;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .likert-option:hover {
+        border-color: #6d28d9;
+        background: #f5f3ff;
+    }
+    .likert-option input[type="radio"] {
+        display: none;
+    }
+    .likert-option.selected-1 { border-color: #ef4444; background: #fef2f2; }
+    .likert-option.selected-2 { border-color: #f97316; background: #fff7ed; }
+    .likert-option.selected-3 { border-color: #eab308; background: #fefce8; }
+    .likert-option.selected-4 { border-color: #22c55e; background: #f0fdf4; }
+    .likert-option.selected-5 { border-color: #3b82f6; background: #eff6ff; }
+
+    .likert-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+    .dot-1 { background: #fca5a5; }
+    .dot-2 { background: #fdba74; }
+    .dot-3 { background: #fde047; }
+    .dot-4 { background: #86efac; }
+    .dot-5 { background: #93c5fd; }
+
+    .likert-label {
+        font-size: 14px;
+        color: #334155;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .comentario-wrap {
+        margin-top: 4px;
+    }
+    .comentario-wrap label {
+        display: block;
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 6px;
+        font-style: italic;
+    }
+    .comentario-wrap textarea {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        font-size: 14px;
+        color: #334155;
+        resize: vertical;
+        min-height: 70px;
+        box-sizing: border-box;
+        font-family: inherit;
+        transition: border-color 0.2s;
+    }
+    .comentario-wrap textarea:focus {
+        outline: none;
+        border-color: #6d28d9;
+        box-shadow: 0 0 0 3px rgba(109,40,217,0.1);
+    }
+
+    .error-msg {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        color: #b91c1c;
+        border-radius: 12px;
+        padding: 14px 20px;
+        font-size: 14px;
+        margin-bottom: 24px;
+        font-weight: 600;
+    }
+
+    .btn-submit {
+        display: block;
+        width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #3b82f6, #6d28d9);
+        color: white;
+        padding: 16px 28px;
+        border: none;
+        border-radius: 30px;
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: opacity 0.2s, transform 0.2s;
+        box-shadow: 0 6px 18px rgba(109,40,217,0.3);
+    }
+    .btn-submit:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="encuesta-hero">
+    <h1>📋 Evaluación Semanal LiderA+</h1>
+    <p>Tu opinión hace que la plataforma mejore</p>
+    <span class="encuesta-aviso">Esta encuesta es obligatoria cada viernes. Toma solo 3 minutos.</span>
+</div>
+
+{% if error %}
+<div class="error-msg">⚠️ {{ error }}</div>
+{% endif %}
+
+<form method="post" id="encuesta-form">
+    {% csrf_token %}
+
+    <!-- P1 -->
+    <div class="pregunta-card">
+        <div class="pregunta-header">
+            <div class="pregunta-num">1</div>
+            <div>
+                <p class="pregunta-titulo">📊 Reuniones online y actas automatizadas</p>
+                <p class="pregunta-texto">En comparación con otras plataformas que ha utilizado (Zoom, Meet, Teams), ¿cómo evalúa la experiencia de las reuniones online en LiderA+ considerando la facilidad para conectarse, crear links de invitación, ausencia de límites de tiempo, y especialmente la grabación automática, la redacción de actas mediante IA y la trazabilidad de acuerdos?</p>
+            </div>
+        </div>
+
+        <div class="likert-group" data-pregunta="p1">
+            <label class="likert-option" data-val="1">
+                <input type="radio" name="p1_score" value="1">
+                <div class="likert-dot dot-1">🔴</div>
+                <span class="likert-label">1 — Muy inferior a otras plataformas</span>
+            </label>
+            <label class="likert-option" data-val="2">
+                <input type="radio" name="p1_score" value="2">
+                <div class="likert-dot dot-2">🟠</div>
+                <span class="likert-label">2 — Inferior</span>
+            </label>
+            <label class="likert-option" data-val="3">
+                <input type="radio" name="p1_score" value="3">
+                <div class="likert-dot dot-3">🟡</div>
+                <span class="likert-label">3 — Similar</span>
+            </label>
+            <label class="likert-option" data-val="4">
+                <input type="radio" name="p1_score" value="4">
+                <div class="likert-dot dot-4">🟢</div>
+                <span class="likert-label">4 — Superior</span>
+            </label>
+            <label class="likert-option" data-val="5">
+                <input type="radio" name="p1_score" value="5">
+                <div class="likert-dot dot-5">🔵</div>
+                <span class="likert-label">5 — Muy superior, realmente innovador</span>
+            </label>
+        </div>
+
+        <div class="comentario-wrap">
+            <label>💬 ¿Qué funcionalidad de las reuniones o actas le resultó más útil para su gestión diaria? <em>(opcional)</em></label>
+            <textarea name="p1_comentario" placeholder="Escribe tu comentario aquí..."></textarea>
+        </div>
+    </div>
+
+    <!-- P2 -->
+    <div class="pregunta-card">
+        <div class="pregunta-header">
+            <div class="pregunta-num">2</div>
+            <div>
+                <p class="pregunta-titulo">🧠 Asistente IA – Confiabilidad y contextualización normativa</p>
+                <p class="pregunta-texto">El Agente IA de LiderA+ ha sido entrenado para responder sin 'alucinaciones' (respuestas falsas o inventadas) y ajustado a la normativa educativa vigente (MINEDUC, MBD, estándares indicativos de desempeño, PEI y sus reglamentos internos). ¿Cómo califica la confiabilidad, pertinencia y utilidad de las respuestas del asistente para la toma de decisiones en su rol directivo?</p>
+            </div>
+        </div>
+
+        <div class="likert-group" data-pregunta="p2">
+            <label class="likert-option" data-val="1">
+                <input type="radio" name="p2_score" value="1">
+                <div class="likert-dot dot-1">🔴</div>
+                <span class="likert-label">1 — No es confiable, respuestas erróneas frecuentes</span>
+            </label>
+            <label class="likert-option" data-val="2">
+                <input type="radio" name="p2_score" value="2">
+                <div class="likert-dot dot-2">🟠</div>
+                <span class="likert-label">2 — Poco confiable, varias respuestas dudosas</span>
+            </label>
+            <label class="likert-option" data-val="3">
+                <input type="radio" name="p2_score" value="3">
+                <div class="likert-dot dot-3">🟡</div>
+                <span class="likert-label">3 — Aceptable, pero con margen de mejora</span>
+            </label>
+            <label class="likert-option" data-val="4">
+                <input type="radio" name="p2_score" value="4">
+                <div class="likert-dot dot-4">🟢</div>
+                <span class="likert-label">4 — Confiable, respuestas pertinentes y útiles</span>
+            </label>
+            <label class="likert-option" data-val="5">
+                <input type="radio" name="p2_score" value="5">
+                <div class="likert-dot dot-5">🔵</div>
+                <span class="likert-label">5 — Muy confiable, respuestas precisas, contextualizadas y sin errores</span>
+            </label>
+        </div>
+
+        <div class="comentario-wrap">
+            <label>💬 Mencione un ejemplo concreto donde el asistente IA le haya ayudado a resolver una duda normativa o de gestión: <em>(opcional)</em></label>
+            <textarea name="p2_comentario" placeholder="Escribe tu comentario aquí..."></textarea>
+        </div>
+    </div>
+
+    <!-- P3 -->
+    <div class="pregunta-card">
+        <div class="pregunta-header">
+            <div class="pregunta-num">3</div>
+            <div>
+                <p class="pregunta-titulo">✅ Monitoreo de tareas y checklist IA por rol</p>
+                <p class="pregunta-texto">La plataforma facilita el monitoreo de tareas propias de su rol y la distribución de responsabilidades según conducto regular, a través de listas de cotejo (checklist) generadas por IA. ¿Cómo califica la utilidad de esta funcionalidad para organizar, asignar y dar seguimiento a las tareas de su equipo directivo y/o de gestión?</p>
+            </div>
+        </div>
+
+        <div class="likert-group" data-pregunta="p3">
+            <label class="likert-option" data-val="1">
+                <input type="radio" name="p3_score" value="1">
+                <div class="likert-dot dot-1">🔴</div>
+                <span class="likert-label">1 — No es útil, no facilita el monitoreo</span>
+            </label>
+            <label class="likert-option" data-val="2">
+                <input type="radio" name="p3_score" value="2">
+                <div class="likert-dot dot-2">🟠</div>
+                <span class="likert-label">2 — Poco útil, mejora marginal</span>
+            </label>
+            <label class="likert-option" data-val="3">
+                <input type="radio" name="p3_score" value="3">
+                <div class="likert-dot dot-3">🟡</div>
+                <span class="likert-label">3 — Moderadamente útil</span>
+            </label>
+            <label class="likert-option" data-val="4">
+                <input type="radio" name="p3_score" value="4">
+                <div class="likert-dot dot-4">🟢</div>
+                <span class="likert-label">4 — Útil, mejora visible en el seguimiento</span>
+            </label>
+            <label class="likert-option" data-val="5">
+                <input type="radio" name="p3_score" value="5">
+                <div class="likert-dot dot-5">🔵</div>
+                <span class="likert-label">5 — Muy útil, transforma la forma en que monitoreamos tareas y delegamos</span>
+            </label>
+        </div>
+
+        <div class="comentario-wrap">
+            <label>💬 ¿Qué tarea o proceso se ha visto más beneficiado con el checklist de IA? <em>(opcional)</em></label>
+            <textarea name="p3_comentario" placeholder="Escribe tu comentario aquí..."></textarea>
+        </div>
+    </div>
+
+    <!-- P4 -->
+    <div class="pregunta-card">
+        <div class="pregunta-header">
+            <div class="pregunta-num">4</div>
+            <div>
+                <p class="pregunta-titulo">⏱️ Gestión del tiempo y datos – Valor agregado del trabajo telemático</p>
+                <p class="pregunta-texto">LiderA+ sistematiza el trabajo telemático y complementa el presencial, integrando calendario, mensajería, objetivos y metas a nivel de RED. Considerando el tiempo que ha liberado (o liberaría) para foco pedagógico, la mejora en la gestión de datos y la distribución de tareas y responsabilidades, ¿cómo evalúa el impacto general de la plataforma en la optimización de su tiempo y en la articulación con su equipo directivo y otros establecimientos de la RED?</p>
+            </div>
+        </div>
+
+        <div class="likert-group" data-pregunta="p4">
+            <label class="likert-option" data-val="1">
+                <input type="radio" name="p4_score" value="1">
+                <div class="likert-dot dot-1">🔴</div>
+                <span class="likert-label">1 — Sin impacto, no libera tiempo ni mejora articulación</span>
+            </label>
+            <label class="likert-option" data-val="2">
+                <input type="radio" name="p4_score" value="2">
+                <div class="likert-dot dot-2">🟠</div>
+                <span class="likert-label">2 — Impacto bajo, cambios poco significativos</span>
+            </label>
+            <label class="likert-option" data-val="3">
+                <input type="radio" name="p4_score" value="3">
+                <div class="likert-dot dot-3">🟡</div>
+                <span class="likert-label">3 — Impacto moderado, algo de tiempo liberado</span>
+            </label>
+            <label class="likert-option" data-val="4">
+                <input type="radio" name="p4_score" value="4">
+                <div class="likert-dot dot-4">🟢</div>
+                <span class="likert-label">4 — Impacto positivo, tiempo liberado y mejor articulación en RED</span>
+            </label>
+            <label class="likert-option" data-val="5">
+                <input type="radio" name="p4_score" value="5">
+                <div class="likert-dot dot-5">🔵</div>
+                <span class="likert-label">5 — Impacto muy positivo, tiempo significativamente liberado y articulación en RED realmente efectiva</span>
+            </label>
+        </div>
+
+        <div class="comentario-wrap">
+            <label>💬 ¿Cuántas horas a la semana estima que LiderA+ le ha ahorrado o le ahorraría en tareas administrativas? <em>(opcional)</em></label>
+            <textarea name="p4_comentario" placeholder="Escribe tu comentario aquí..."></textarea>
+        </div>
+    </div>
+
+    <!-- P5 -->
+    <div class="pregunta-card" style="border-left-color: #f59e0b;">
+        <div class="pregunta-header">
+            <div class="pregunta-num" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">5</div>
+            <div>
+                <p class="pregunta-titulo">🌟 Potencialidad general – Recomendación a otros establecimientos</p>
+                <p class="pregunta-texto">Considerando todos los beneficios evaluados (reuniones ilimitadas, actas automatizadas, IA confiable, monitoreo de tareas, ahorro de tiempo, gestión de datos y articulación en RED), ¿qué tan probable es que recomiende LiderA+ a otros directores, representantes legales o redes de establecimientos educativos?</p>
+            </div>
+        </div>
+
+        <div class="likert-group" data-pregunta="p5">
+            <label class="likert-option" data-val="1">
+                <input type="radio" name="p5_score" value="1">
+                <div class="likert-dot dot-1">🔴</div>
+                <span class="likert-label">1 — Definitivamente no lo recomendaría</span>
+            </label>
+            <label class="likert-option" data-val="2">
+                <input type="radio" name="p5_score" value="2">
+                <div class="likert-dot dot-2">🟠</div>
+                <span class="likert-label">2 — Probablemente no lo recomendaría</span>
+            </label>
+            <label class="likert-option" data-val="3">
+                <input type="radio" name="p5_score" value="3">
+                <div class="likert-dot dot-3">🟡</div>
+                <span class="likert-label">3 — Neutral / No estoy seguro</span>
+            </label>
+            <label class="likert-option" data-val="4">
+                <input type="radio" name="p5_score" value="4">
+                <div class="likert-dot dot-4">🟢</div>
+                <span class="likert-label">4 — Probablemente sí lo recomendaría</span>
+            </label>
+            <label class="likert-option" data-val="5">
+                <input type="radio" name="p5_score" value="5">
+                <div class="likert-dot dot-5">🔵</div>
+                <span class="likert-label">5 — Definitivamente sí lo recomendaría</span>
+            </label>
+        </div>
+
+        <div class="comentario-wrap">
+            <label id="p5-comentario-label">💬 ¿Qué mejoraría o qué funcionalidad adicional le gustaría tener en LiderA+ para recomendarlo sin reservas? <em id="p5-opcional-tag">(opcional)</em></label>
+            <textarea name="p5_comentario" id="p5_comentario" placeholder="Escribe tu comentario aquí..."></textarea>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top: 10px;">
+        <button type="submit" class="btn-submit">Enviar evaluación</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Likert interactive highlighting
+    document.querySelectorAll('.likert-group').forEach(function (group) {
+        var pregunta = group.dataset.pregunta;
+        group.querySelectorAll('.likert-option').forEach(function (option) {
+            option.addEventListener('click', function () {
+                var val = option.dataset.val;
+                // Unmark all in group
+                group.querySelectorAll('.likert-option').forEach(function (o) {
+                    o.classList.remove('selected-1', 'selected-2', 'selected-3', 'selected-4', 'selected-5');
+                });
+                // Mark selected
+                option.classList.add('selected-' + val);
+                option.querySelector('input[type="radio"]').checked = true;
+
+                // P5 comentario obligatorio si score <= 2
+                if (pregunta === 'p5') {
+                    var score = parseInt(val);
+                    var textarea = document.getElementById('p5_comentario');
+                    var tag = document.getElementById('p5-opcional-tag');
+                    if (score <= 2) {
+                        textarea.required = true;
+                        tag.textContent = '(obligatorio)';
+                        tag.style.color = '#dc2626';
+                        tag.style.fontWeight = '700';
+                    } else {
+                        textarea.required = false;
+                        tag.textContent = '(opcional)';
+                        tag.style.color = '';
+                        tag.style.fontWeight = '';
+                    }
+                }
+            });
+        });
+    });
+
+    // Form submit validation
+    document.getElementById('encuesta-form').addEventListener('submit', function (e) {
+        var preguntas = ['p1', 'p2', 'p3', 'p4', 'p5'];
+        for (var i = 0; i < preguntas.length; i++) {
+            var p = preguntas[i];
+            var checked = document.querySelector('input[name="' + p + '_score"]:checked');
+            if (!checked) {
+                e.preventDefault();
+                alert('Por favor selecciona una puntuación para la pregunta ' + (i + 1) + '.');
+                return;
+            }
+        }
+        // P5 comentario obligatorio
+        var p5score = document.querySelector('input[name="p5_score"]:checked');
+        if (p5score && parseInt(p5score.value) <= 2) {
+            var p5comentario = document.getElementById('p5_comentario').value.trim();
+            if (!p5comentario) {
+                e.preventDefault();
+                alert('Por favor completa el comentario de la pregunta 5 (es obligatorio cuando la puntuación es 1 o 2).');
+                return;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
