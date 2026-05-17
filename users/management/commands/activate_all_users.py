@@ -91,17 +91,20 @@ class Command(BaseCommand):
 
         from django.contrib.auth.hashers import check_password as chk
 
-        has_correct_pwd = chk(USER_PASSWORD, user.password)  # 123456
+        has_correct_pwd = chk(USER_PASSWORD, user.password)
+        must_change     = has_mcp and getattr(user, 'must_change_password', False)
+        # Claves conocidas de deploys anteriores que quedaron con must_change_password=False
+        LEGACY_PWDS = ['Admin1234!', 'SanFrancisco2026!']
+        has_legacy = any(chk(p, user.password) for p in LEGACY_PWDS)
 
-        # Si la contraseña no es 123456 (sea cual sea la anterior) → resetear
-        if not has_correct_pwd:
+        if has_legacy or (must_change and not has_correct_pwd):
             user.set_password(USER_PASSWORD)
             if has_mcp:
                 user.must_change_password = True
             changed = True
 
         # Determinar si el usuario aún no completó el primer ingreso
-        pending = (not has_correct_pwd) or (has_mcp and getattr(user, 'must_change_password', False))
+        pending = has_legacy or must_change
 
         if username == 'utp.temuco':
             if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
