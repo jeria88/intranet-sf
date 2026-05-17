@@ -9,6 +9,8 @@ class CalendarEvent(models.Model):
         ('agencia',          'Agencia de Calidad'),
         ('congregacional',   'Congregacional'),
         ('interno',          'Interno EE'),
+        ('cultural',         'Cultural'),
+        ('deportivo',        'Deportivo'),
     ]
 
     title = models.CharField(max_length=200, verbose_name='Título')
