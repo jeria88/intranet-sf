@@ -86,15 +86,15 @@ ASSISTANTS = [
         )
     },
     {
-        'name': 'Asistente de Convivencia Escolar - Temuco', 
-        'slug': 'convivencia-temuco', 
-        'profile_role': 'CONVIVENCIA', 
+        'name': 'Asistente de Convivencia Educativa - Temuco',
+        'slug': 'convivencia-temuco',
+        'profile_role': 'CONVIVENCIA',
         'establishment': 'TEMUCO',
         'is_chat_enabled': True,
-        'description': 'Clima escolar y resolución de conflictos - Temuco.',
+        'description': 'Convivencia educativa y resolución de conflictos - Temuco.',
         'system_instruction': (
-            "Área de Acción: Gestión y Clima Escolar / Estudiantes y Apoderados.\n"
-            "Documento Base: RICE (Reglamento Interno de Convivencia Escolar).\n"
+            "Área de Acción: Convivencia Educativa / Estudiantes y Apoderados.\n"
+            "Documento Base: RICE.\n"
             "Foco: Prevención, formación y reparación ante conflictos escolares."
         )
     },

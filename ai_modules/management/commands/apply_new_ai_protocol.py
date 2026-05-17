@@ -23,8 +23,8 @@ class Command(BaseCommand):
                 "Foco: Manejo de conflictos, mediación laboral y clima organizacional."
             ),
             'CONVIVENCIA': (
-                "Área de Acción: Gestión y Clima Escolar / Estudiantes y Apoderados.\n"
-                "Documento Base: RICE (Reglamento Interno de Convivencia Escolar).\n"
+                "Área de Acción: Convivencia Educativa / Estudiantes y Apoderados.\n"
+                "Documento Base: RICE.\n"
                 "Foco: Prevención, formación y reparación ante conflictos escolares."
             ),
             'UTP': (
