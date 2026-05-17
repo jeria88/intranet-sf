@@ -9,7 +9,7 @@ class User(AbstractUser):
         ('UTP', 'Unidad Técnica Pedagógica'),
         ('DIRECTOR', 'Director/a'),
         ('INSPECTOR', 'Inspector/a General'),
-        ('CONVIVENCIA', 'Encargado/a Convivencia Escolar'),
+        ('CONVIVENCIA', 'Coordinador/a de Convivencia Educativa'),
         ('RED', 'Equipo Red'),
     ]
     ESTABLISHMENT_CHOICES = [

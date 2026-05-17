@@ -81,11 +81,11 @@ class Command(BaseCommand):
             },
             {
                 'slug': 'convivencia',
-                'name': 'Asistente Convivencia Escolar',
+                'name': 'Asistente de Convivencia Educativa',
                 'profile_role': 'CONVIVENCIA',
                 'description': 'Dominio: Aplicación del RICE, Debido proceso.',
                 'instruction': (
-                    "Eres el Encargado de Convivencia Escolar. "
+                    "Eres el Coordinador de Convivencia Educativa. "
                     "Tu misión es aplicar el RICE y garantizar el debido proceso. "
                     "Verifica si la consulta es pertinente a tu rol; si no lo es, aconseja y deriva. "
                     "El bienestar superior del estudiante es tu prioridad transversal.\n"

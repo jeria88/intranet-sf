@@ -337,7 +337,7 @@ def case_repository(request, slug=None):
     role = assistant.profile_role if assistant else 'GENERAL'
     if role == 'UTP': subtitle = 'Gestión y seguimiento de asesorías técnico-pedagógicas.'
     elif role == 'DIRECTOR': subtitle = 'Gestión y seguimiento de casos directivos y normativos.'
-    elif role == 'CONVIVENCIA': subtitle = 'Gestión y seguimiento de casos de convivencia escolar.'
+    elif role == 'CONVIVENCIA': subtitle = 'Gestión y seguimiento de casos de convivencia educativa.'
     elif role == 'INSPECTOR': subtitle = 'Gestión y seguimiento de disciplina e inspectoría general.'
     elif role == 'REPRESENTANTE': subtitle = 'Gestión y seguimiento legal y representación institucional.'
     else: subtitle = 'Gestión y seguimiento de casos normativos institucionales.'
