@@ -20,7 +20,7 @@ USER_PASSWORD = '123456'
 
 
 class Command(BaseCommand):
-    help = 'Crea/activa todos los usuarios de todos los establecimientos con nombre en blanco.'
+    help = 'Crea/activa todos los usuarios de todos los establecimientos. Seguro para correr en cada deploy.'
 
     def handle(self, *args, **options):
         created_count = 0
@@ -45,31 +45,35 @@ class Command(BaseCommand):
                 }
             )
 
-            changed = False
-
-            if not user.is_active:
-                user.is_active = True
-                changed = True
-
-            # UTP Temuco conserva su nombre; el resto en blanco
-            if username == 'utp.temuco':
-                if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
-                    user.first_name = 'Luis Humberto'
-                    user.last_name = 'Jeria Castro'
-                    changed = True
-            else:
-                if user.first_name or user.last_name:
-                    user.first_name = ''
-                    user.last_name = ''
-                    changed = True
-
             if created:
                 user.set_password(USER_PASSWORD)
                 user.must_change_password = True
                 user.save()
                 created_count += 1
                 self.stdout.write(f'  CREADO      {username}')
-            elif changed:
+                continue
+
+            # Para usuarios existentes: solo tocar lo estrictamente necesario
+            changed = False
+
+            if not user.is_active:
+                user.is_active = True
+                changed = True
+
+            # UTP Temuco: nombre siempre fijo
+            if username == 'utp.temuco':
+                if user.first_name != 'Luis Humberto' or user.last_name != 'Jeria Castro':
+                    user.first_name = 'Luis Humberto'
+                    user.last_name = 'Jeria Castro'
+                    changed = True
+            # Resto: solo limpiar nombre si el usuario AÚN no cambió su contraseña
+            # (si ya la cambió, respetamos el nombre que haya registrado)
+            elif user.must_change_password and (user.first_name or user.last_name):
+                user.first_name = ''
+                user.last_name = ''
+                changed = True
+
+            if changed:
                 user.save()
                 updated_count += 1
                 self.stdout.write(f'  ACTUALIZADO {username}')
@@ -80,5 +84,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'Completado: {created_count} creados, {updated_count} actualizados.'
         ))
-        self.stdout.write(f'Contraseña inicial: {USER_PASSWORD}  (los usuarios deben cambiarla al primer ingreso)')
-        self.stdout.write('El admin conserva su contraseña Admin1234!')
+        self.stdout.write(
+            f'Contraseña inicial: {USER_PASSWORD}  (los usuarios la cambian al primer ingreso)'
+        )
